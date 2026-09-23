@@ -1,0 +1,6 @@
+{
+  "identifier": "main",
+  "description": "Only the trusted shell may receive core events. No shell/fs/http plugins.",
+  "windows": ["main"],
+  "permissions": ["core:event:allow-listen", "core:event:allow-unlisten"]
+}

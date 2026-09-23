@@ -1,0 +1,47 @@
+{
+  "id": "agent-chat",
+  "name": "Agent Chat",
+  "version": "0.2.0",
+  "apiVersion": "1",
+  "minDesktopVersion": "0.1.0",
+  "main": "index.js",
+  "permissions": ["pi.read", "pi.sendMessage"],
+  "contributes": {
+    "commands": [
+      {
+        "id": "agent-chat.send",
+        "title": "Send a prompt",
+        "titleI18n": {
+          "zh-CN": "发送提示"
+        }
+      },
+      {
+        "id": "agent-chat.abort",
+        "title": "Stop agent",
+        "titleI18n": {
+          "zh-CN": "停止任务"
+        }
+      },
+      {
+        "id": "agent-chat.refresh",
+        "title": "Restore current Pi conversation",
+        "titleI18n": {
+          "zh-CN": "恢复当前 Pi 对话"
+        }
+      }
+    ],
+    "panels": [
+      {
+        "id": "agent-chat.conversation",
+        "title": "Agent",
+        "location": "mainPanel",
+        "titleI18n": {
+          "zh-CN": "智能体"
+        }
+      }
+    ]
+  },
+  "nameI18n": {
+    "zh-CN": "智能体对话"
+  }
+}

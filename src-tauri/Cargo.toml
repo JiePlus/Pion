@@ -1,0 +1,22 @@
+[package]
+name = "pion"
+version = "0.1.0"
+description = "A small plugin-first desktop shell for Pi"
+edition = "2021"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-dialog = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+semver = "1"
+reqwest = { version = "0.13", default-features = false, features = ["blocking", "json", "rustls"] }
+base64 = "0.22"
+sha2 = "0.10"
+zip = { version = "4", default-features = false, features = ["deflate"] }
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
