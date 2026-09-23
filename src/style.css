@@ -2350,6 +2350,13 @@ kbd {
   margin: 22px 0;
 }
 
+.model-custom-auth-picker {
+  display: grid;
+  gap: 8px;
+  max-width: 320px;
+  margin-top: 22px;
+}
+
 .model-auth-list {
   margin-top: 32px;
   border-top: 1px solid var(--line);

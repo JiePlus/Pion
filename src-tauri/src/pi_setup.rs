@@ -152,7 +152,7 @@ pub fn pi_command(executable: &Path) -> Result<Command, String> {
         let script = executable
             .parent()
             .ok_or("Cannot locate Pi")?
-            .join("node_modules/@earendil-works/pi-coding-agent/dist/index.js");
+            .join("node_modules/@earendil-works/pi-coding-agent/dist/bundle/cli.js");
         if !script.is_file() {
             return Err("Cannot locate Pi CLI".into());
         }
@@ -242,8 +242,21 @@ fn same_file(left: &Path, right: &Path) -> bool {
 pub fn inspect(executable: &str, home: &Path) -> Value {
     let npm = npm_path(executable, home);
     let resolved = if Path::new(executable).is_absolute() {
-        Some(PathBuf::from(executable))
+        let path = PathBuf::from(executable);
+        #[cfg(target_os = "windows")]
+        let path = if path.extension().is_none() && path.with_extension("cmd").is_file() {
+            path.with_extension("cmd")
+        } else {
+            path
+        };
+        Some(path)
     } else {
+        #[cfg(target_os = "windows")]
+        let executable = if executable == "pi" {
+            PI_NAME
+        } else {
+            executable
+        };
         command_path(executable, home).or_else(|| {
             npm.as_ref()
                 .and_then(|npm| npm_prefix(npm).ok())

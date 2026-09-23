@@ -71,6 +71,7 @@ export function ModelSettings({
   embedded?: boolean;
 }) {
   const [method, setMethod] = useState<AccessMethod>("key");
+  const [keyProvider, setKeyProvider] = useState("");
   return (
     <div className="model-management">
       {!embedded && (
@@ -96,7 +97,7 @@ export function ModelSettings({
           </button>
         ))}
       </nav>
-      {method === "key" && <ApiKeyAccess onChanged={onChanged} />}
+      {method === "key" && <ApiKeyAccess onChanged={onChanged} initialProvider={keyProvider} />}
       {method === "login" && <PiLogin onChanged={onChanged} />}
       {method === "environment" && (
         <section className="model-method-content">
@@ -125,7 +126,15 @@ export function ModelSettings({
           </p>
         </section>
       )}
-      {method === "custom" && <CustomModels onChanged={onChanged} />}
+      {method === "custom" && (
+        <CustomModels
+          onChanged={onChanged}
+          onSetApiKey={(provider) => {
+            setKeyProvider(provider);
+            setMethod("key");
+          }}
+        />
+      )}
       {method === "extension" && (
         <section className="model-method-content">
           <h2>{t("Provider extension")}</h2>
@@ -143,12 +152,19 @@ export function ModelSettings({
   );
 }
 
-function ApiKeyAccess({ onChanged }: { onChanged?: () => void }) {
+function ApiKeyAccess({
+  onChanged,
+  initialProvider,
+}: {
+  onChanged?: () => void;
+  initialProvider: string;
+}) {
   const [config, setConfig] = useState<{
     path: string;
     providers: { provider: string; type: string }[];
   } | null>(null);
-  const [provider, setProvider] = useState("");
+  const [provider, setProvider] = useState(initialProvider);
+  const [customProviders, setCustomProviders] = useState<string[]>([]);
   const [key, setKey] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -161,6 +177,13 @@ function ApiKeyAccess({ onChanged }: { onChanged?: () => void }) {
     })
       .then((value) => {
         if (mounted) setConfig(value);
+      })
+      .catch((failure) => {
+        if (mounted) setError(String(failure));
+      });
+    host<Config>({ op: "model_config.list" })
+      .then((value) => {
+        if (mounted) setCustomProviders(value.providers.map((item) => item.name));
       })
       .catch((failure) => {
         if (mounted) setError(String(failure));
@@ -207,6 +230,22 @@ function ApiKeyAccess({ onChanged }: { onChanged?: () => void }) {
       )}
       {!native && (
         <p className="settings-note">{t("Model configuration requires the desktop app.")}</p>
+      )}
+      {customProviders.length > 0 && (
+        <label className="model-custom-auth-picker">
+          {t("Custom provider")}
+          <select
+            value={customProviders.includes(provider) ? provider : ""}
+            onChange={(event) => setProvider(event.target.value)}
+          >
+            <option value="">{t("Choose a custom provider")}</option>
+            {customProviders.map((name) => (
+              <option key={name} value={name}>
+                {name}
+              </option>
+            ))}
+          </select>
+        </label>
       )}
       <form
         className="model-auth-form"
@@ -604,7 +643,13 @@ function PiLogin({ onChanged }: { onChanged?: () => void }) {
   );
 }
 
-function CustomModels({ onChanged }: { onChanged?: () => void }) {
+function CustomModels({
+  onChanged,
+  onSetApiKey,
+}: {
+  onChanged?: () => void;
+  onSetApiKey: (provider: string) => void;
+}) {
   const [config, setConfig] = useState<Config | null>(null);
   const [selected, setSelected] = useState("");
   const [providerDraft, setProviderDraft] = useState({
@@ -864,6 +909,9 @@ function CustomModels({ onChanged }: { onChanged?: () => void }) {
                   </p>
                 </div>
                 <div className="button-row">
+                  <button type="button" disabled={busy} onClick={() => onSetApiKey(provider.name)}>
+                    {t("Set API key")}
+                  </button>
                   <button type="button" disabled={busy} onClick={() => editProvider(provider)}>
                     {t("Edit")}
                   </button>

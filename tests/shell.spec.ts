@@ -658,6 +658,19 @@ test("custom Pi providers and models have a primary navigation entry", async ({ 
   await page.getByRole("textbox", { name: "Base URL" }).fill("http://localhost:11434/v1");
   await page.getByRole("button", { name: "Save provider" }).click();
   await expect(page.getByRole("navigation", { name: "Custom providers" })).toContainText("ollama");
+  await page.getByRole("button", { name: "Set API key" }).click();
+  await expect(page.getByRole("combobox", { name: "Custom provider" })).toHaveValue("ollama");
+  await expect(page.getByLabel("Provider ID", { exact: true })).toHaveValue("ollama");
+  await page.getByLabel("API key", { exact: true }).fill("ollama-test-key");
+  await page.getByRole("button", { name: "Save API key" }).click();
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () => JSON.parse(localStorage.getItem("fixture.modelAuthAction") ?? "{}").provider,
+      ),
+    )
+    .toBe("ollama");
+  await page.getByRole("button", { name: "Custom endpoint" }).click();
   await page.getByRole("button", { name: "Fetch model list" }).click();
   await expect(page.getByText("3 models found")).toBeVisible();
   await page.screenshot({ path: "test-results/pi-model-discovery.png", fullPage: true });

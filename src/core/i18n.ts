@@ -173,6 +173,9 @@ const zh = {
   "Save a provider API key in Pi's auth.json. Existing keys and OAuth tokens are never shown here.":
     "将服务商 API Key 保存到 Pi 的 auth.json；已有密钥和 OAuth Token 不会在此显示。",
   "Save API key": "保存 API Key",
+  "Set API key": "设置 API Key",
+  "Custom provider": "自定义服务商",
+  "Choose a custom provider": "选择自定义服务商",
   "Saved Pi credentials": "Pi 已保存的凭据",
   "API key saved": "已保存 API Key",
   "Managed by Pi login": "由 Pi 登录管理",
