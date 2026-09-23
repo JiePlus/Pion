@@ -1,0 +1,87 @@
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--pion-space-xs);
+  min-height: 32px;
+  padding: 0 var(--pion-space-md);
+  border: 1px solid transparent;
+  border-radius: var(--pion-size-radius-sm);
+  background: transparent;
+  color: var(--pion-color-ink);
+  font-family: var(--pion-font-sans);
+  font-size: 14px;
+  line-height: 22px;
+  cursor: pointer;
+  transition:
+    background 120ms ease,
+    color 120ms ease;
+}
+
+.button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.ghost:hover:not(:disabled),
+.toolbar:hover:not(:disabled),
+.icon:hover:not(:disabled),
+.rail:hover:not(:disabled) {
+  background: var(--pion-color-surface-hover);
+}
+
+.outline {
+  border-color: var(--pion-color-line);
+  background: var(--pion-color-surface);
+}
+
+.outline:hover:not(:disabled) {
+  border-color: var(--pion-color-line-strong);
+  background: var(--pion-color-surface-hover);
+}
+
+.primary {
+  border-color: var(--pion-color-brand-strong);
+  background: var(--pion-color-brand-strong);
+  color: var(--pion-color-surface);
+}
+
+.primary:hover:not(:disabled) {
+  border-color: var(--pion-color-brand);
+  background: var(--pion-color-brand);
+}
+
+:global(:root[data-theme="dark"]) .primary {
+  border-color: var(--pion-color-brand);
+  background: var(--pion-color-brand);
+  color: var(--pion-color-canvas);
+}
+
+.toolbar {
+  color: var(--pion-color-ink-soft);
+  font-size: 11px;
+}
+
+.icon {
+  width: 30px;
+  height: 30px;
+  min-height: 30px;
+  padding: 0;
+  color: var(--pion-color-muted);
+}
+
+.rail {
+  width: 100%;
+  justify-content: flex-start;
+  text-align: left;
+}
+
+.sm {
+  min-height: 27px;
+  font-size: 11px;
+}
+
+.iconContent {
+  display: inline-flex;
+  flex-shrink: 0;
+}

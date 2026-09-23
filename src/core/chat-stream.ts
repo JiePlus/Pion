@@ -1,4 +1,4 @@
-import type { ContentBlock, Message } from "../ui/ChatMessage.tsx";
+import type { ContentBlock, Message } from "../ui/chat/ChatMessage.tsx";
 
 interface Delta {
   type?: string;

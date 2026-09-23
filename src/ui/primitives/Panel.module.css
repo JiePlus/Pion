@@ -1,0 +1,32 @@
+.panel {
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid var(--pion-color-line);
+  background: var(--pion-color-surface);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 9px 11px;
+  border-bottom: 1px solid var(--pion-color-line);
+  font-size: 11px;
+}
+
+.header > div {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.header select {
+  max-width: 104px;
+  min-height: 27px;
+  padding: 3px;
+  border-color: transparent;
+  background: transparent;
+  color: var(--pion-color-muted);
+  font-size: 9px;
+}

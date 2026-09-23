@@ -1,7 +1,11 @@
+import { StatusDot } from "./primitives/StatusDot.tsx";
+import { Button } from "./primitives/Button.tsx";
+import { componentClass } from "./componentClass.ts";
 import { Component, createContext, useContext, useLayoutEffect, useRef, useState } from "react";
 import type { ErrorInfo, ReactNode } from "react";
 import type { Json, View } from "../core/api.ts";
 import { t } from "../core/i18n.ts";
+import styles from "./View.module.css";
 
 export const DraftScope = createContext("");
 
@@ -29,21 +33,27 @@ export function ViewRenderer({ view, run }: { view: View; run: Run }) {
     case "stack":
       return <Stack view={view} run={run} />;
     case "text":
-      return <p className={`view-text ${view.tone ?? ""}`}>{view.text}</p>;
+      return (
+        <p
+          className={`${componentClass(styles, "view-text")} ${view.tone ? componentClass(styles, view.tone) : ""}`}
+        >
+          {view.text}
+        </p>
+      );
     case "badge":
       return (
-        <span className="badge">
-          <span className="dot" />
+        <span className={componentClass(styles, "badge")}>
+          <StatusDot />
           {view.text}
         </span>
       );
     case "list":
       return (
-        <div className="view-list">
+        <div className={componentClass(styles, "view-list")}>
           {view.items.map((item, index) => (
             <article key={index}>
-              <div className="item-label">{item.label}</div>
-              <div className="item-text">{item.text}</div>
+              <div className={componentClass(styles, "item-label")}>{item.label}</div>
+              <div className={componentClass(styles, "item-text")}>{item.text}</div>
             </article>
           ))}
         </div>
@@ -62,7 +72,7 @@ function Stack({ view, run }: { view: Extract<View, { type: "stack" }>; run: Run
   }, [view]);
   return (
     <div
-      className="view-stack"
+      className={componentClass(styles, "view-stack")}
       ref={element}
       onScroll={(event) => {
         const node = event.currentTarget;
@@ -107,7 +117,7 @@ function CommandForm({ view, run }: { view: Extract<View, { type: "form" }>; run
   const [busy, setBusy] = useState(false);
   return (
     <form
-      className="command-form"
+      className={componentClass(styles, "command-form")}
       onSubmit={(event) => {
         event.preventDefault();
         if (!text.trim() || busy || view.disabled) return;
@@ -139,11 +149,16 @@ function CommandForm({ view, run }: { view: Extract<View, { type: "form" }>; run
         }}
         rows={3}
       />
-      <div className="composer-footer">
+      <div className={componentClass(styles, "composer-footer")}>
         <span>{t("Pi uses your configured tools and model")}</span>
-        <button className="primary" disabled={view.disabled || busy || !text.trim()} type="submit">
+        <Button
+          variant="primary"
+          className="primary"
+          disabled={view.disabled || busy || !text.trim()}
+          type="submit"
+        >
           {busy ? t("Sending…") : view.submit} <span aria-hidden="true">↗</span>
-        </button>
+        </Button>
       </div>
     </form>
   );

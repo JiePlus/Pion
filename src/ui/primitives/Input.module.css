@@ -1,0 +1,14 @@
+.input {
+  min-height: 34px;
+  padding: 6px 9px;
+  border: 1px solid var(--pion-color-line);
+  border-radius: var(--pion-size-radius-sm);
+  background: var(--pion-color-surface);
+  color: var(--pion-color-ink);
+  font-family: var(--pion-font-sans);
+}
+
+.input:focus-visible {
+  outline: 2px solid var(--pion-color-brand);
+  outline-offset: 2px;
+}

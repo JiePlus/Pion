@@ -1,0 +1,43 @@
+.language-setting {
+  max-width: 640px;
+  margin-bottom: 24px;
+}
+
+.language-setting select {
+  width: 220px;
+  max-width: 100%;
+}
+
+.legacy-sessions {
+  margin: 28px 0;
+  padding-top: 24px;
+  border-top: 1px solid var(--pion-color-line);
+}
+
+.legacy-session-list {
+  display: grid;
+  max-height: 320px;
+  gap: 6px;
+  margin-top: 13px;
+  overflow: auto;
+}
+
+.legacy-session-list label {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 9px;
+  border: 1px solid var(--pion-color-line);
+  border-radius: 7px;
+  background: var(--pion-color-surface-raised);
+}
+
+.legacy-session-list input {
+  width: auto;
+  min-height: auto;
+}
+
+.legacy-session-list span,
+.legacy-session-list small {
+  display: block;
+}

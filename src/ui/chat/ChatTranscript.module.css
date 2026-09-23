@@ -1,0 +1,89 @@
+.chat-viewport {
+  position: relative;
+  display: flex;
+  min-height: 0;
+  flex: 1;
+}
+
+.chat-scroll {
+  min-width: 0;
+  flex: 1;
+  padding: 28px max(24px, calc((100% - 790px) / 2));
+  overflow-y: auto;
+  overflow-anchor: none;
+  scrollbar-width: thin;
+  scrollbar-color: var(--pion-color-line-strong) transparent;
+}
+
+.chat-messages > h1 {
+  margin-top: 18vh;
+  text-align: center;
+}
+
+.chat-working {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 0 18px;
+  color: var(--pion-color-muted);
+  font-size: 12px;
+}
+
+.chat-working :global(.dot) {
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+.scroll-to-latest {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  min-height: 30px;
+  padding: 5px 11px;
+  transform: translateX(-50%);
+  border-radius: 18px;
+  box-shadow: var(--pion-shadow-low);
+  font-size: 11px;
+}
+
+.message-queue {
+  width: min(790px, calc(100% - 28px));
+  margin: 5px auto;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+}
+
+.message-queue span {
+  padding: 4px 7px;
+  border: 1px solid var(--pion-color-line);
+  border-radius: 6px;
+  background: var(--pion-color-surface-raised);
+}
+
+.retry-card,
+.compaction-card {
+  margin: 10px 0;
+  padding: 9px 11px;
+  border: 1px solid var(--pion-color-line);
+  border-radius: 7px;
+  background: var(--pion-color-surface-muted);
+  font-size: 12px;
+}
+
+.retry-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.compaction-card p {
+  white-space: pre-wrap;
+}
+
+@media (max-width: 1040px) {
+  .chat-scroll {
+    padding-inline: 22px;
+  }
+}

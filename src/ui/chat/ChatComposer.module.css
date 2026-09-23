@@ -1,0 +1,221 @@
+.core-composer {
+  position: relative;
+  width: min(800px, calc(100% - 28px));
+  margin: 0 auto 13px;
+  flex-shrink: 0;
+  overflow: visible;
+  border: 1px solid var(--pion-color-line-strong);
+  border-radius: 15px;
+  background: var(--pion-color-surface-raised);
+  box-shadow: var(--pion-shadow-low);
+}
+
+.core-composer:focus-within {
+  border-color: var(--pion-color-brand);
+}
+
+.core-composer > textarea {
+  height: auto;
+  min-height: 54px;
+  max-height: 180px;
+  padding: 13px 15px 4px;
+  border: 0;
+  border-radius: 15px 15px 0 0;
+  background: transparent;
+  resize: none;
+  font-size: 14px;
+}
+
+.core-composer > textarea:focus-visible {
+  outline: none;
+}
+
+.core-composer-footer {
+  display: flex;
+  min-width: 0;
+  min-height: 43px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 7px;
+  padding: 4px 7px 7px;
+}
+
+.composer-options,
+.composer-actions,
+.composer-more-settings {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 3px;
+}
+
+.composer-options {
+  overflow: visible;
+}
+
+.composer-actions {
+  flex-shrink: 0;
+  justify-content: flex-end;
+}
+
+.composer-tool-preset select {
+  max-width: 125px;
+}
+
+.send-button,
+.stop-button {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  min-width: 34px;
+  min-height: 34px;
+  place-items: center;
+  padding: 0;
+  border-radius: 50%;
+}
+
+.send-button {
+  font-size: 15px;
+}
+
+.stop-button {
+  font-size: 9px;
+}
+
+.queue-next-button {
+  padding-inline: 9px;
+  background: var(--pion-color-brand-soft);
+  color: var(--pion-color-brand-strong);
+}
+
+.composer-more {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 0;
+  z-index: 12;
+  display: grid;
+  width: min(470px, 100%);
+  max-height: min(420px, 60vh);
+  gap: 9px;
+  padding: 11px;
+  overflow-y: auto;
+  border: 1px solid var(--pion-color-line);
+  border-radius: 11px;
+  background: var(--pion-color-surface-raised);
+  box-shadow: var(--pion-shadow-card);
+}
+
+.composer-more .composer-options,
+.composer-more-settings {
+  flex-wrap: wrap;
+  overflow: visible;
+}
+
+.composer-more :global(.compact-field) {
+  max-width: 190px;
+}
+
+.custom-compact {
+  display: grid;
+  gap: 8px;
+  padding: 11px;
+  border-bottom: 1px solid var(--pion-color-line);
+}
+
+.core-composer .custom-compact textarea {
+  height: 72px;
+  min-height: 72px;
+  padding: 9px 10px;
+  background: var(--pion-color-surface);
+  resize: vertical;
+}
+
+.slash-command-menu {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 8px);
+  left: 0;
+  z-index: 11;
+  max-height: 270px;
+  padding: 6px;
+  overflow-y: auto;
+  border: 1px solid var(--pion-color-line);
+  border-radius: 10px;
+  background: var(--pion-color-surface-raised);
+  box-shadow: var(--pion-shadow-card);
+}
+
+.slash-command-menu button {
+  display: grid;
+  grid-template-columns: minmax(120px, auto) 1fr;
+  width: 100%;
+  gap: 13px;
+  padding: 8px 9px;
+  border-color: transparent;
+  background: transparent;
+  text-align: left;
+}
+
+.slash-command-menu strong {
+  font-size: 12px;
+}
+
+.slash-command-menu span {
+  overflow: hidden;
+  color: var(--pion-color-muted);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.attachment-strip {
+  display: flex;
+  gap: 8px;
+  padding: 9px 11px 0;
+  overflow-x: auto;
+}
+
+.attachment-strip figure {
+  position: relative;
+  width: 72px;
+  margin: 0;
+  flex-shrink: 0;
+}
+
+.attachment-strip img {
+  width: 72px;
+  height: 54px;
+  border-radius: 7px;
+  object-fit: cover;
+}
+
+.attachment-strip figcaption {
+  overflow: hidden;
+  color: var(--pion-color-muted);
+  font-size: 9px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.attachment-strip button {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  width: 20px;
+  height: 20px;
+  min-height: 20px;
+  padding: 0;
+  border-radius: 50%;
+}
+
+.image-warning {
+  margin: 6px 13px 0;
+  color: var(--pion-color-danger);
+  font-size: 11px;
+}
+
+@media (max-width: 850px) {
+  .composer-tool-preset {
+    display: none;
+  }
+}

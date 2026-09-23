@@ -1,5 +1,7 @@
+import { componentClass } from "../../componentClass.ts";
 import { useEffect, useRef, useState } from "react";
-import { t } from "../core/i18n.ts";
+import { t } from "../../../core/i18n.ts";
+import styles from "./ModelPicker.module.css";
 
 interface Model {
   provider: string;
@@ -52,7 +54,7 @@ export function ModelPicker({
 
   return (
     <div
-      className="model-picker"
+      className={componentClass(styles, "model-picker")}
       ref={root}
       onKeyDown={(event) => {
         if (event.key === "Escape" && open) {
@@ -65,7 +67,7 @@ export function ModelPicker({
       <button
         ref={trigger}
         type="button"
-        className="model-picker-trigger"
+        className={componentClass(styles, "model-picker-trigger")}
         aria-label={t("Model")}
         aria-expanded={open}
         aria-haspopup="dialog"
@@ -78,12 +80,16 @@ export function ModelPicker({
       >
         <span>{selected?.name || selected?.id || t("Default model")}</span>
         {selected && <small>{selected.provider}</small>}
-        <span className="model-picker-chevron" aria-hidden="true">
+        <span className={componentClass(styles, "model-picker-chevron")} aria-hidden="true">
           ⌄
         </span>
       </button>
       {open && (
-        <div className="model-picker-menu" role="dialog" aria-label={t("Model")}>
+        <div
+          className={componentClass(styles, "model-picker-menu")}
+          role="dialog"
+          aria-label={t("Model")}
+        >
           <input
             ref={search}
             type="search"
@@ -95,12 +101,14 @@ export function ModelPicker({
               if (event.key === "ArrowDown") {
                 event.preventDefault();
                 root.current
-                  ?.querySelector<HTMLButtonElement>(".model-picker-results button")
+                  ?.querySelector<HTMLButtonElement>(
+                    `.${componentClass(styles, "model-picker-results")} button`,
+                  )
                   ?.focus();
               }
             }}
           />
-          <div className="model-picker-results">
+          <div className={componentClass(styles, "model-picker-results")}>
             {[...groups].map(([provider, items]) => (
               <section key={provider}>
                 <h3>{provider}</h3>

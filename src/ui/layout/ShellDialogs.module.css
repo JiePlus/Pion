@@ -1,0 +1,162 @@
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 26px;
+  background: var(--pion-color-overlay);
+  backdrop-filter: blur(3px);
+}
+
+.modal {
+  width: 540px;
+  max-width: 100%;
+  max-height: 85vh;
+  padding: 28px;
+  overflow-y: auto;
+  border: 1px solid var(--pion-color-line);
+  border-radius: 12px;
+  background: var(--pion-color-surface-raised);
+  box-shadow: var(--pion-shadow-card);
+}
+
+.modal > p {
+  font-size: 12px;
+}
+
+.permissions {
+  display: grid;
+  gap: 7px;
+  padding: 0;
+  margin: 22px 0;
+  list-style: none;
+}
+
+.permissions li {
+  padding: 10px 12px;
+  border: 1px solid var(--pion-color-line);
+  border-radius: 7px;
+  background: var(--pion-color-surface-muted);
+}
+
+.permissions li.sensitive {
+  border-color: color-mix(in oklch, var(--pion-color-amber) 45%, var(--pion-color-line));
+  background: var(--pion-color-amber-soft);
+}
+
+.permissions strong {
+  font-size: 11px;
+}
+
+.permissions p {
+  margin: 5px 0 0;
+  color: var(--pion-color-muted);
+  font-size: 11px;
+}
+
+.palette {
+  padding: 14px;
+}
+
+.palette > input {
+  width: 100%;
+  margin-bottom: 10px;
+}
+
+.palette > button {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  padding: 11px;
+  border-color: transparent;
+  background: transparent;
+}
+
+.palette small {
+  color: var(--pion-color-muted);
+  font-size: 9px;
+}
+
+.toasts {
+  position: fixed;
+  right: 18px;
+  bottom: 38px;
+  z-index: 40;
+  display: grid;
+  width: min(360px, calc(100% - 36px));
+  gap: 8px;
+}
+
+.toast {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 13px;
+  overflow-wrap: anywhere;
+  border: 1px solid var(--pion-color-line);
+  border-radius: 8px;
+  background: var(--pion-color-surface-raised);
+  box-shadow: var(--pion-shadow-low);
+  font-size: 11px;
+}
+
+.toast > div {
+  min-width: 0;
+  flex: 1;
+}
+
+.toast strong {
+  color: var(--pion-color-brand);
+  font-size: 10px;
+}
+
+.toast p {
+  margin: 6px 0 0;
+}
+
+.toast button {
+  width: 26px;
+  min-height: 26px;
+  padding: 0;
+  border-color: transparent;
+  background: transparent;
+}
+
+.session-history {
+  width: min(680px, calc(100% - 36px));
+}
+
+.session-tree {
+  max-height: 260px;
+  padding: 8px;
+  overflow: auto;
+  border: 1px solid var(--pion-color-line);
+  border-radius: 7px;
+  background: var(--pion-color-surface-muted);
+  font-size: 12px;
+}
+
+.session-tree [role="treeitem"] {
+  padding-block: 4px;
+}
+
+.fork-messages,
+.extension-options {
+  display: grid;
+  gap: 6px;
+}
+
+.fork-messages button,
+.extension-options button {
+  overflow: hidden;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.extension-dialog textarea {
+  min-height: 160px;
+}

@@ -1,0 +1,30 @@
+.compactField {
+  display: block;
+  min-width: 0;
+}
+
+.compactField select,
+.commandButton,
+.queueButton {
+  height: 30px;
+  min-height: 30px;
+  padding: 4px 8px;
+  border-color: transparent;
+  background: transparent;
+  color: var(--pion-color-ink-soft);
+  font-size: 11px;
+}
+
+.compactField select:hover,
+.commandButton:hover:not(:disabled),
+.queueButton:hover:not(:disabled) {
+  background: var(--pion-color-surface-hover);
+}
+
+.commandButton {
+  display: grid;
+  width: 30px;
+  min-width: 30px;
+  place-items: center;
+  padding: 0;
+}

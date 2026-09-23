@@ -1,0 +1,32 @@
+.settings-tabs {
+  display: flex;
+  min-height: 46px;
+  align-items: end;
+  gap: 4px;
+  margin: 0;
+  padding: 8px 28px 0;
+  border-bottom: 1px solid var(--pion-color-line);
+  background: var(--pion-color-surface);
+}
+
+.settings-tabs button {
+  min-height: 32px;
+  border-color: transparent;
+  border-bottom-color: transparent;
+  border-radius: 6px 6px 0 0;
+  background: transparent;
+  color: var(--pion-color-muted);
+  font-size: 12px;
+}
+
+.settings-tabs button.selected {
+  color: var(--pion-color-ink);
+  border-bottom-color: var(--pion-color-brand);
+}
+
+@media (max-width: 850px) {
+  .settings-tabs {
+    padding-inline: 12px;
+    overflow-x: auto;
+  }
+}

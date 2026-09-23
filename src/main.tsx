@@ -4,7 +4,10 @@ import type { Boot } from "./core/host.ts";
 import { i18n, t } from "./core/i18n.ts";
 import { Runtime } from "./core/runtime.ts";
 import { applyTheme, readThemePreference } from "./core/theme.ts";
-import { Shell } from "./ui/Shell.tsx";
+import { Shell } from "./ui/layout/Shell.tsx";
+import startupStyles from "./ui/layout/StartupError.module.css";
+import "./ui/theme/tokens.css";
+import "./ui/theme/themes.css";
 import "./style.css";
 
 applyTheme(readThemePreference());
@@ -28,7 +31,7 @@ async function start() {
     root.render(<Shell runtime={runtime} boot={boot} />);
   } catch (error) {
     root.render(
-      <main className="startup-error">
+      <main className={startupStyles.startupError}>
         <h1>{t("Pion could not start")}</h1>
         <p>{String(error)}</p>
         <button onClick={() => location.reload()}>{t("Retry")}</button>

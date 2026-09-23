@@ -1,0 +1,210 @@
+import utilityStyles from "../primitives/Utilities.module.css";
+import { Button } from "../primitives/Button.tsx";
+import managementStyles from "./Management.module.css";
+import { componentClass } from "../componentClass.ts";
+import type { Dispatch, SetStateAction } from "react";
+import { native } from "../../core/host.ts";
+import type { PiSetupStatus } from "../../core/host.ts";
+import type { Locale } from "../../core/api.ts";
+import { t } from "../../core/i18n.ts";
+import type { Runtime } from "../../core/runtime.ts";
+import type { ThemePreference } from "../../core/theme.ts";
+import { PiVersionSection } from "./PiVersionSection.tsx";
+import { Checkbox, Input } from "../primitives/index.ts";
+import styles from "./Settings.module.css";
+
+export interface LegacySession {
+  id: string;
+  title: string;
+  projectPath: string;
+  modified: number;
+  messageCount: number;
+}
+
+interface SettingsProps {
+  locale: Locale;
+  action: (id: string, args?: string) => void;
+  themePreference: ThemePreference;
+  setTheme: (value: ThemePreference) => void;
+  executable: string;
+  setExecutable: Dispatch<SetStateAction<string>>;
+  busy: boolean;
+  connected: boolean;
+  setupError: string;
+  setupStatus: PiSetupStatus | null;
+  setupBusy: boolean;
+  setupProgress: string;
+  versionStatus: PiSetupStatus | null;
+  checkPiUpdate: () => Promise<void>;
+  updatePi: () => Promise<void>;
+  legacySessions: LegacySession[];
+  legacyLoading: boolean;
+  legacySelected: Set<string>;
+  setLegacySelected: Dispatch<SetStateAction<Set<string>>>;
+  loadLegacySessions: () => Promise<void>;
+  importLegacySessions: () => Promise<void>;
+  runtime: Runtime;
+}
+
+export function Settings({
+  locale,
+  action,
+  themePreference,
+  setTheme,
+  executable,
+  setExecutable,
+  busy,
+  connected,
+  setupError,
+  setupStatus,
+  setupBusy,
+  setupProgress,
+  versionStatus,
+  checkPiUpdate,
+  updatePi,
+  legacySessions,
+  legacyLoading,
+  legacySelected,
+  setLegacySelected,
+  loadLegacySessions,
+  importLegacySessions,
+  runtime,
+}: SettingsProps) {
+  return (
+    <main className={`${componentClass(managementStyles, "management")} settings`}>
+      <h1>{t("General")}</h1>
+      <label className={componentClass(styles, "language-setting")}>
+        {t("Language")}
+        <select value={locale} onChange={(event) => action("core.locale", event.target.value)}>
+          <option value="zh-CN">简体中文</option>
+          <option value="en">English</option>
+        </select>
+        <span className={`settings-note ${utilityStyles.settingsNote}`}>
+          {t(
+            "Choose the display language. Changes apply immediately and are saved on this device.",
+          )}
+        </span>
+      </label>
+      <label className={componentClass(styles, "language-setting")}>
+        {t("Theme")}
+        <select
+          aria-label={t("Theme")}
+          value={themePreference}
+          onChange={(event) => setTheme(event.target.value as ThemePreference)}
+        >
+          <option value="system">{t("Follow system")}</option>
+          <option value="light">{t("Light")}</option>
+          <option value="dark">{t("Dark")}</option>
+        </select>
+        <span className={`settings-note ${utilityStyles.settingsNote}`}>
+          {t("Choose how Pion appears on this device.")}
+        </span>
+      </label>
+      <p className="muted">
+        {t("Pion starts your installed Pi with its existing model and authentication settings.")}
+      </p>
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          action("core.settings.save");
+        }}
+      >
+        <label>
+          {t("Pi executable")}
+          <Input
+            value={executable}
+            placeholder={t("pi or an absolute executable path")}
+            onChange={(event) => setExecutable(event.target.value)}
+            required
+          />
+        </label>
+        <p className={`settings-note ${utilityStyles.settingsNote}`}>
+          {t(
+            "Connecting trusts the selected workspace and its Pi extensions. Pi runs with your user permissions. Tested with Pi 0.87.0.",
+          )}
+        </p>
+        <div className={`button-row ${utilityStyles.buttonRow}`}>
+          <Button variant="primary" className="primary" disabled={busy || !native} type="submit">
+            {t("Save settings")}
+          </Button>
+          <button
+            type="button"
+            disabled={busy || !connected}
+            onClick={() => action("core.disconnect")}
+          >
+            {t("Disconnect")}
+          </button>
+        </div>
+      </form>
+      {setupError && (
+        <p className="error" role="alert">
+          {setupError}
+        </p>
+      )}
+      <PiVersionSection
+        setupStatus={setupStatus}
+        setupBusy={setupBusy}
+        setupProgress={setupProgress}
+        versionStatus={versionStatus}
+        checkPiUpdate={checkPiUpdate}
+        updatePi={updatePi}
+      />
+      <section className={componentClass(styles, "legacy-sessions")}>
+        <h2>{t("Import Pi CLI sessions")}</h2>
+        <p className={`settings-note ${utilityStyles.settingsNote}`}>
+          {t(
+            "Copies selected sessions from ~/.pi/agent into Pion. The original files are not changed or kept in sync.",
+          )}
+        </p>
+        <div className={`button-row ${utilityStyles.buttonRow}`}>
+          <button
+            type="button"
+            disabled={busy || legacyLoading || !native}
+            onClick={() =>
+              loadLegacySessions().catch((error) => runtime.notice("Pi", String(error)))
+            }
+          >
+            {t(legacyLoading ? "Scanning sessions…" : "Scan Pi sessions")}
+          </button>
+          <Button
+            variant="primary"
+            type="button"
+            className="primary"
+            disabled={busy || legacyLoading || !legacySelected.size}
+            onClick={() =>
+              importLegacySessions().catch((error) => runtime.notice("Pi", String(error)))
+            }
+          >
+            {t("Import selected sessions")}
+          </Button>
+        </div>
+        {!!legacySessions.length && (
+          <div className={componentClass(styles, "legacy-session-list")}>
+            {legacySessions.map((session) => (
+              <label key={session.id}>
+                <Checkbox
+                  checked={legacySelected.has(session.id)}
+                  onChange={(event) => {
+                    const next = new Set(legacySelected);
+                    if (event.target.checked) next.add(session.id);
+                    else next.delete(session.id);
+                    setLegacySelected(next);
+                  }}
+                />
+                <span>
+                  <strong>{session.title}</strong>
+                  <small>
+                    {session.projectPath} · {t("{count} messages", { count: session.messageCount })}
+                  </small>
+                </span>
+              </label>
+            ))}
+          </div>
+        )}
+        {!legacyLoading && !legacySessions.length && (
+          <p className="muted">{t("No scanned sessions.")}</p>
+        )}
+      </section>
+    </main>
+  );
+}

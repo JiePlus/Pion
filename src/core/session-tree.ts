@@ -1,4 +1,4 @@
-import type { Message } from "../ui/ChatMessage.tsx";
+import type { Message } from "../ui/chat/ChatMessage.tsx";
 
 export interface SessionTreeNode {
   entry: {

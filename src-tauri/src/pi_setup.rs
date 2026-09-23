@@ -1,6 +1,7 @@
 use semver::Version;
 use serde_json::{json, Value};
 use std::env;
+use std::ffi::OsStr;
 use std::fs;
 use std::io::Read;
 use std::path::{Path, PathBuf};
@@ -14,11 +15,26 @@ pub const VERIFIED_VERSION: &str = "0.87.1";
 pub const VERIFIED_VERSION: &str = "0.87.0";
 const PACKAGE: &str = "@earendil-works/pi-coding-agent";
 const MAX_OUTPUT: usize = 64 * 1024;
+#[cfg(target_os = "windows")]
+const CREATE_NO_WINDOW: u32 = 0x08000000;
 
 struct Output {
     status: ExitStatus,
     stdout: String,
     stderr: String,
+}
+
+pub fn hidden_command(program: impl AsRef<OsStr>) -> Command {
+    #[cfg(target_os = "windows")]
+    let mut command = Command::new(program);
+    #[cfg(not(target_os = "windows"))]
+    let command = Command::new(program);
+    #[cfg(target_os = "windows")]
+    {
+        use std::os::windows::process::CommandExt;
+        command.creation_flags(CREATE_NO_WINDOW);
+    }
+    command
 }
 
 fn drain(mut reader: impl Read + Send + 'static) -> thread::JoinHandle<Vec<u8>> {
@@ -133,14 +149,14 @@ fn npm_command(npm: &Path) -> Result<Command, String> {
     if !script.is_file() {
         return Err("Cannot locate npm CLI".into());
     }
-    let mut command = Command::new(node);
+    let mut command = hidden_command(node);
     command.arg(script);
     Ok(command)
 }
 
 #[cfg(not(target_os = "windows"))]
 fn npm_command(npm: &Path) -> Result<Command, String> {
-    Ok(Command::new(npm))
+    Ok(hidden_command(npm))
 }
 
 pub fn pi_command(executable: &Path) -> Result<Command, String> {
@@ -157,11 +173,11 @@ pub fn pi_command(executable: &Path) -> Result<Command, String> {
             return Err("Cannot locate Pi CLI".into());
         }
         let node = node_path(executable).ok_or("Node.js 22.19+ is required")?;
-        let mut command = Command::new(node);
+        let mut command = hidden_command(node);
         command.arg(script);
         return Ok(command);
     }
-    Ok(Command::new(executable))
+    Ok(hidden_command(executable))
 }
 
 fn npm_path(executable: &str, home: &Path) -> Option<PathBuf> {
@@ -376,7 +392,7 @@ fn install_with_npm(npm: &Path, home: &Path) -> Result<PathBuf, String> {
     } else {
         command_path(NODE_NAME, home).ok_or("Node.js 22.19+ is required")?
     };
-    let mut node_command = Command::new(&node);
+    let mut node_command = hidden_command(&node);
     let node_output = run(node_command.arg("--version"), Duration::from_secs(15))?;
     let installed = Version::parse(node_output.stdout.trim_start_matches('v'))
         .map_err(|_| "Cannot read Node.js version".to_string())?;

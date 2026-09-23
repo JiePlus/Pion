@@ -20,7 +20,7 @@ pub fn node_command(executable: &str, helper: &Path) -> Result<Command, String> 
         .map(|parent| parent.join("node"))
         .filter(|path| path.is_file())
         .unwrap_or_else(|| "node".into());
-    let mut command = Command::new(node);
+    let mut command = crate::pi_setup::hidden_command(node);
     if executable_path.is_absolute() {
         if let Some(parent) = executable_path.parent() {
             let mut paths = vec![parent.to_path_buf()];

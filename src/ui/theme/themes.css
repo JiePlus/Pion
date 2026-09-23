@@ -1,0 +1,32 @@
+:root {
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --pion-color-canvas: #171a16;
+  --pion-color-surface: #1d211c;
+  --pion-color-surface-raised: #232820;
+  --pion-color-surface-muted: #262b24;
+  --pion-color-surface-hover: #2d3429;
+  --pion-color-surface-selected: #34402e;
+  --pion-color-ink: #eef1eb;
+  --pion-color-ink-soft: #c4c9c0;
+  --pion-color-muted: #9da69a;
+  --pion-color-faint: #747d71;
+  --pion-color-line: #343b31;
+  --pion-color-line-strong: #485043;
+  --pion-color-brand: #95b47b;
+  --pion-color-brand-strong: #b0c998;
+  --pion-color-brand-soft: #2c3a27;
+  --pion-color-unread: #f09a61;
+  --pion-color-leaf: #aabd78;
+  --pion-color-blue: #8ab4ee;
+  --pion-color-amber: #d6ad62;
+  --pion-color-amber-soft: #372f20;
+  --pion-color-danger: #ed9987;
+  --pion-color-danger-soft: #3d2824;
+  --pion-color-overlay: rgb(0 0 0 / 55%);
+  --pion-shadow-card: 0 18px 54px rgb(0 0 0 / 34%);
+  --pion-shadow-low: 0 8px 24px rgb(0 0 0 / 24%);
+}

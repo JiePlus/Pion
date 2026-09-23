@@ -2,7 +2,7 @@ use crate::workspace::bounded_read;
 use serde_json::{json, Value};
 use std::io::Read;
 use std::path::{Component, Path};
-use std::process::{Command, Stdio};
+use std::process::Stdio;
 
 const MAX_SOURCE: usize = 512;
 const MAX_OUTPUT: u64 = 64 * 1024;
@@ -107,7 +107,7 @@ pub fn run(
         return Err("Pi package is not installed in this scope".into());
     }
     let args = command_args(action, source, scope == "project")?;
-    let mut command = Command::new(executable);
+    let mut command = crate::pi_setup::pi_command(Path::new(executable))?;
     let executable_path = Path::new(executable);
     if executable_path.is_absolute() {
         if let Some(parent) = executable_path.parent() {

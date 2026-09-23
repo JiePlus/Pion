@@ -1,0 +1,53 @@
+:root {
+  --pion-color-canvas: #f7f8f4;
+  --pion-color-surface: #ffffff;
+  --pion-color-surface-raised: #fbfcf9;
+  --pion-color-surface-muted: #f0f2ec;
+  --pion-color-surface-hover: #e9ede4;
+  --pion-color-surface-selected: #e3e9dc;
+  --pion-color-ink: #20231f;
+  --pion-color-ink-soft: #555b53;
+  --pion-color-muted: #7c8478;
+  --pion-color-faint: #a6ada1;
+  --pion-color-line: #dfe3da;
+  --pion-color-line-strong: #cbd1c6;
+  --pion-color-brand: #53753c;
+  --pion-color-brand-strong: #3f612d;
+  --pion-color-brand-soft: #e7eee0;
+  --pion-color-unread: #c6532f;
+  --pion-color-leaf: #a3b572;
+  --pion-color-blue: #3f6fb5;
+  --pion-color-amber: #9c6b22;
+  --pion-color-amber-soft: #fbf2dd;
+  --pion-color-danger: #a34737;
+  --pion-color-danger-soft: #f8eae6;
+  --pion-color-overlay: rgb(16 20 14 / 40%);
+  --pion-shadow-card: 0 16px 44px rgb(37 45 32 / 10%);
+  --pion-shadow-low: 0 6px 20px rgb(37 45 32 / 7%);
+  --pion-size-rail: 264px;
+  --pion-size-topbar: 52px;
+  --pion-size-rail-collapsed: 62px;
+  --pion-size-radius-sm: 7px;
+  --pion-size-radius-md: 14px;
+  --pion-size-radius-lg: 18px;
+  --pion-size-radius-pill: 50%;
+  --pion-space-xs: 4px;
+  --pion-space-sm: 7px;
+  --pion-space-md: 10px;
+  --pion-space-lg: 14px;
+  --pion-space-xl: 24px;
+  --pion-font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --pion-font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+@media (max-width: 1040px) {
+  :root {
+    --pion-size-rail: 224px;
+  }
+}
+
+@media (max-width: 850px) {
+  :root {
+    --pion-size-rail: 62px;
+  }
+}
