@@ -19,7 +19,7 @@
   padding: 10px 14px;
   overflow: auto;
   border: 1px solid var(--pion-color-line);
-  border-radius: 13px;
+  border-radius: 15px 15px 4px 15px;
   background: var(--pion-color-surface-muted);
 }
 
@@ -243,10 +243,10 @@
 }
 
 .tool-call {
-  margin: 8px 0;
+  margin: 12px 0;
   overflow: hidden;
   border: 1px solid var(--pion-color-line);
-  border-radius: 8px;
+  border-radius: 10px;
   background: var(--pion-color-surface-raised);
   font-size: 12px;
 }
@@ -257,7 +257,7 @@
   min-width: 0;
   align-items: center;
   gap: 8px;
-  padding: 8px 10px;
+  padding: 12px 14px;
 }
 
 .tool-call summary {

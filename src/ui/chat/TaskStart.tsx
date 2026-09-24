@@ -1,7 +1,9 @@
 import { Button } from "../primitives/Button.tsx";
+import { Icon } from "../primitives/Icon.tsx";
 import controlStyles from "../primitives/Controls.module.css";
 import { componentClass } from "../componentClass.ts";
 import type { Dispatch, RefObject, SetStateAction } from "react";
+import { useRef } from "react";
 import { imageFailure } from "../../core/attachments.ts";
 import type { ImageAttachment } from "../../core/attachments.ts";
 import { native } from "../../core/host.ts";
@@ -82,12 +84,34 @@ export function TaskStart({
   selectedProject,
   openTask,
 }: TaskStartProps) {
+  const prompt = useRef<HTMLTextAreaElement>(null);
   return (
     <div className={componentClass(styles, "task-start")}>
       <div className={componentClass(styles, "start-heading")}>
         <img src={pionMark} alt="" />
         <h1>{t("What would you like to work on?")}</h1>
         <p>{t("Start a local Pi task in one of your projects.")}</p>
+        <div className={componentClass(styles, "suggestions")} aria-label={t("Suggestions")}>
+          {(
+            [
+              ["bolt", "Explore the project architecture"],
+              ["cube", "Review dependencies"],
+              ["sparkles", "Write unit tests"],
+            ] as const
+          ).map(([icon, label]) => (
+            <button
+              key={label}
+              type="button"
+              onClick={() => {
+                updateNewText(t(label));
+                prompt.current?.focus();
+              }}
+            >
+              <Icon name={icon} size={14} />
+              {t(label)}
+            </button>
+          ))}
+        </div>
       </div>
       {native && !setupStatus && (
         <p className={componentClass(styles, "setup-reminder")} role="status">
@@ -171,6 +195,8 @@ export function TaskStart({
           }}
         />
         <textarea
+          ref={prompt}
+          autoFocus
           aria-label={t("Describe your task")}
           placeholder={t("Ask a question, build a feature, or fix a bug…")}
           value={newText}
@@ -212,7 +238,7 @@ export function TaskStart({
                 else newImagePicker.current?.click();
               }}
             >
-              ◇
+              <Icon name="folder" size={16} />
             </button>
             {catalog.projects.length ? (
               <label className={`compact-field ${controlStyles.compactField}`}>
@@ -302,7 +328,7 @@ export function TaskStart({
               (native && !setupStatus?.modelReady)
             }
           >
-            ↑
+            <Icon name="arrow-up" size={17} />
           </Button>
         </div>
       </form>

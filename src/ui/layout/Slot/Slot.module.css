@@ -12,6 +12,10 @@
   background: var(--pion-color-canvas);
 }
 
+:global(:root[data-theme="dark"]) :global(.new-task) .slot-main {
+  background-image: radial-gradient(ellipse at 48% 45%, rgb(16 185 129 / 5%), transparent 58%);
+}
+
 .slot-side {
   position: relative;
   width: 250px;

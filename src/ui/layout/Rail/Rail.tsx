@@ -1,5 +1,6 @@
 import { StatusDot } from "../../primitives/StatusDot.tsx";
 import { Button } from "../../primitives/Button.tsx";
+import { Icon } from "../../primitives/Icon.tsx";
 import { componentClass } from "../../componentClass.ts";
 import type { Dispatch, SetStateAction } from "react";
 import type { Json } from "../../../core/api.ts";
@@ -61,7 +62,7 @@ export function Rail({
           title={t(railCollapsed ? "Show sidebar" : "Hide sidebar")}
           onClick={toggleRail}
         >
-          {railCollapsed ? "›" : "‹"}
+          <Icon name={railCollapsed ? "chevron-right" : "chevron-left"} size={17} />
         </Button>
       </div>
       <nav aria-label={t("Main navigation")}>
@@ -74,8 +75,11 @@ export function Rail({
             setPage("workspace");
           }}
         >
-          <span aria-hidden="true">＋</span>
+          <span aria-hidden="true">
+            <Icon name="plus" size={18} />
+          </span>
           <span>{t("New task")}</span>
+          <kbd aria-hidden="true">⌘N</kbd>
         </button>
         <button
           className={page === "models" ? componentClass(styles, "selected") : ""}
@@ -83,8 +87,32 @@ export function Rail({
           title={t("Pi models")}
           onClick={() => action("core.navigate", "models")}
         >
-          <span aria-hidden="true">◇</span>
+          <span aria-hidden="true">
+            <Icon name="cube" size={17} />
+          </span>
           <span>{t("Pi models")}</span>
+        </button>
+        <button
+          className={page === "packages" ? componentClass(styles, "selected") : ""}
+          aria-label={t("Pi packages")}
+          title={t("Pi packages")}
+          onClick={() => action("core.navigate", "packages")}
+        >
+          <span aria-hidden="true">
+            <Icon name="grid" size={17} />
+          </span>
+          <span>{t("Pi packages")}</span>
+        </button>
+        <button
+          className={page === "skills" ? componentClass(styles, "selected") : ""}
+          aria-label={t("Pi skills")}
+          title={t("Pi skills")}
+          onClick={() => action("core.navigate", "skills")}
+        >
+          <span aria-hidden="true">
+            <Icon name="bolt" size={17} />
+          </span>
+          <span>{t("Pi skills")}</span>
         </button>
       </nav>
       <div className={componentClass(styles, "project-heading")}>
@@ -103,7 +131,7 @@ export function Rail({
             aria-controls="task-browser-controls"
             onClick={() => setTaskBrowserOpen((open) => !open)}
           >
-            ⌕
+            <Icon name="search" size={16} />
           </Button>
           <Button
             variant="icon"
@@ -113,14 +141,16 @@ export function Rail({
             disabled={busy || !native}
             onClick={() => perform(addProject)}
           >
-            ＋
+            <Icon name="plus" size={17} />
           </Button>
         </div>
       </div>
       {taskBrowserOpen && (
         <div id="task-browser-controls" className={componentClass(styles, "task-browser-controls")}>
           <label className={componentClass(styles, "task-search")}>
-            <span aria-hidden="true">⌕</span>
+            <span aria-hidden="true">
+              <Icon name="search" size={15} />
+            </span>
             <span className="sr-only">{t("Search tasks")}</span>
             <input
               autoFocus
@@ -157,17 +187,23 @@ export function Rail({
         setPage={setPage}
         busy={busy}
         connected={connected}
+        railCollapsed={railCollapsed}
         clearExtensionUi={clearExtensionUi}
         perform={perform}
       />
       <div className={componentClass(styles, "rail-bottom")}>
         <button
           className={
-            page !== "workspace" && page !== "models" ? componentClass(styles, "selected") : ""
+            page === "settings" || page === "plugins" || page === "panels" || page === "shortcuts"
+              ? componentClass(styles, "selected")
+              : ""
           }
           onClick={() => action("core.navigate", "settings")}
         >
-          <span aria-hidden="true">⚙</span> {t("Settings")}
+          <span aria-hidden="true">
+            <Icon name="settings" size={17} />
+          </span>{" "}
+          {t("Settings")}
         </button>
         <div className={componentClass(styles, "runtime-label")}>
           <StatusDot offline={!connected} />

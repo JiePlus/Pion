@@ -1,30 +1,53 @@
 .task-start {
-  width: min(760px, calc(100% - 40px));
+  width: min(840px, calc(100% - 40px));
   margin: auto;
-  padding: 52px 0 96px;
+  padding: 40px 0 80px;
 }
 
 .start-heading {
-  margin-bottom: 24px;
+  margin-bottom: 38px;
   text-align: center;
 }
 
 .start-heading img {
-  width: 48px;
-  height: 48px;
-  margin-bottom: 14px;
-  border-radius: 12px;
+  width: 56px;
+  height: 56px;
+  margin-bottom: 24px;
+  border-radius: 15px;
   box-shadow: 0 0 0 1px var(--pion-color-line);
 }
 
 .start-heading h1 {
-  margin-bottom: 8px;
+  margin-bottom: 10px;
+  font-size: 32px;
 }
 
 .start-heading p {
   margin: 0;
   color: var(--pion-color-muted);
-  font-size: 13px;
+  font-size: 15px;
+}
+
+.suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 24px;
+}
+
+.suggestions button {
+  min-height: 36px;
+  padding: 7px 13px;
+  border-radius: 7px;
+  background: var(--pion-color-surface-raised);
+  font-size: 12px;
+}
+
+.suggestions svg {
+  margin-right: 7px;
+  color: var(--pion-color-brand);
+  vertical-align: -2px;
 }
 
 .composer-footer {
@@ -33,14 +56,15 @@
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  padding: 8px 10px 10px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--pion-color-line);
 }
 
 .new-task-options {
   display: flex;
   min-width: 0;
   align-items: center;
-  gap: 3px;
+  gap: 7px;
   overflow: visible;
 }
 
@@ -110,7 +134,7 @@
   min-height: 34px;
   place-items: center;
   padding: 0;
-  border-radius: 50%;
+  border-radius: 8px;
 }
 
 .send-button {
@@ -173,7 +197,7 @@
   width: 100%;
   overflow: visible;
   border: 1px solid var(--pion-color-line-strong);
-  border-radius: 14px;
+  border-radius: 20px;
   background: var(--pion-color-surface);
   box-shadow: var(--pion-shadow-low);
 }
@@ -183,15 +207,31 @@
 }
 
 .command-form textarea {
-  min-height: 122px;
-  padding: 17px 18px 8px;
+  min-height: 178px;
+  padding: 22px 24px 8px;
   border: 0;
-  border-radius: 13px 13px 0 0;
+  border-radius: 19px 19px 0 0;
   background: transparent;
-  font-size: 14px;
+  font-size: 16px;
   resize: none;
 }
 
 .command-form textarea:focus-visible {
   outline: none;
+}
+
+@media (max-width: 700px) {
+  .task-start {
+    width: calc(100% - 28px);
+    padding-block: 20px 36px;
+  }
+
+  .start-heading h1 {
+    font-size: 25px;
+  }
+
+  .new-task-options {
+    gap: 2px;
+    overflow-x: auto;
+  }
 }

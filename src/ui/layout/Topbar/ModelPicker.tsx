@@ -1,6 +1,7 @@
 import { componentClass } from "../../componentClass.ts";
 import { useEffect, useRef, useState } from "react";
 import { t } from "../../../core/i18n.ts";
+import { Icon } from "../../primitives/Icon.tsx";
 import styles from "./ModelPicker.module.css";
 
 interface Model {
@@ -81,7 +82,7 @@ export function ModelPicker({
         <span>{selected?.name || selected?.id || t("Default model")}</span>
         {selected && <small>{selected.provider}</small>}
         <span className={componentClass(styles, "model-picker-chevron")} aria-hidden="true">
-          ⌄
+          <Icon name="chevron-down" size={14} />
         </span>
       </button>
       {open && (

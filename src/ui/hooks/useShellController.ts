@@ -530,6 +530,20 @@ export function useShellController(runtime: Runtime, boot: Boot) {
         event.preventDefault();
         runtime.commands.execute("core.palette").catch(() => {});
       }
+      if (
+        (event.metaKey || event.ctrlKey) &&
+        !event.shiftKey &&
+        event.key.toLowerCase() === "n" &&
+        !dialogs.active &&
+        !busy &&
+        page !== "setup"
+      ) {
+        event.preventDefault();
+        setPalette(false);
+        setTask(null);
+        clearExtensionUi();
+        setPage("workspace");
+      }
       if (event.key === "Tab" && dialogs.active) {
         const focusable = [
           ...(extensionDialog.current?.querySelectorAll<HTMLElement>(
@@ -570,7 +584,7 @@ export function useShellController(runtime: Runtime, boot: Boot) {
     };
     document.addEventListener("keydown", key);
     return () => document.removeEventListener("keydown", key);
-  }, [dialogs.active, dialogs.responding, runtime, taskMenuOpen, usageOpen]);
+  }, [dialogs.active, dialogs.responding, runtime, taskMenuOpen, usageOpen, page, busy]);
 
   const panels = [...runtime.panels.values()];
   const { getPanelsAt: at } = usePanels(runtime, layoutState);

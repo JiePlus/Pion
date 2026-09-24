@@ -1,15 +1,18 @@
 .settings-tabs {
   display: flex;
-  min-height: 46px;
+  min-height: 52px;
   align-items: end;
   gap: 4px;
   margin: 0;
-  padding: 8px 28px 0;
+  padding: 8px 40px 0;
   border-bottom: 1px solid var(--pion-color-line);
   background: var(--pion-color-surface);
 }
 
 .settings-tabs button {
+  display: flex;
+  align-items: center;
+  gap: 7px;
   min-height: 32px;
   border-color: transparent;
   border-bottom-color: transparent;

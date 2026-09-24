@@ -7,10 +7,10 @@
   align-items: center;
   justify-content: space-between;
   gap: 20px;
-  padding: 0 18px;
+  padding: 0 30px;
   border-bottom: 1px solid var(--pion-color-line);
   background: var(--pion-color-surface);
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .task-breadcrumb {
@@ -21,7 +21,7 @@
 }
 
 .task-breadcrumb strong {
-  font-weight: 620;
+  font-weight: 600;
 }
 
 .slash {
@@ -62,7 +62,10 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 7px;
+  padding: 5px 10px;
+  border: 1px solid var(--pion-color-line);
+  border-radius: 6px;
+  background: var(--pion-color-surface-raised);
   color: var(--pion-color-muted);
   font-size: 10px;
   white-space: nowrap;

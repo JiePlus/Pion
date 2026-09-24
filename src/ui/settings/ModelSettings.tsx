@@ -45,7 +45,9 @@ export function ModelSettings({
     <div className={componentClass(styles, "model-management")}>
       {!embedded && (
         <header className={componentClass(styles, "model-management-header")}>
-          <h1>{t("Connect Pi models")}</h1>
+          <h1>
+            {t("Connect Pi models")} <span aria-hidden="true">/ Models</span>
+          </h1>
           <p className={`settings-note ${utilityStyles.settingsNote}`}>
             {t(
               "Choose how Pi connects to a model provider. Reopen a task after changing configuration.",

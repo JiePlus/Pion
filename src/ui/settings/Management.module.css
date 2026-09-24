@@ -1,9 +1,9 @@
 .management {
   width: 100%;
-  max-width: 1040px;
+  max-width: 1120px;
   min-height: 0;
-  margin: 0 auto;
-  padding: 40px 42px 70px;
+  margin: 0;
+  padding: 42px 40px 70px;
   flex: 1;
   overflow: auto;
 }
@@ -11,6 +11,10 @@
 .management > p {
   margin-bottom: 28px;
   font-size: 12px;
+}
+
+.management > h1 {
+  margin-bottom: 9px;
 }
 
 .management h3 {

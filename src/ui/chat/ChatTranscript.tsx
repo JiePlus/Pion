@@ -91,7 +91,7 @@ export function ChatTranscript({
             {working && (
               <div className={componentClass(styles, "chat-working")} role="status">
                 <StatusDot />
-                {t("Working…")}
+                <span className={componentClass(styles, "working-label")}>{t("Working…")}</span>
               </div>
             )}
             {retry && (

@@ -118,19 +118,23 @@ p {
 
 h1 {
   font-size: 28px;
-  font-weight: 590;
+  font-weight: 600;
   letter-spacing: -0.8px;
 }
 
 h2 {
   font-size: 20px;
-  font-weight: 590;
+  font-weight: 600;
   letter-spacing: -0.35px;
 }
 
 h3 {
   font-size: 13px;
-  font-weight: 650;
+  font-weight: 600;
+}
+
+::placeholder {
+  color: var(--pion-color-faint);
 }
 
 code,

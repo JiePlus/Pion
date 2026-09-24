@@ -20,6 +20,7 @@ async function openTaskActions(page: import("@playwright/test").Page) {
 }
 
 test("browser preview does not offer native Pi installation", async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem("pion.locale", "en"));
   await page.goto("/");
   await page.getByRole("button", { name: "Settings", exact: true }).click();
   await expect(page.getByRole("button", { name: "Check Pi updates" })).toBeDisabled();
@@ -457,8 +458,8 @@ test("background task banner only counts tasks in the current project", async ({
 test("Pi packages stay separate from desktop plugins and support both scopes", async ({ page }) => {
   await taskFixture(page);
   await page.goto("/");
-  await page.getByRole("button", { name: "Settings", exact: true }).click();
   await page.getByRole("button", { name: "Pi packages", exact: true }).click();
+  await expect(page.getByRole("navigation", { name: "Settings sections" })).toHaveCount(0);
   await page.getByRole("textbox", { name: "Package source" }).fill("npm:example-pi");
   await page.getByRole("button", { name: "Install", exact: true }).click();
   await expect(page.locator(".plugin-card")).toContainText("npm:example-pi");
@@ -494,8 +495,8 @@ test("Pi packages stay separate from desktop plugins and support both scopes", a
 test("Pi skills use native paths and show discovered skills", async ({ page }) => {
   await taskFixture(page);
   await page.goto("/");
-  await page.getByRole("button", { name: "Settings", exact: true }).click();
   await page.getByRole("button", { name: "Pi skills", exact: true }).click();
+  await expect(page.getByRole("navigation", { name: "Settings sections" })).toHaveCount(0);
   await page
     .getByRole("textbox", { name: "Skill file or directory" })
     .fill("/home/test/skills/review");
@@ -547,7 +548,6 @@ test("Pi package skills show source and can be toggled", async ({ page }) => {
     ),
   );
   await page.reload();
-  await page.getByRole("button", { name: "Settings", exact: true }).click();
   await page.getByRole("button", { name: "Pi skills", exact: true }).click();
   await expect(page.getByText("npm:example")).toBeVisible();
   await page.getByRole("button", { name: "Disable package-skill" }).click();
@@ -557,7 +557,6 @@ test("Pi package skills show source and can be toggled", async ({ page }) => {
 test("Pi skills support project paths, overrides, and slash commands", async ({ page }) => {
   await taskFixture(page);
   await page.goto("/");
-  await page.getByRole("button", { name: "Settings", exact: true }).click();
   await page.getByRole("button", { name: "Pi skills", exact: true }).click();
   await page
     .getByRole("textbox", { name: "Skill file or directory" })
@@ -786,6 +785,51 @@ test("theme follows the system, persists an override and sidebar controls stay l
     .toBe("true");
 });
 
+test("compact sidebar shows colored project initials and switches projects", async ({ page }) => {
+  await taskFixture(page);
+  await page.goto("/");
+  await page.evaluate(() => {
+    localStorage.setItem(
+      "fixture.catalog",
+      JSON.stringify({
+        projects: [
+          { id: "p1", name: "Pion", path: "/projects/Pion" },
+          { id: "p2", name: "Pioneer", path: "/projects/Pioneer" },
+          { id: "p3", name: "Pinn", path: "/projects/Pinn" },
+        ],
+        tasks: [],
+      }),
+    );
+  });
+  await page.reload();
+  await page.getByRole("button", { name: "Hide sidebar" }).click();
+
+  const projects = page.locator(".project-row button:first-child");
+  await expect(projects.nth(0).locator(".project-initials")).toHaveText("P");
+  await expect(projects.nth(1).locator(".project-initials")).toHaveText("P");
+  await expect(projects.nth(2).locator(".project-initials")).toHaveText("P");
+  await expect(projects.nth(0).locator(".project-initials")).toBeVisible();
+  await expect(projects.nth(0).locator(".project-name")).toBeHidden();
+  await expect(projects.nth(0)).toHaveAttribute("aria-label", "Pion");
+  const colors = await projects
+    .locator(".project-initials")
+    .evaluateAll((elements) =>
+      elements.map((element) => getComputedStyle(element).backgroundColor),
+    );
+  expect(new Set(colors).size).toBe(3);
+  await expect(projects.nth(0)).toHaveAttribute("aria-current", "true");
+  await projects.nth(1).click();
+  await expect(projects.nth(1)).toHaveAttribute("aria-current", "true");
+  await expect(page.locator(".app")).toHaveClass(/rail-collapsed/);
+
+  await page.getByRole("button", { name: "Show sidebar" }).click();
+  await page.setViewportSize({ width: 800, height: 1000 });
+  await expect(projects.nth(0).locator(".project-initials")).toBeVisible();
+  await expect(projects.nth(0).locator(".project-name")).toBeHidden();
+  await projects.nth(0).click();
+  await expect(projects.nth(0)).toHaveAttribute("aria-current", "true");
+});
+
 test("task search, state filters and project collapse preserve grouped navigation", async ({
   page,
 }) => {
@@ -922,6 +966,7 @@ test("sandbox denies network, host DOM, Tauri, other plugin commands, and undecl
 test("a deadlocked plugin times out without freezing the shell or a subsequent plugin", async ({
   page,
 }) => {
+  await page.addInitScript(() => localStorage.setItem("pion.locale", "en"));
   const manifest = {
     ...builtin,
     id: "broken",
@@ -943,6 +988,7 @@ test("a deadlocked plugin times out without freezing the shell or a subsequent p
 });
 
 test("sandbox boots under production CSP containing Tauri script hashes", async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem("pion.locale", "en"));
   await page.route("**/", async (route) => {
     const response = await route.fetch();
     const html = await response.text();

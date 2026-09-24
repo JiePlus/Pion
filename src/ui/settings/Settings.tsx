@@ -11,6 +11,7 @@ import type { Runtime } from "../../core/runtime.ts";
 import type { ThemePreference } from "../../core/theme.ts";
 import { PiVersionSection } from "./PiVersionSection.tsx";
 import { Checkbox, Input } from "../primitives/index.ts";
+import { Icon } from "../primitives/Icon.tsx";
 import styles from "./Settings.module.css";
 
 export interface LegacySession {
@@ -34,6 +35,7 @@ interface SettingsProps {
   setupStatus: PiSetupStatus | null;
   setupBusy: boolean;
   setupProgress: string;
+  refreshSetup: () => Promise<void>;
   versionStatus: PiSetupStatus | null;
   checkPiUpdate: () => Promise<void>;
   updatePi: () => Promise<void>;
@@ -59,6 +61,7 @@ export function Settings({
   setupStatus,
   setupBusy,
   setupProgress,
+  refreshSetup,
   versionStatus,
   checkPiUpdate,
   updatePi,
@@ -72,70 +75,117 @@ export function Settings({
 }: SettingsProps) {
   return (
     <main className={`${componentClass(managementStyles, "management")} settings`}>
-      <h1>{t("General")}</h1>
-      <label className={componentClass(styles, "language-setting")}>
-        {t("Language")}
-        <select value={locale} onChange={(event) => action("core.locale", event.target.value)}>
-          <option value="zh-CN">简体中文</option>
-          <option value="en">English</option>
-        </select>
-        <span className={`settings-note ${utilityStyles.settingsNote}`}>
-          {t(
-            "Choose the display language. Changes apply immediately and are saved on this device.",
-          )}
-        </span>
-      </label>
-      <label className={componentClass(styles, "language-setting")}>
-        {t("Theme")}
-        <select
-          aria-label={t("Theme")}
-          value={themePreference}
-          onChange={(event) => setTheme(event.target.value as ThemePreference)}
-        >
-          <option value="system">{t("Follow system")}</option>
-          <option value="light">{t("Light")}</option>
-          <option value="dark">{t("Dark")}</option>
-        </select>
-        <span className={`settings-note ${utilityStyles.settingsNote}`}>
-          {t("Choose how Pion appears on this device.")}
-        </span>
-      </label>
-      <p className="muted">
-        {t("Pion starts your installed Pi with its existing model and authentication settings.")}
-      </p>
-      <form
-        onSubmit={(event) => {
-          event.preventDefault();
-          action("core.settings.save");
-        }}
-      >
-        <label>
-          {t("Pi executable")}
-          <Input
-            value={executable}
-            placeholder={t("pi or an absolute executable path")}
-            onChange={(event) => setExecutable(event.target.value)}
-            required
-          />
-        </label>
-        <p className={`settings-note ${utilityStyles.settingsNote}`}>
-          {t(
-            "Connecting trusts the selected workspace and its Pi extensions. Pi runs with your user permissions. Tested with Pi 0.87.0.",
-          )}
-        </p>
-        <div className={`button-row ${utilityStyles.buttonRow}`}>
-          <Button variant="primary" className="primary" disabled={busy || !native} type="submit">
-            {t("Save settings")}
-          </Button>
-          <button
-            type="button"
-            disabled={busy || !connected}
-            onClick={() => action("core.disconnect")}
-          >
-            {t("Disconnect")}
-          </button>
+      <header className={componentClass(styles, "page-heading")}>
+        <h1>
+          {t("Settings")} <span>/ Preferences</span>
+        </h1>
+        <p>{t("Manage appearance, language, and the Pi runtime.")}</p>
+      </header>
+      <section className={componentClass(styles, "settings-card")}>
+        <h2>
+          <Icon name="palette" size={16} />
+          {t("Appearance and display")}
+        </h2>
+        <div className={componentClass(styles, "appearance-grid")}>
+          <label className={componentClass(styles, "language-setting")}>
+            {t("Language")}
+            <select value={locale} onChange={(event) => action("core.locale", event.target.value)}>
+              <option value="zh-CN">简体中文 (zh-CN)</option>
+              <option value="en">English (en-US)</option>
+            </select>
+            <span className={`settings-note ${utilityStyles.settingsNote}`}>
+              {t(
+                "Choose the display language. Changes apply immediately and are saved on this device.",
+              )}
+            </span>
+          </label>
+          <div className={componentClass(styles, "theme-setting")}>
+            <label>
+              {t("Theme")}
+              <select
+                aria-label={t("Theme")}
+                value={themePreference}
+                onChange={(event) => setTheme(event.target.value as ThemePreference)}
+              >
+                <option value="dark">{t("Dark")}</option>
+                <option value="system">{t("Follow system")}</option>
+                <option value="light">{t("Light")}</option>
+              </select>
+            </label>
+            <div className={componentClass(styles, "theme-choices")}>
+              {(["dark", "system", "light"] as const).map((value) => (
+                <button
+                  key={value}
+                  type="button"
+                  className={themePreference === value ? componentClass(styles, "selected") : ""}
+                  aria-pressed={themePreference === value}
+                  onClick={() => setTheme(value)}
+                >
+                  <span
+                    className={componentClass(styles, `theme-preview-${value}`)}
+                    aria-hidden="true"
+                  >
+                    <Icon
+                      name={value === "dark" ? "moon" : value === "light" ? "sun" : "monitor"}
+                      size={15}
+                    />
+                  </span>
+                  {t(value === "dark" ? "Dark" : value === "light" ? "Light" : "Follow system")}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
-      </form>
+      </section>
+      <section className={componentClass(styles, "settings-card")}>
+        <h2>
+          <Icon name="terminal" size={16} />
+          {t("Pi runtime")}
+        </h2>
+        <p className="muted">
+          {t("Pion starts your installed Pi with its existing model and authentication settings.")}
+        </p>
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            action("core.settings.save");
+          }}
+        >
+          <label>
+            {t("Pi executable")}
+            <Input
+              value={executable}
+              placeholder={t("pi or an absolute executable path")}
+              onChange={(event) => setExecutable(event.target.value)}
+              required
+            />
+          </label>
+          <p className={`settings-note ${utilityStyles.settingsNote}`}>
+            {t(
+              "Connecting trusts the selected workspace and its Pi extensions. Pi runs with your user permissions. Tested with Pi 0.87.0.",
+            )}
+          </p>
+          <div className={`button-row ${utilityStyles.buttonRow}`}>
+            <button
+              type="button"
+              disabled={busy || setupBusy || !native}
+              onClick={() => refreshSetup().catch((error) => runtime.notice("Pi", String(error)))}
+            >
+              {t("Test connection")}
+            </button>
+            <Button variant="primary" className="primary" disabled={busy || !native} type="submit">
+              {t("Save settings")}
+            </Button>
+            <button
+              type="button"
+              disabled={busy || !connected}
+              onClick={() => action("core.disconnect")}
+            >
+              {t("Disconnect")}
+            </button>
+          </div>
+        </form>
+      </section>
       {setupError && (
         <p className="error" role="alert">
           {setupError}

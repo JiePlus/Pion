@@ -8,11 +8,15 @@
 .chat-scroll {
   min-width: 0;
   flex: 1;
-  padding: 28px max(24px, calc((100% - 790px) / 2));
+  padding: 32px max(28px, calc((100% - 960px) / 2));
   overflow-y: auto;
   overflow-anchor: none;
   scrollbar-width: thin;
   scrollbar-color: var(--pion-color-line-strong) transparent;
+}
+
+:global(:root[data-theme="dark"]) .chat-scroll {
+  padding-inline: 30px;
 }
 
 .chat-messages > h1 {
@@ -30,7 +34,49 @@
 }
 
 .chat-working :global(.dot) {
-  animation: pulse 1.4s ease-in-out infinite;
+  position: relative;
+  width: 12px;
+  height: 12px;
+  flex: 0 0 12px;
+  background: transparent;
+}
+
+.chat-working :global(.dot)::before {
+  position: absolute;
+  inset: 2px;
+  border-radius: 1px;
+  background: var(--pion-color-brand);
+  content: "";
+  transform: rotate(45deg);
+  transform-origin: center;
+  animation: working-spin 1.4s linear infinite;
+}
+
+.working-label {
+  font-weight: 600;
+  background: linear-gradient(
+    100deg,
+    var(--pion-color-ink-soft) 42%,
+    #fff 50%,
+    var(--pion-color-ink-soft) 58%
+  );
+  background-size: 250% 100%;
+  background-position: 100% 0;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: working-shine 2.2s linear infinite;
+}
+
+@keyframes working-spin {
+  to {
+    transform: rotate(405deg);
+  }
+}
+
+@keyframes working-shine {
+  to {
+    background-position: 0 0;
+  }
 }
 
 .scroll-to-latest {

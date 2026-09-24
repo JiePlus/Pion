@@ -8,6 +8,7 @@ import { Runtime } from "../../core/runtime.ts";
 import type { PanelView } from "../../core/runtime.ts";
 import { SettingsTabs } from "../settings/SettingsTabs.tsx";
 import { Settings } from "../settings/Settings.tsx";
+import { Shortcuts } from "../settings/Shortcuts.tsx";
 import { PiSetup } from "../settings/PiSetup.tsx";
 import { PiPackages } from "../settings/PiPackages.tsx";
 import { Skills } from "../settings/Skills.tsx";
@@ -172,6 +173,7 @@ export function Shell({ runtime, boot }: { runtime: Runtime; boot: Boot }) {
               viewMode={viewMode}
               setConversationView={setConversationView}
               connected={connected}
+              setupStatus={setupStatus}
               headerActions={headerActions}
               usageButton={usageButton}
               usageOpen={usageOpen}
@@ -204,7 +206,10 @@ export function Shell({ runtime, boot }: { runtime: Runtime; boot: Boot }) {
           {page === "workspace" && (
             <Workspace controller={controller} panel={panel} selectedProject={selectedProject} />
           )}
-          {page !== "workspace" && page !== "models" && page !== "setup" && (
+          {(page === "settings" ||
+            page === "plugins" ||
+            page === "panels" ||
+            page === "shortcuts") && (
             <SettingsTabs page={page} onNavigate={(next) => action("core.navigate", next)} />
           )}
           {page === "models" && (
@@ -273,6 +278,7 @@ export function Shell({ runtime, boot }: { runtime: Runtime; boot: Boot }) {
           {page === "panels" && (
             <Panels panels={panels} layout={layout} at={at} panel={panel} action={action} />
           )}
+          {page === "shortcuts" && <Shortcuts />}
           {page === "settings" && (
             <Settings
               locale={locale}
@@ -287,6 +293,7 @@ export function Shell({ runtime, boot }: { runtime: Runtime; boot: Boot }) {
               setupStatus={setupStatus}
               setupBusy={setupBusy}
               setupProgress={setupProgress}
+              refreshSetup={refreshSetup}
               versionStatus={versionStatus}
               checkPiUpdate={checkPiUpdate}
               updatePi={updatePi}

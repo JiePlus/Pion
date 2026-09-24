@@ -120,24 +120,43 @@ const zh = {
   "Start task": "开始任务",
   "Opening task…": "正在打开任务…",
   "Describe your task": "描述你的任务",
-  "What would you like to work on?": "想从哪里开始？",
-  "Start a local Pi task in one of your projects.": "在一个项目中启动本地 Pi 任务。",
+  "What would you like to work on?": "今天想做什么？",
+  "Start a local Pi task in one of your projects.":
+    "在当前项目中启动 Pi 任务，调度模型、自动化工具与工程技能。",
+  Suggestions: "任务建议",
+  "Explore the project architecture": "探索工程架构",
+  "Review dependencies": "依赖审查与清理",
+  "Write unit tests": "编写单元测试用例",
   Local: "本地",
   "Ask a question, build a feature, or fix a bug…": "提个问题，开发新功能，或修复一个问题…",
   "Enter to send · Shift + Enter for a new line": "Enter 发送 · Shift + Enter 换行",
   "Tasks use your local Pi configuration and can run tools in the selected project.":
     "任务使用本机 Pi 配置，可在所选项目中执行工具操作。",
   General: "通用",
+  "Appearance and display": "界面与外观",
+  "Manage appearance, language, and the Pi runtime.": "管理显示语言、外观主题，以及 Pi 执行环境。",
+  "Add API key": "添加 API Key",
+  "Test connection": "测试连接",
   "Settings sections": "设置分类",
-  Theme: "主题",
+  Theme: "视觉主题",
   "Follow system": "跟随系统",
-  Light: "浅色",
-  Dark: "深色",
+  Light: "明亮工程",
+  Dark: "深色终端",
   "Choose how Pion appears on this device.": "选择 Pion 在此设备上的显示方式。",
   "Save settings": "保存设置",
   "Custom Pi models": "自定义 Pi 模型",
-  "Pi models": "Pi 模型",
-  "Connect Pi models": "接入 Pi 模型",
+  "Pi models": "模型",
+  "Model services": "模型服务",
+  "Workspace ready": "工作区就绪",
+  "Pi setup required": "Pi 待配置",
+  "Keyboard shortcuts": "快捷键",
+  "Manage extension panels": "管理扩展面板",
+  "Keyboard shortcuts for common actions.": "查看常用操作的键盘快捷键。",
+  "Common actions": "常用操作",
+  "Send message": "发送消息",
+  "Insert new line": "插入换行",
+  "Close menu or dialog": "关闭菜单或对话框",
+  "Connect Pi models": "模型服务",
   "Choose how Pi connects to a model provider. Reopen a task after changing configuration.":
     "选择 Pi 连接模型服务商的方式。更改配置后，请重新打开任务。",
   "Connection methods": "接入方式",
@@ -270,8 +289,8 @@ const zh = {
   Workspace: "工作区",
   Plugins: "插件",
   "Desktop plugins": "桌面插件",
-  "Pi packages": "Pi 包",
-  "Pi skills": "Pi 技能",
+  "Pi packages": "扩展包",
+  "Pi skills": "技能",
   "Manage discovered user, project, and Pi package skills here. Install and update packages under Pi packages.":
     "在这里管理用户、项目和 Pi 包中的技能；安装和更新包请前往 Pi 包。",
   "Skill file or directory": "技能文件或目录",
@@ -305,7 +324,7 @@ const zh = {
   Settings: "设置",
   PANELS: "面板",
   "Your plugins live here.": "已启用的插件将显示在这里。",
-  "Pi runtime": "Pi 运行时",
+  "Pi runtime": "Pi 引擎执行环境",
   "Pi setup": "Pi 初始设置",
   "Set up Pi": "配置 Pi",
   "Open Pi setup": "打开 Pi 初始设置",
@@ -334,10 +353,10 @@ const zh = {
   "Choose a model and connect its provider below. Pion checks authentication without sending a model request.":
     "请选择模型并在下方连接其服务商。Pion 会检查认证状态，不会发送模型请求。",
   "Check model again": "重新检查模型",
-  "Pi version": "Pi 版本",
+  "Pi version": "版本与兼容性",
   "Installed: {installed} · Pion verified: {verified}":
     "已安装：{installed} · Pion 已验证：{verified}",
-  "Check Pi updates": "检查 Pi 更新",
+  "Check Pi updates": "检查更新",
   "Update Pi to {version}": "将 Pi 更新到 {version}",
   "Official latest: {version}": "官方最新版本：{version}",
   "This release has not been verified with Pion yet.": "此版本尚未通过 Pion 验证。",
@@ -395,7 +414,7 @@ const zh = {
   "Pion starts your installed Pi with its existing model and authentication settings.":
     "Pion 使用已安装的 Pi，并沿用其模型和身份验证配置。",
   "Workspace directory": "工作区目录",
-  "Pi executable": "Pi 可执行文件",
+  "Pi executable": "可执行文件路径",
   "pi or an absolute executable path": "pi 或可执行文件的绝对路径",
   "Connecting trusts the selected workspace and its Pi extensions. Pi runs with your user permissions. Tested with Pi 0.87.0.":
     "连接表示信任所选工作区及其中的 Pi 扩展。Pi 使用当前用户权限运行。已验证 Pi 0.87.0。",
@@ -468,7 +487,7 @@ function initialLocale(): Locale {
   } catch {
     /* Storage may be unavailable. */
   }
-  return resolveLocale(saved, typeof navigator === "undefined" ? [] : navigator.languages);
+  return saved === null ? "zh-CN" : resolveLocale(saved, navigator.languages);
 }
 let locale = initialLocale();
 const listeners = new Set<() => void>();

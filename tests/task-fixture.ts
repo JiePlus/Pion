@@ -5,6 +5,8 @@ import { readFileSync } from "node:fs";
 export async function taskFixture(page: Page) {
   await page.addInitScript(
     ({ manifest, source }) => {
+      if (!localStorage.getItem("pion.locale") && navigator.language.startsWith("en"))
+        localStorage.setItem("pion.locale", "en");
       const callbacks = new Map<number, (event: unknown) => void>();
       const listeners = new Map<string, number>();
       let sequence = 0;

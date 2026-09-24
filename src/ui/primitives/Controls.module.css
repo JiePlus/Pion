@@ -9,8 +9,8 @@
   height: 30px;
   min-height: 30px;
   padding: 4px 8px;
-  border-color: transparent;
-  background: transparent;
+  border-color: var(--pion-color-line);
+  background: var(--pion-color-surface-raised);
   color: var(--pion-color-ink-soft);
   font-size: 11px;
 }

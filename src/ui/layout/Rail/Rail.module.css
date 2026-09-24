@@ -3,18 +3,20 @@
   min-width: 0;
   min-height: 0;
   flex-direction: column;
-  padding: 12px 10px 10px;
+  padding: 0 10px 10px;
   overflow: hidden;
   border-right: 1px solid var(--pion-color-line);
-  background: var(--pion-color-surface-muted);
+  background: var(--pion-color-surface);
 }
 
 .rail-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  min-height: 36px;
-  margin: 0 4px 8px;
+  min-height: 60px;
+  margin: 0 -10px 14px;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--pion-color-line);
 }
 
 .brand {
@@ -25,57 +27,108 @@
 }
 
 .brand img {
-  width: 26px;
-  height: 26px;
-  border-radius: 7px;
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
 }
 
 .brand strong {
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 650;
   letter-spacing: -0.15px;
 }
 
 .rail nav {
   display: grid;
-  gap: 2px;
-  margin-bottom: 8px;
+  gap: 4px;
+  margin-bottom: 20px;
+  padding: 0 5px 18px;
+  border-bottom: 1px solid var(--pion-color-line);
 }
 
 .rail nav button,
 .rail-bottom > button {
   display: flex;
   width: 100%;
-  min-height: 34px;
+  min-height: 38px;
   align-items: center;
   gap: 10px;
-  padding: 7px 9px;
+  padding: 7px 11px;
   border-color: transparent;
   background: transparent;
   text-align: left;
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .rail nav button.selected,
 .rail-bottom > button.selected {
-  color: var(--pion-color-ink);
+  color: var(--pion-color-brand-strong);
   background: var(--pion-color-surface-selected);
+}
+
+.rail nav button.selected > span:first-child,
+.rail-bottom > button.selected > span:first-child,
+.rail nav .new-task-button > span:first-child {
+  color: var(--pion-color-brand);
 }
 
 .rail nav .new-task-button {
-  color: var(--pion-color-brand-strong);
-  background: var(--pion-color-brand-soft);
-  font-weight: 620;
+  min-height: 42px;
+  margin-bottom: 12px;
+  justify-content: center;
+  border-color: var(--pion-color-line-strong);
+  background: var(--pion-color-surface-muted);
+  color: var(--pion-color-ink);
+  font-weight: 600;
+}
+
+.rail nav .new-task-button.selected {
+  background: var(--pion-color-surface-muted);
+  color: var(--pion-color-ink);
 }
 
 .rail nav .new-task-button:hover:not(:disabled) {
-  background: var(--pion-color-surface-selected);
+  border-color: var(--pion-color-brand);
+  background: var(--pion-color-brand-soft);
+}
+
+.new-task-button kbd {
+  margin-left: auto;
+  color: var(--pion-color-muted);
+  font-size: 10px;
+  font-weight: 400;
+}
+
+:global(:root[data-theme="light"]) .new-task-button kbd {
+  color: rgb(255 255 255 / 70%);
+}
+
+:global(:root[data-theme="light"]) .rail nav .new-task-button {
+  border-color: var(--pion-color-brand-strong);
+  background: var(--pion-color-brand-strong);
+  color: #ffffff;
+}
+
+:global(:root[data-theme="light"]) .rail nav .new-task-button.selected {
+  background: var(--pion-color-brand-strong);
+  color: #ffffff;
+}
+
+:global(:root[data-theme="light"]) .rail nav .new-task-button > span:first-child {
+  color: #ffffff;
+}
+
+:global(:root[data-theme="light"]) .rail nav .new-task-button:hover:not(:disabled) {
+  background: var(--pion-color-brand);
+  color: #ffffff;
 }
 
 .rail nav button > span:first-child,
 .rail-bottom > button > span:first-child {
+  display: grid;
   width: 16px;
   flex: 0 0 16px;
+  place-items: center;
   color: var(--pion-color-ink-soft);
   text-align: center;
   font-size: 16px;
@@ -128,7 +181,7 @@
   border-color: transparent;
   background: transparent;
   color: var(--pion-color-muted);
-  font-size: 10px;
+  font-size: 11px;
 }
 
 .task-filters button.selected {
@@ -189,6 +242,9 @@
 
 .project-group {
   margin-bottom: 8px;
+  padding: 4px 5px;
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--pion-color-surface-muted) 45%, transparent);
 }
 
 .project-row {
@@ -214,7 +270,12 @@
   font-weight: 620;
 }
 
-.project-row button:first-child > span:nth-child(2) {
+.project-row button:first-child.selected-project {
+  color: var(--pion-color-ink);
+  background: transparent;
+}
+
+.project-name {
   min-width: 0;
   flex: 1;
   overflow: hidden;
@@ -222,15 +283,67 @@
   white-space: nowrap;
 }
 
+.project-initials {
+  display: none;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9px;
+  background: var(--pion-color-surface);
+  color: var(--pion-color-ink-soft);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.selected-project .project-initials {
+  box-shadow: 0 0 0 2px var(--pion-color-brand);
+}
+
+.project-color-0 {
+  background: var(--pion-color-brand-soft);
+  color: var(--pion-color-brand-strong);
+}
+
+.project-color-1 {
+  background: color-mix(in srgb, var(--pion-color-blue) 20%, var(--pion-color-surface));
+  color: var(--pion-color-blue);
+}
+
+.project-color-2 {
+  background: var(--pion-color-amber-soft);
+  color: var(--pion-color-amber);
+}
+
+.project-color-3 {
+  background: var(--pion-color-danger-soft);
+  color: var(--pion-color-danger);
+}
+
+.project-color-4 {
+  background: color-mix(in srgb, var(--pion-color-leaf) 28%, var(--pion-color-surface));
+  color: var(--pion-color-ink-soft);
+}
+
+.project-color-5 {
+  background: color-mix(in srgb, var(--pion-color-unread) 20%, var(--pion-color-surface));
+  color: var(--pion-color-unread);
+}
+
 .project-row button:last-child {
+  display: grid;
   width: 28px;
   min-height: 28px;
+  place-items: center;
   padding: 0;
   color: var(--pion-color-muted);
 }
 
 .disclosure {
+  display: grid;
   width: 12px;
+  place-items: center;
   color: var(--pion-color-muted);
   font-size: 14px;
   text-align: center;
@@ -257,6 +370,13 @@
 .task-list button.selected {
   color: var(--pion-color-ink);
   background: var(--pion-color-surface-selected);
+  box-shadow: inset 2px 0 var(--pion-color-brand);
+}
+
+:global(:root[data-theme="dark"]) .task-list button.selected {
+  border: 1px solid var(--pion-color-line-strong);
+  background: var(--pion-color-surface-hover);
+  box-shadow: none;
 }
 
 .task-title {
@@ -315,11 +435,18 @@
   border-top: 1px solid var(--pion-color-line);
 }
 
+.rail-bottom > button.selected {
+  border: 1px solid color-mix(in srgb, var(--pion-color-brand) 40%, var(--pion-color-line));
+}
+
 .runtime-label {
   display: flex;
   align-items: center;
   gap: 7px;
-  padding: 4px 10px 0;
+  padding: 12px 10px 0;
+  margin-top: 8px;
+  border-top: 1px solid var(--pion-color-line);
+  font-family: var(--pion-font-mono);
   color: var(--pion-color-muted);
   font-size: 10px;
 }
@@ -334,10 +461,14 @@
 
 :global(.rail-collapsed) .brand strong,
 :global(.rail-collapsed) .rail nav button > span:last-child,
+:global(.rail-collapsed) .new-task-button > span:nth-child(2),
+:global(.rail-collapsed) .new-task-button kbd,
 :global(.rail-collapsed) .task-browser-controls,
 :global(.rail-collapsed) .project-heading > span,
 :global(.rail-collapsed) .project-heading :global(.icon-button),
-:global(.rail-collapsed) .project-row button:first-child > :not(.disclosure),
+:global(.rail-collapsed) .project-row .disclosure,
+:global(.rail-collapsed) .project-row .project-name,
+:global(.rail-collapsed) .project-row small,
 :global(.rail-collapsed) .project-row button:last-child,
 :global(.rail-collapsed) .task-list,
 :global(.rail-collapsed) .rail-bottom > button,
@@ -357,6 +488,11 @@
 
 :global(.rail-collapsed) .project-row button:first-child {
   justify-content: center;
+  padding: 3px;
+}
+
+:global(.rail-collapsed) .project-initials {
+  display: flex;
 }
 
 :global(.rail-collapsed) .project-heading {
@@ -371,10 +507,14 @@
 @media (max-width: 850px) {
   :global(.app):not(:global(.rail-collapsed)) .brand strong,
   :global(.app):not(:global(.rail-collapsed)) .rail nav button > span:last-child,
+  :global(.app):not(:global(.rail-collapsed)) .new-task-button > span:nth-child(2),
+  :global(.app):not(:global(.rail-collapsed)) .new-task-button kbd,
   :global(.app):not(:global(.rail-collapsed)) .task-browser-controls,
   :global(.app):not(:global(.rail-collapsed)) .project-heading > span,
   :global(.app):not(:global(.rail-collapsed)) .project-heading :global(.icon-button),
-  :global(.app):not(:global(.rail-collapsed)) .project-row button:first-child > :not(.disclosure),
+  :global(.app):not(:global(.rail-collapsed)) .project-row .disclosure,
+  :global(.app):not(:global(.rail-collapsed)) .project-row .project-name,
+  :global(.app):not(:global(.rail-collapsed)) .project-row small,
   :global(.app):not(:global(.rail-collapsed)) .project-row button:last-child,
   :global(.app):not(:global(.rail-collapsed)) .task-list,
   :global(.app):not(:global(.rail-collapsed)) .rail-bottom > button,
@@ -391,5 +531,13 @@
   .project-row button:first-child,
   .runtime-label {
     justify-content: center;
+  }
+
+  :global(.app):not(:global(.rail-collapsed)) .project-row button:first-child {
+    padding: 3px;
+  }
+
+  :global(.app):not(:global(.rail-collapsed)) .project-initials {
+    display: flex;
   }
 }

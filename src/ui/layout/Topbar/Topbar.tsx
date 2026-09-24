@@ -2,7 +2,7 @@ import { StatusDot } from "../../primitives/StatusDot.tsx";
 import { componentClass } from "../../componentClass.ts";
 import type { Dispatch, RefObject, SetStateAction } from "react";
 import { host, native } from "../../../core/host.ts";
-import type { Task } from "../../../core/host.ts";
+import type { PiSetupStatus, Task } from "../../../core/host.ts";
 import { t } from "../../../core/i18n.ts";
 import type { Runtime } from "../../../core/runtime.ts";
 import type { ViewMode } from "../../chat/ChatMessage.tsx";
@@ -22,6 +22,7 @@ interface TopbarProps {
   viewMode: ViewMode;
   setConversationView: (value: ViewMode) => void;
   connected: boolean;
+  setupStatus: PiSetupStatus | null;
   headerActions: RefObject<HTMLDivElement | null>;
   usageButton: RefObject<HTMLButtonElement | null>;
   usageOpen: boolean;
@@ -52,6 +53,7 @@ export function Topbar({
   viewMode,
   setConversationView,
   connected,
+  setupStatus,
   headerActions,
   usageButton,
   usageOpen,
@@ -79,7 +81,7 @@ export function Topbar({
         <span className="muted">
           {page === "workspace"
             ? (projectName ?? "Pion")
-            : page === "models"
+            : page === "models" || page === "packages" || page === "skills"
               ? "Pion"
               : t("Settings")}
         </span>
@@ -87,21 +89,37 @@ export function Topbar({
         <strong>
           {page === "workspace"
             ? extensionTitle || task?.title || t("New task")
-            : page === "models"
-              ? t("Pi models")
+            : page === "models" || page === "packages" || page === "skills"
+              ? t(
+                  page === "models"
+                    ? "Model services"
+                    : page === "packages"
+                      ? "Pi packages"
+                      : "Pi skills",
+                )
               : t(
                   page === "plugins"
                     ? "Desktop plugins"
-                    : page === "packages"
-                      ? "Pi packages"
-                      : page === "skills"
-                        ? "Pi skills"
-                        : page === "panels"
-                          ? "Extension panels"
-                          : "General",
+                    : page === "panels"
+                      ? "Extension panels"
+                      : page === "shortcuts"
+                        ? "Keyboard shortcuts"
+                        : "General",
                 )}
         </strong>
       </div>
+      {!(page === "workspace" && task) && (
+        <span className={componentClass(styles, "connection-pill")}>
+          <StatusDot offline={!setupStatus?.modelReady} />
+          {t(
+            !setupStatus && native
+              ? "Checking Pi…"
+              : setupStatus?.modelReady
+                ? "Workspace ready"
+                : "Pi setup required",
+          )}
+        </span>
+      )}
       {page === "workspace" && task && (
         <div className={componentClass(styles, "header-actions")} ref={headerActions}>
           <label className={componentClass(styles, "view-mode-control")}>

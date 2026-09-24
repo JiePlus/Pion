@@ -1,5 +1,6 @@
 import utilityStyles from "../primitives/Utilities.module.css";
 import { Button } from "../primitives/Button.tsx";
+import { Icon } from "../primitives/Icon.tsx";
 import controlStyles from "../primitives/Controls.module.css";
 import { componentClass } from "../componentClass.ts";
 import type { Dispatch, RefObject, SetStateAction } from "react";
@@ -253,7 +254,7 @@ export function ChatComposer({
             title={t("More options")}
             onClick={() => setMoreOpen((open) => !open)}
           >
-            +
+            <Icon name="plus" size={17} />
           </button>
           <button
             className={`composer-command-button ${controlStyles.commandButton}`}
@@ -266,7 +267,7 @@ export function ChatComposer({
               else picker.current?.click();
             }}
           >
-            ◇
+            <Icon name="folder" size={16} />
           </button>
           <ModelPicker
             models={models}
@@ -462,7 +463,7 @@ export function ChatComposer({
               (!!attachments.length && !supportsImages)
             }
           >
-            ↑
+            <Icon name="arrow-up" size={17} />
           </Button>
         </div>
       </div>

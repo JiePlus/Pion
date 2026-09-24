@@ -1,7 +1,7 @@
 import utilityStyles from "../primitives/Utilities.module.css";
 import { Button } from "../primitives/Button.tsx";
 import { componentClass } from "../componentClass.ts";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { t } from "../../core/i18n.ts";
 import styles from "./ModelSettings.module.css";
 import { host, native } from "../../core/host.ts";
@@ -35,6 +35,7 @@ export function ApiKeyAccess({
   const [key, setKey] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const providerInput = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!native) return;
@@ -100,6 +101,37 @@ export function ApiKeyAccess({
           {t("Model configuration requires the desktop app.")}
         </p>
       )}
+      <div className={componentClass(styles, "provider-cards")}>
+        {["openai", "anthropic", "google", "deepseek"].map((name) => {
+          const connected = config?.providers.some((item) => item.provider === name);
+          return (
+            <button
+              key={name}
+              type="button"
+              className={provider === name ? componentClass(styles, "selected") : ""}
+              aria-pressed={provider === name}
+              onClick={() => {
+                setProvider(name);
+                providerInput.current?.focus();
+              }}
+            >
+              <span className={componentClass(styles, "provider-mark")} aria-hidden="true">
+                {name.slice(0, 2).toUpperCase()}
+              </span>
+              <strong>
+                {name === "openai"
+                  ? "OpenAI"
+                  : name === "google"
+                    ? "Google"
+                    : name === "deepseek"
+                      ? "DeepSeek"
+                      : "Anthropic"}
+              </strong>
+              <small>{connected ? t("Connected") : t("Add API key")}</small>
+            </button>
+          );
+        })}
+      </div>
       {customProviders.length > 0 && (
         <label className={componentClass(styles, "model-custom-auth-picker")}>
           {t("Custom provider")}
@@ -126,6 +158,7 @@ export function ApiKeyAccess({
         <label>
           {t("Provider ID")}
           <input
+            ref={providerInput}
             list="pi-provider-suggestions"
             value={provider}
             onChange={(event) => setProvider(event.target.value)}

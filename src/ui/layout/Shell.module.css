@@ -13,7 +13,7 @@
 }
 
 .rail-collapsed {
-  --pion-size-rail: 62px;
+  --pion-size-rail: 60px;
 }
 
 .shell-content {
@@ -75,7 +75,7 @@
 
 .statusbar {
   display: flex;
-  min-height: 27px;
+  min-height: 30px;
   flex-shrink: 0;
   align-items: center;
   justify-content: space-between;
@@ -84,7 +84,8 @@
   border-top: 1px solid var(--pion-color-line);
   color: var(--pion-color-muted);
   background: var(--pion-color-surface);
-  font-size: 9px;
+  font-family: var(--pion-font-mono);
+  font-size: 10px;
 }
 
 .statusbar > span {

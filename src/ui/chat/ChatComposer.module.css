@@ -1,13 +1,17 @@
 .core-composer {
   position: relative;
-  width: min(800px, calc(100% - 28px));
+  width: min(960px, calc(100% - 40px));
   margin: 0 auto 13px;
   flex-shrink: 0;
   overflow: visible;
   border: 1px solid var(--pion-color-line-strong);
-  border-radius: 15px;
+  border-radius: 19px;
   background: var(--pion-color-surface-raised);
   box-shadow: var(--pion-shadow-low);
+}
+
+:global(:root[data-theme="dark"]) .core-composer {
+  width: min(1080px, calc(100% - 40px));
 }
 
 .core-composer:focus-within {
@@ -16,11 +20,11 @@
 
 .core-composer > textarea {
   height: auto;
-  min-height: 54px;
+  min-height: 90px;
   max-height: 180px;
-  padding: 13px 15px 4px;
+  padding: 19px 21px 6px;
   border: 0;
-  border-radius: 15px 15px 0 0;
+  border-radius: 18px 18px 0 0;
   background: transparent;
   resize: none;
   font-size: 14px;
@@ -33,11 +37,12 @@
 .core-composer-footer {
   display: flex;
   min-width: 0;
-  min-height: 43px;
+  min-height: 60px;
   align-items: center;
   justify-content: space-between;
   gap: 7px;
-  padding: 4px 7px 7px;
+  padding: 8px 14px;
+  border-top: 1px solid var(--pion-color-line);
 }
 
 .composer-options,
@@ -71,7 +76,7 @@
   min-height: 34px;
   place-items: center;
   padding: 0;
-  border-radius: 50%;
+  border-radius: 8px;
 }
 
 .send-button {

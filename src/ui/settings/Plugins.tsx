@@ -23,6 +23,9 @@ export function Plugins({ installed, runtime, path, setPath, busy, action }: Plu
       <p className="muted">
         {t("Install a local plugin, review its permissions, and make this space yours.")}
       </p>
+      <button type="button" onClick={() => action("core.navigate", "panels")}>
+        {t("Manage extension panels")}
+      </button>
       <form
         className={componentClass(managementStyles, "install-form")}
         onSubmit={(event) => {
