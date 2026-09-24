@@ -1,0 +1,379 @@
+.endpointDialog,
+.discoveryDialog {
+  width: min(840px, 100%);
+  max-height: min(90vh, 920px);
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--catalog-line, #29364c);
+  border-radius: 7px;
+  background: var(--catalog-panel, #fff);
+  color: var(--catalog-text, #172033);
+  box-shadow: 0 28px 80px rgb(0 0 0 / 35%);
+}
+.discoveryDialog {
+  width: min(800px, 100%);
+}
+:global(:root[data-theme="dark"]) .endpointDialog,
+:global(:root[data-theme="dark"]) .discoveryDialog {
+  --catalog-line: #29364c;
+  --catalog-panel: #111827;
+  --catalog-inset: #182234;
+  --catalog-text: #f8fafc;
+  --catalog-muted: #94a3b8;
+}
+:global(:root[data-theme="light"]) .endpointDialog,
+:global(:root[data-theme="light"]) .discoveryDialog {
+  --catalog-line: #d8e3f5;
+  --catalog-panel: #fff;
+  --catalog-inset: #f8faff;
+  --catalog-text: #172033;
+  --catalog-muted: #8292ad;
+}
+.dialogHeading {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 25px 30px;
+  border-bottom: 1px solid var(--catalog-line);
+}
+.headingIcon {
+  display: grid;
+  width: 37px;
+  height: 37px;
+  flex: 0 0 37px;
+  place-items: center;
+  border: 1px solid #286855;
+  border-radius: 6px;
+  color: #50d9aa;
+  font-size: 21px;
+}
+.dialogHeading > div {
+  min-width: 0;
+  flex: 1;
+}
+.dialogHeading h2 {
+  margin: 0;
+  color: var(--catalog-text);
+  font-size: 20px;
+  line-height: 1.25;
+}
+.dialogHeading p {
+  margin: 5px 0 0;
+  color: var(--catalog-muted);
+  font-size: 12px;
+}
+.dialogHeading code {
+  padding: 2px 5px;
+  border: 1px solid var(--catalog-line);
+  border-radius: 3px;
+  color: var(--catalog-text);
+}
+.close {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--catalog-muted);
+  font-size: 25px;
+  line-height: 1;
+}
+.dialogBody {
+  max-height: calc(90vh - 185px);
+  padding: 24px 30px;
+  overflow-y: auto;
+  background: var(--catalog-inset);
+}
+.modeTabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 21px;
+}
+.modeTabs button {
+  min-height: 29px;
+  padding: 3px 12px;
+  border-color: var(--catalog-line);
+  background: var(--catalog-panel);
+  color: var(--catalog-muted);
+  font-size: 11px;
+}
+.modeTabs .selected {
+  border-color: #3bc89b;
+  color: #0f9e76;
+}
+.presetHeading {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  color: var(--catalog-muted);
+  font-size: 11px;
+}
+.presetHeading small {
+  font-size: 10px;
+}
+.presets,
+.protocols {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+.presets button,
+.protocols label {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 11px 13px;
+  border: 1px solid var(--catalog-line);
+  border-radius: 4px;
+  background: var(--catalog-panel);
+  color: var(--catalog-text);
+  text-align: left;
+}
+.presets button:hover,
+.protocols label.selected {
+  border-color: #4fcaac;
+  background: color-mix(in srgb, var(--catalog-panel), #10b981 8%);
+}
+.presets strong,
+.protocols strong {
+  font-size: 12px;
+  font-weight: 600;
+}
+.presets small,
+.protocols small {
+  margin-top: 4px;
+  color: var(--catalog-muted);
+  font-family: var(--pion-font-mono);
+  font-size: 10px;
+}
+.formFields {
+  display: grid;
+  gap: 17px;
+  margin-top: 22px;
+}
+.formFields > label,
+.formFields legend {
+  display: grid;
+  gap: 8px;
+  color: var(--catalog-text);
+  font-size: 12px;
+  font-weight: 600;
+}
+.formFields input:not([type="radio"]) {
+  width: 100%;
+  height: 39px;
+  border: 1px solid var(--catalog-line);
+  border-radius: 3px;
+  background: var(--catalog-panel);
+  color: var(--catalog-text);
+  font-family: var(--pion-font-mono);
+  font-size: 12px;
+}
+.formFields fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.formFields legend {
+  margin-bottom: 10px;
+}
+.protocols label {
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 9px;
+  cursor: pointer;
+}
+.protocols label span {
+  display: grid;
+}
+.protocols input {
+  width: 15px;
+  height: 15px;
+  min-height: 0;
+  margin: 1px 0 0;
+  accent-color: #10b981;
+}
+.keyField {
+  display: flex;
+  align-items: center;
+}
+.keyField input {
+  flex: 1;
+}
+.keyField button {
+  margin-left: 5px;
+  border-color: var(--catalog-line);
+  background: var(--catalog-panel);
+  color: var(--catalog-muted);
+  font-size: 11px;
+}
+.advanced {
+  justify-self: start;
+  border: 0;
+  background: transparent;
+  color: var(--catalog-muted);
+  font-size: 11px;
+}
+.note {
+  margin: 0;
+  color: var(--catalog-muted);
+  font-size: 11px;
+}
+.dialogError {
+  margin: 10px 0;
+  color: #ef4444;
+  font-size: 11px;
+}
+.dialogFooter {
+  display: flex;
+  min-height: 74px;
+  align-items: center;
+  gap: 10px;
+  padding: 15px 30px;
+  border-top: 1px solid var(--catalog-line);
+  background: var(--catalog-panel);
+}
+.dialogFooter button {
+  min-height: 33px;
+  border-color: var(--catalog-line);
+  background: var(--catalog-inset);
+  color: var(--catalog-text);
+  font-size: 11px;
+}
+.dialogFooter .primary {
+  border-color: #10b981;
+  background: #10b981;
+  color: #062e24;
+  font-weight: 700;
+}
+.probe {
+  flex: 1;
+  color: #0eac79;
+  font-family: var(--pion-font-mono);
+  font-size: 11px;
+}
+.spacer {
+  flex: 1;
+}
+.discoveryBanner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 14px;
+  border: 1px solid var(--catalog-line);
+  border-radius: 4px;
+  background: var(--catalog-panel);
+  color: var(--catalog-text);
+  font-size: 12px;
+}
+.discoveryBanner button {
+  border: 0;
+  background: transparent;
+  color: #0eac79;
+  font-size: 11px;
+}
+.discoverySearch input {
+  width: 100%;
+  height: 39px;
+  margin: 13px 0 16px;
+  border: 1px solid var(--catalog-line);
+  border-radius: 4px;
+  background: var(--catalog-panel);
+  color: var(--catalog-text);
+  font-size: 12px;
+}
+.discoveryList {
+  display: grid;
+  max-height: min(45vh, 425px);
+  gap: 9px;
+  overflow-y: auto;
+}
+.discoveryList label {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 14px;
+  border: 1px solid var(--catalog-line);
+  border-radius: 5px;
+  background: var(--catalog-panel);
+  cursor: pointer;
+}
+.discoveryList label.selected {
+  border-color: #3eac89;
+}
+.discoveryList input {
+  width: 17px;
+  height: 17px;
+  min-height: 0;
+  margin: 1px 0 0;
+  accent-color: #10b981;
+}
+.discoveryList label span {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-wrap: wrap;
+  gap: 5px 9px;
+  align-items: center;
+}
+.discoveryList strong {
+  font-size: 14px;
+}
+.discoveryList code {
+  padding: 3px 5px;
+  background: var(--catalog-inset);
+  color: var(--catalog-muted);
+  font-size: 11px;
+}
+.discoveryList small {
+  width: 100%;
+  color: var(--catalog-muted);
+  font-size: 11px;
+}
+.discoveryList em {
+  color: #0eac79;
+  font-size: 11px;
+  font-style: normal;
+  white-space: nowrap;
+}
+:global(:root[data-theme="dark"]) .endpointDialog .modeTabs button,
+:global(:root[data-theme="dark"]) .endpointDialog .presets button,
+:global(:root[data-theme="dark"]) .endpointDialog .keyField button,
+:global(:root[data-theme="dark"]) .endpointDialog .dialogFooter button,
+:global(:root[data-theme="dark"]) .discoveryDialog .dialogFooter button {
+  border-color: #344258;
+  background: #1d293b;
+  color: #e2e8f0;
+}
+:global(:root[data-theme="dark"]) .endpointDialog .modeTabs .selected,
+:global(:root[data-theme="dark"]) .endpointDialog .protocols label.selected,
+:global(:root[data-theme="dark"]) .discoveryDialog .discoveryList label.selected {
+  border-color: #4fcaac;
+  background: #15302e;
+  color: #5ee0b6;
+}
+:global(:root[data-theme="dark"]) .endpointDialog .dialogFooter .primary,
+:global(:root[data-theme="dark"]) .discoveryDialog .dialogFooter .primary {
+  border-color: #10b981;
+  background: #10b981;
+  color: #062e24;
+}
+@media (max-width: 680px) {
+  .dialogHeading,
+  .dialogBody,
+  .dialogFooter {
+    padding-inline: 16px;
+  }
+  .presets,
+  .protocols {
+    grid-template-columns: 1fr;
+  }
+  .dialogFooter {
+    flex-wrap: wrap;
+  }
+  .probe {
+    flex-basis: 100%;
+  }
+}

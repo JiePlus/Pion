@@ -38,8 +38,8 @@ test("redesigned shortcuts and controls perform their actions", async ({ page })
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
 
   await page.getByRole("button", { name: "Pi models" }).click();
-  await page.getByRole("button", { name: /OpenAI Add API key/ }).click();
-  await expect(page.getByPlaceholder("openai")).toHaveValue("openai");
+  await page.getByRole("button", { name: "Configure OpenAI" }).click();
+  await expect(page.getByLabel("OpenAI API Key")).toBeVisible();
 
   await page.keyboard.press("Control+n");
   await expect(page.getByRole("textbox", { name: "Describe your task" })).toHaveValue(

@@ -12,7 +12,32 @@
   grid-template-columns: minmax(0, 1fr);
 }
 
+.app.model-view {
+  --pion-size-rail: 320px;
+  --pion-size-topbar: 60px;
+  --pion-color-canvas: #fcfcfd;
+  --pion-color-surface: #ffffff;
+  --pion-color-line: #e2e8f0;
+}
+
+:global(:root[data-theme="dark"]) .app.model-view {
+  --pion-color-canvas: #0b111c;
+  --pion-color-surface: #0e1521;
+  --pion-color-surface-raised: #111827;
+  --pion-color-line: #29364c;
+}
+
+@media (max-width: 850px) {
+  .app.model-view {
+    --pion-size-rail: 60px;
+  }
+}
+
 .rail-collapsed {
+  --pion-size-rail: 60px;
+}
+
+.app.model-view.rail-collapsed {
   --pion-size-rail: 60px;
 }
 
@@ -22,6 +47,14 @@
   min-height: 0;
   flex-direction: column;
   background: var(--pion-color-surface);
+}
+
+.models-page {
+  min-width: 0;
+  min-height: 0;
+  flex: 1;
+  overflow: auto;
+  background: var(--pion-color-canvas);
 }
 
 .preview-banner,

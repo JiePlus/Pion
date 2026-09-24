@@ -1,0 +1,710 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Pion · 模型服务设计图</title>
+    <style>
+      :root {
+        font-family:
+          Geist,
+          Inter,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+        color: #0f172a;
+        background: #f8fafc;
+        --canvas: #f8fafc;
+        --surface: #ffffff;
+        --raised: #ffffff;
+        --muted-surface: #f1f5f9;
+        --selected: #ecfdf5;
+        --ink: #0f172a;
+        --soft: #334155;
+        --muted: #64748b;
+        --faint: #94a3b8;
+        --line: #e2e8f0;
+        --line-strong: #cbd5e1;
+        --brand: #10b981;
+        --brand-strong: #059669;
+        --brand-soft: #ecfdf5;
+        --danger: #dc2626;
+      }
+      :root[data-theme="dark"] {
+        color-scheme: dark;
+        color: #f8fafc;
+        background: #0d1015;
+        --canvas: #0d1015;
+        --surface: #14171c;
+        --raised: #191e27;
+        --muted-surface: #1b212b;
+        --selected: #16332d;
+        --ink: #f8fafc;
+        --soft: #cbd5e1;
+        --muted: #94a3b8;
+        --faint: #64748b;
+        --line: #293140;
+        --line-strong: #3c4859;
+        --brand: #4edea3;
+        --brand-strong: #10b981;
+        --brand-soft: #123c31;
+        --danger: #ffb4ab;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+      }
+      body {
+        overflow: hidden;
+        color: var(--ink);
+        background: var(--canvas);
+      }
+      button,
+      input,
+      select {
+        font: inherit;
+        color: inherit;
+      }
+      button {
+        min-height: 32px;
+        padding: 6px 10px;
+        border: 1px solid var(--line);
+        border-radius: 5px;
+        background: var(--surface);
+        font-size: 12px;
+      }
+      button.primary {
+        border-color: var(--brand-strong);
+        color: #fff;
+        background: var(--brand-strong);
+      }
+      input,
+      select {
+        width: 100%;
+        height: 34px;
+        padding: 6px 9px;
+        border: 1px solid var(--line);
+        border-radius: 5px;
+        background: var(--surface);
+        font-size: 12px;
+      }
+      input[type="checkbox"] {
+        width: 14px;
+        height: 14px;
+        accent-color: var(--brand-strong);
+      }
+      label {
+        display: grid;
+        gap: 7px;
+        color: var(--soft);
+        font-size: 12px;
+      }
+      h1,
+      h2,
+      h3,
+      h4,
+      p {
+        margin-top: 0;
+      }
+      h1,
+      h2,
+      h3,
+      h4 {
+        color: var(--ink);
+      }
+      h1 {
+        margin-bottom: 8px;
+        font-size: 26px;
+        font-weight: 600;
+        letter-spacing: -0.7px;
+      }
+      h1 span {
+        color: var(--muted);
+        font-size: 17px;
+        font-weight: 400;
+        letter-spacing: 0;
+      }
+      h2 {
+        margin-bottom: 8px;
+        font-size: 18px;
+        font-weight: 600;
+      }
+      h3 {
+        margin-bottom: 8px;
+        font-size: 13px;
+        font-weight: 600;
+      }
+      p {
+        line-height: 1.6;
+      }
+      a {
+        color: var(--brand-strong);
+        text-decoration: none;
+      }
+      code,
+      .mono {
+        font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+      }
+      .note {
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .app {
+        display: grid;
+        grid-template-columns: 320px minmax(0, 1fr);
+        height: 100vh;
+        background: var(--surface);
+      }
+      .rail {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+        padding: 0 10px 10px;
+        border-right: 1px solid var(--line);
+        background: var(--surface);
+      }
+      .rail-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        height: 60px;
+        margin: 0 -10px 14px;
+        padding: 0 16px;
+        border-bottom: 1px solid var(--line);
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        font-size: 16px;
+        font-weight: 650;
+      }
+      .brand img {
+        width: 34px;
+        height: 34px;
+        border-radius: 9px;
+      }
+      .collapse {
+        color: var(--muted);
+        font-size: 19px;
+      }
+      .rail-nav {
+        display: grid;
+        gap: 4px;
+        margin-bottom: 20px;
+        padding: 0 5px 18px;
+        border-bottom: 1px solid var(--line);
+      }
+      .rail-nav .nav-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-height: 38px;
+        padding: 7px 11px;
+        border-radius: 5px;
+        color: var(--soft);
+        font-size: 13px;
+      }
+      .rail-nav .new-task {
+        justify-content: center;
+        min-height: 42px;
+        margin-bottom: 12px;
+        border: 1px solid var(--brand-strong);
+        color: #fff;
+        background: var(--brand-strong);
+        font-weight: 600;
+      }
+      .new-task kbd {
+        margin-left: auto;
+        color: rgb(255 255 255 / 75%);
+        font-size: 10px;
+        font-weight: 400;
+      }
+      .rail-nav .active {
+        color: var(--brand-strong);
+        background: var(--selected);
+      }
+      .nav-symbol {
+        display: grid;
+        width: 17px;
+        place-items: center;
+        color: inherit;
+        font-size: 16px;
+      }
+      .projects {
+        padding: 0 10px;
+        color: var(--muted);
+        font-size: 10px;
+        font-weight: 650;
+        letter-spacing: 0.04em;
+      }
+      .project {
+        margin: 11px 5px;
+        padding: 12px;
+        border-radius: 9px;
+        background: var(--muted-surface);
+        color: var(--soft);
+        font-size: 12px;
+        font-weight: 620;
+      }
+      .project small {
+        display: block;
+        margin-top: 13px;
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 400;
+      }
+      .rail-spacer {
+        flex: 1;
+      }
+      .rail-bottom {
+        padding: 10px 16px;
+        border-top: 1px solid var(--line);
+        color: var(--soft);
+        font-size: 12px;
+      }
+      .runtime {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 11px;
+        padding-top: 13px;
+        border-top: 1px solid var(--line);
+        color: var(--muted);
+        font-size: 10px;
+      }
+      .work {
+        display: flex;
+        min-width: 0;
+        flex-direction: column;
+      }
+      .topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        height: 56px;
+        flex: 0 0 56px;
+        padding: 0 30px;
+        border-bottom: 1px solid var(--line);
+        background: var(--surface);
+        font-size: 13px;
+      }
+      .topbar .crumb {
+        color: var(--muted);
+      }
+      .topbar .slash {
+        margin: 0 9px;
+        color: var(--faint);
+      }
+      .topbar strong {
+        font-weight: 600;
+      }
+      .status {
+        padding: 5px 10px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        color: var(--muted);
+        background: var(--raised);
+        font-size: 10px;
+      }
+      .dot {
+        display: inline-block;
+        width: 7px;
+        height: 7px;
+        margin-right: 6px;
+        border-radius: 50%;
+        background: var(--brand);
+      }
+      .content {
+        width: 100%;
+        max-width: 1120px;
+        padding: 42px 40px 70px;
+        overflow: auto;
+      }
+      .lead {
+        margin-bottom: 0;
+      }
+      .tabs {
+        display: flex;
+        gap: 4px;
+        margin: 28px 0;
+        border-bottom: 1px solid var(--line);
+      }
+      .tabs span {
+        padding: 8px 12px 10px;
+        border-bottom: 2px solid transparent;
+        color: var(--muted);
+        font-size: 12px;
+        white-space: nowrap;
+      }
+      .tabs span.active {
+        border-color: var(--brand);
+        color: var(--ink);
+      }
+      .path {
+        display: block;
+        margin-top: 8px;
+        color: var(--muted);
+        font-size: 11px;
+        overflow-wrap: anywhere;
+      }
+      .cards {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+        max-width: 780px;
+        margin: 24px 0;
+      }
+      .provider-card {
+        display: grid;
+        grid-template-columns: 38px 1fr;
+        grid-template-rows: auto auto;
+        align-items: center;
+        column-gap: 12px;
+        min-height: 78px;
+        padding: 14px;
+        border: 1px solid var(--line);
+        border-radius: 5px;
+        background: var(--surface);
+      }
+      .provider-card.active {
+        border-color: var(--brand);
+        box-shadow: inset 0 0 0 1px var(--brand);
+      }
+      .provider-mark {
+        display: grid;
+        grid-row: span 2;
+        width: 38px;
+        height: 38px;
+        place-items: center;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--muted-surface);
+        font-family: ui-monospace, monospace;
+        font-size: 12px;
+        font-weight: 700;
+      }
+      .provider-card strong {
+        font-size: 13px;
+      }
+      .provider-card small {
+        color: var(--muted);
+        font-size: 11px;
+      }
+      .auth-form {
+        display: grid;
+        grid-template-columns: minmax(140px, 1fr) minmax(190px, 1.4fr) auto;
+        align-items: end;
+        gap: 10px;
+        max-width: 760px;
+        margin: 22px 0;
+      }
+      .saved {
+        max-width: 780px;
+        margin-top: 32px;
+        border-top: 1px solid var(--line);
+      }
+      .saved h3 {
+        margin: 18px 0 8px;
+      }
+      .saved-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 9px 0;
+        border-bottom: 1px solid var(--line);
+        font-size: 12px;
+      }
+      .saved-row strong {
+        min-width: 130px;
+      }
+      .saved-row button {
+        margin-left: auto;
+      }
+      .login-controls {
+        display: flex;
+        align-items: end;
+        gap: 10px;
+        margin: 22px 0;
+      }
+      .login-controls label {
+        width: 360px;
+      }
+      .login-step {
+        display: grid;
+        justify-items: start;
+        gap: 10px;
+        max-width: 640px;
+        margin: 20px 0;
+        padding: 16px;
+        border: 1px solid var(--line);
+        background: var(--raised);
+        font-size: 12px;
+      }
+      .login-step code {
+        font-size: 16px;
+        letter-spacing: 0.08em;
+      }
+      .env-list {
+        display: grid;
+        grid-template-columns: 150px 1fr;
+        gap: 10px 18px;
+        max-width: 500px;
+        margin: 22px 0;
+        font-size: 12px;
+      }
+      .env-list code {
+        padding: 4px 0;
+        color: var(--soft);
+      }
+      .settings-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 18px;
+      }
+      .config-layout {
+        display: grid;
+        grid-template-columns: 190px minmax(0, 1fr);
+        gap: 28px;
+        margin-top: 24px;
+      }
+      .provider-list {
+        display: grid;
+        align-content: start;
+        gap: 2px;
+      }
+      .provider-list .item {
+        display: flex;
+        justify-content: space-between;
+        padding: 9px 10px;
+        border-radius: 5px;
+        color: var(--soft);
+        font-size: 12px;
+      }
+      .provider-list .item.active {
+        color: var(--brand-strong);
+        background: var(--brand-soft);
+      }
+      .provider-list small {
+        color: var(--muted);
+        font-size: 10px;
+      }
+      .detail-title {
+        display: flex;
+        justify-content: space-between;
+        gap: 14px;
+      }
+      .detail-title h3 {
+        margin: 0 0 6px;
+        font-size: 15px;
+      }
+      .detail-title .note {
+        margin-bottom: 0;
+      }
+      .actions {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .model-actions {
+        margin: 18px 0 12px;
+      }
+      .model-list {
+        margin: 16px 0;
+        border-top: 1px solid var(--line);
+      }
+      .model-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 0;
+        border-bottom: 1px solid var(--line);
+        font-size: 12px;
+      }
+      .model-row div:first-child {
+        display: grid;
+        gap: 3px;
+      }
+      .model-row small {
+        color: var(--muted);
+        font-size: 10px;
+      }
+      .config-form {
+        max-width: 760px;
+        margin: 18px 0;
+        padding: 18px;
+        border: 1px solid var(--line);
+        background: var(--raised);
+      }
+      .config-form h3 {
+        margin-bottom: 18px;
+      }
+      .fields {
+        display: grid;
+        gap: 18px;
+      }
+      .fields.two {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .form-actions {
+        margin-top: 18px;
+      }
+      .checkline {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .discovery {
+        max-width: 680px;
+        padding: 16px;
+        border: 1px solid var(--line);
+        background: var(--raised);
+      }
+      .discovery-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .discovery-head h4 {
+        margin: 0;
+        font-size: 13px;
+      }
+      .discovery-search {
+        display: block;
+        margin: 16px 0 10px;
+      }
+      .discovery-list {
+        margin: 12px 0;
+        border-top: 1px solid var(--line);
+        border-bottom: 1px solid var(--line);
+      }
+      .discovery-row {
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        align-items: center;
+        gap: 10px;
+        padding: 9px 2px;
+        border-bottom: 1px solid var(--line);
+        font-size: 12px;
+      }
+      .discovery-row:last-child {
+        border-bottom: 0;
+      }
+      .discovery-row span {
+        display: grid;
+        gap: 3px;
+      }
+      .discovery-row small {
+        color: var(--muted);
+        font-size: 10px;
+      }
+      .empty {
+        max-width: 760px;
+        margin-top: 24px;
+        padding: 24px;
+        border: 1px dashed var(--line-strong);
+        color: var(--muted);
+        font-size: 12px;
+      }
+      @media (max-width: 1000px) {
+        .app {
+          grid-template-columns: 264px minmax(0, 1fr);
+        }
+        .content {
+          padding-inline: 24px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script>
+      const screens = [
+        { id: "01-api-key", tab: 0, title: "API Key" },
+        { id: "02-pi-login", tab: 1, title: "Pi 登录" },
+        { id: "03-login-flow", tab: 1, title: "Pi 登录授权" },
+        { id: "04-environment", tab: 2, title: "环境变量" },
+        { id: "05-custom-endpoint", tab: 3, title: "自定义接口" },
+        { id: "06-add-provider", tab: 3, title: "新增服务商" },
+        { id: "07-model-discovery", tab: 3, title: "获取模型列表" },
+        { id: "08-model-details", tab: 3, title: "模型详情" },
+        { id: "09-custom-empty", tab: 3, title: "自定义接口空状态" },
+        { id: "10-provider-extension", tab: 4, title: "服务商扩展" },
+      ];
+      const params = new URLSearchParams(location.search);
+      const current = screens.find((screen) => screen.id === params.get("screen")) || screens[0];
+      document.documentElement.dataset.theme = params.get("theme") === "dark" ? "dark" : "light";
+      document.title = `Pion · ${current.title}`;
+
+      const button = (text, primary = false) =>
+        `<button type="button" class="${primary ? "primary" : ""}">${text}</button>`;
+      const field = (label, value = "", type = "text") =>
+        `<label>${label}<input type="${type}" value="${value}" /></label>`;
+      const savedRow = (name, status, removable = false) =>
+        `<div class="saved-row"><strong>${name}</strong><span class="note">${status}</span>${removable ? button("移除") : ""}</div>`;
+      const tabs = ["API Key", "Pi 登录", "环境变量", "自定义接口", "服务商扩展"];
+      const head = `<h1>模型服务 <span>/ Models</span></h1><p class="note lead">选择 Pi 连接模型服务商的方式。更改配置后，请重新打开任务。</p><nav class="tabs" aria-label="接入方式">${tabs.map((tab, i) => `<span class="${i === current.tab ? "active" : ""}">${tab}</span>`).join("")}</nav>`;
+      const apiKey = `<section><h2>API Key</h2><p class="note">将服务商 API Key 保存到 Pi 的 auth.json；已有密钥和 OAuth Token 不会在此显示。</p><code class="path">~/.pi/agent/auth.json</code><div class="cards">${[
+        ["OpenAI", "OP", "已连接"],
+        ["Anthropic", "AN", "已连接"],
+        ["Google", "GO", "添加 API Key"],
+        ["DeepSeek", "DE", "添加 API Key"],
+      ]
+        .map(
+          ([name, mark, state], i) =>
+            `<div class="provider-card ${i === 0 ? "active" : ""}"><span class="provider-mark">${mark}</span><strong>${name}</strong><small>${state}</small></div>`,
+        )
+        .join(
+          "",
+        )}</div><div class="auth-form">${field("服务商 ID", "openai")}${field("API Key", "sk-••••••••••••••••••••", "text")}${button("保存 API Key", true)}</div><div class="saved"><h3>Pi 已保存的凭据</h3>${savedRow("openai", "已保存 API Key", true)}${savedRow("anthropic", "由 Pi 登录管理")}</div></section>`;
+      const login = `<section><h2>Pi 登录</h2><p class="note">使用 Pi 自身的登录流程接入订阅或 OAuth 服务商。</p><div class="login-controls"><label>服务商<select><option>Anthropic</option></select></label>${button("通过 Pi 登录", true)}</div><div class="saved"><h3>支持 Pi 登录的服务商</h3>${savedRow("Anthropic", "已登录")}${savedRow("OpenAI", "未登录")}${savedRow("GitHub Copilot", "未登录")}</div></section>`;
+      const loginFlow = `<section><h2>Pi 登录</h2><p class="note">使用 Pi 自身的登录流程接入订阅或 OAuth 服务商。</p><div class="login-controls"><label>服务商<select><option>OpenAI</option></select></label>${button("通过 Pi 登录", true)}${button("取消")}</div><p class="note">正在等待你在浏览器中完成授权…</p><div class="login-step"><strong>打开授权页面</strong><a href="#">https://auth.openai.com/authorize/…</a>${button("复制链接")}</div><div class="login-step"><strong>输入此设备码</strong><code>ABCD-EFGH</code><a href="#">https://auth.openai.com/device</a></div><div class="saved"><h3>支持 Pi 登录的服务商</h3>${savedRow("Anthropic", "已登录")}${savedRow("OpenAI", "未登录")}</div></section>`;
+      const environment = `<section><h2>环境变量</h2><p class="note" style="max-width:640px">Pi 可以从环境变量读取服务商 API Key，无需存入 auth.json。请在启动 Pion 前设置变量。</p><div class="env-list"><span>Anthropic</span><code>ANTHROPIC_API_KEY</code><span>OpenAI</span><code>OPENAI_API_KEY</code><span>Google Gemini</span><code>GEMINI_API_KEY</code><span>OpenRouter</span><code>OPENROUTER_API_KEY</code><span>DeepSeek</span><code>DEEPSEEK_API_KEY</code></div><p class="note">从 Finder 启动 Pion 时，可能无法继承只在 shell 中设置的环境变量。</p></section>`;
+      const customHead = `<div class="settings-head"><div><h2>自定义 Pi 模型</h2><p class="note" style="max-width:650px;margin-bottom:3px">管理 Pi models.json 中的自定义服务商和模型；通过 API Key 或 Pi 登录完成连接。</p><p class="note" style="margin-bottom:0">重新打开任务以刷新可用模型。</p><code class="path">~/.pi/agent/models.json</code></div>${button("添加服务商")}</div>`;
+      const providerList = `<nav class="provider-list"><div class="item active"><span>ollama-local</span><small>3 个模型</small></div><div class="item"><span>openrouter-proxy</span><small>2 个模型</small></div></nav>`;
+      const providerTitle = `<div class="detail-title"><div><h3>ollama-local</h3><p class="note">openai-completions · http://localhost:11434/v1</p></div><div class="actions">${button("设置 API Key")}${button("编辑")}${button("移除")}</div></div>`;
+      const modelActions = `<div class="actions model-actions">${button("获取模型列表", true)}${button("添加模型")}</div>`;
+      const modelList = `<div class="model-list"><div class="model-row"><div><strong>Qwen 3 32B</strong><small>qwen3:32b</small></div><div class="actions">${button("编辑")}${button("移除")}</div></div><div class="model-row"><div><strong>Gemma 3 27B</strong><small>gemma3:27b</small></div><div class="actions">${button("编辑")}${button("移除")}</div></div><div class="model-row"><div><strong>DeepSeek R1 14B</strong><small>deepseek-r1:14b</small></div><div class="actions">${button("编辑")}${button("移除")}</div></div></div>`;
+      const custom = `<section>${customHead}<div class="config-layout">${providerList}<div>${providerTitle}${modelActions}${modelList}</div></div></section>`;
+      const addProvider = `<section>${customHead}<div class="config-form"><h3>服务商详情</h3><div class="fields">${field("服务商 ID", "ollama-local")}${field("接口地址", "http://localhost:11434/v1")}<label>API 类型<select><option>OpenAI Completions</option></select></label></div><p class="note" style="margin:15px 0 0">本地接口会写入占位密钥；远程接口沿用现有 Pi 认证。</p><div class="actions form-actions">${button("保存服务商", true)}${button("取消")}</div></div><div class="config-layout">${providerList}<div>${providerTitle}${modelActions}${modelList}</div></div></section>`;
+      const discoveryRows = [
+        ["qwen3:32b", "Qwen 3 32B", "已添加"],
+        ["qwen3:14b", "Qwen 3 14B", ""],
+        ["gemma3:27b", "Gemma 3 27B", "已添加"],
+        ["llama3.3:70b", "Llama 3.3 70B", ""],
+      ];
+      const discovery = `<section>${customHead}<div class="config-layout">${providerList}<div>${providerTitle}${modelActions}<div class="discovery"><div class="discovery-head"><h4>找到 4 个模型</h4>${button("关闭")}</div><label class="discovery-search">搜索可用模型<input value="" placeholder="搜索模型名称或 ID" /></label><p class="note" style="margin-bottom:8px">选择要添加的对话模型；已配置模型的设置会保留。</p><div class="discovery-list">${discoveryRows.map(([id, name, state], i) => `<div class="discovery-row"><input type="checkbox" ${i === 0 || i === 2 || i === 3 ? "checked" : ""} /><span><strong>${name}</strong><small>${id}</small></span><small>${state}</small></div>`).join("")}</div><div class="actions">${button("选择当前结果")}${button("清空选择")}${button("添加所选模型（1）", true)}</div></div></div></div></section>`;
+      const modelDetails = `<section>${customHead}<div class="config-layout">${providerList}<div>${providerTitle}${modelActions}<div class="config-form" style="margin-top:15px"><h3>模型详情</h3><div class="fields">${field("模型 ID", "qwen3:32b")}${field("显示名称", "Qwen 3 32B")}<div class="fields two">${field("上下文窗口", "131072", "number")}${field("最大输出 Token 数", "8192", "number")}</div><label class="checkline"><input type="checkbox" checked />支持推理</label><label class="checkline"><input type="checkbox" />支持图片输入</label></div><div class="actions form-actions">${button("保存模型", true)}${button("取消")}</div></div></div></div></section>`;
+      const customEmpty = `<section>${customHead}<div class="empty">尚未配置自定义服务商。<br /><span class="note">点击右上角“添加服务商”，填写接口地址和 API 类型后即可添加模型。</span></div></section>`;
+      const extension = `<section><h2>服务商扩展</h2><p class="note" style="max-width:640px">Pi 扩展可接入自定义认证、动态模型发现或特殊协议的服务商。请通过 Pi 包安装与管理。</p>${button("打开 Pi 包")}</section>`;
+      const content = [
+        apiKey,
+        login,
+        loginFlow,
+        environment,
+        custom,
+        addProvider,
+        discovery,
+        modelDetails,
+        customEmpty,
+        extension,
+      ][screens.indexOf(current)];
+      document.getElementById("root").innerHTML =
+        `<div class="app"><aside class="rail"><div class="rail-header"><div class="brand"><img src="../../src-tauri/icon.svg" alt="" /><strong>Pion</strong></div><span class="collapse">‹</span></div><nav class="rail-nav"><div class="nav-row new-task"><span class="nav-symbol">＋</span><span>新任务</span><kbd>⌘N</kbd></div><div class="nav-row active"><span class="nav-symbol">◇</span><span>模型</span></div><div class="nav-row"><span class="nav-symbol">▦</span><span>Pi 包</span></div><div class="nav-row"><span class="nav-symbol">ϟ</span><span>Pi 技能</span></div></nav><div class="projects">项目</div><div class="project">⌄ &nbsp; Pion<small>最近任务 &nbsp; · &nbsp; 模型服务接入</small></div><div class="rail-spacer"></div><div class="rail-bottom">⚙ &nbsp; 设置<div class="runtime"><span>● &nbsp; Pi 已连接</span><span>v0.87.0</span></div></div></aside><div class="work"><header class="topbar"><div><span class="crumb">Pion</span><span class="slash">/</span><strong>模型服务</strong></div><span class="status"><span class="dot"></span>工作区已就绪</span></header><main class="content">${head}${content}</main></div></div>`;
+      document.addEventListener("keydown", (event) => {
+        const index = screens.indexOf(current);
+        const next =
+          event.key === "ArrowRight" ? index + 1 : event.key === "ArrowLeft" ? index - 1 : index;
+        if (next !== index && screens[next])
+          location.search = `?screen=${screens[next].id}&theme=${document.documentElement.dataset.theme}`;
+      });
+    </script>
+  </body>
+</html>

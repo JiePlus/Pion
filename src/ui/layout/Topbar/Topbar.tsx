@@ -1,4 +1,5 @@
 import { StatusDot } from "../../primitives/StatusDot.tsx";
+import { Icon } from "../../primitives/Icon.tsx";
 import { componentClass } from "../../componentClass.ts";
 import type { Dispatch, RefObject, SetStateAction } from "react";
 import { host, native } from "../../../core/host.ts";
@@ -43,6 +44,7 @@ interface TopbarProps {
   setRenameValue: Dispatch<SetStateAction<string>>;
   setRenameOpen: Dispatch<SetStateAction<boolean>>;
   perform: (work: () => Promise<unknown>) => void;
+  onAddProvider?: () => void;
 }
 
 export function Topbar({
@@ -74,6 +76,7 @@ export function Topbar({
   setRenameValue,
   setRenameOpen,
   perform,
+  onAddProvider,
 }: TopbarProps) {
   return (
     <header className={componentClass(styles, "topbar")}>
@@ -109,16 +112,32 @@ export function Topbar({
         </strong>
       </div>
       {!(page === "workspace" && task) && (
-        <span className={componentClass(styles, "connection-pill")}>
-          <StatusDot offline={!setupStatus?.modelReady} />
-          {t(
-            !setupStatus && native
-              ? "Checking Pi…"
-              : setupStatus?.modelReady
-                ? "Workspace ready"
-                : "Pi setup required",
+        <div className={componentClass(styles, "page-actions")}>
+          <span className={componentClass(styles, "connection-pill")}>
+            <StatusDot offline={page === "models" ? !connected : !setupStatus?.modelReady} />
+            {page === "models"
+              ? connected
+                ? t("Pi RPC connected")
+                : t("Pi RPC disconnected")
+              : t(
+                  !setupStatus && native
+                    ? "Checking Pi…"
+                    : setupStatus?.modelReady
+                      ? "Workspace ready"
+                      : "Pi setup required",
+                )}
+          </span>
+          {page === "models" && (
+            <button
+              type="button"
+              className={componentClass(styles, "add-provider")}
+              onClick={onAddProvider}
+            >
+              <Icon name="plus" size={17} />
+              {t("Add custom endpoint")}
+            </button>
           )}
-        </span>
+        </div>
       )}
       {page === "workspace" && task && (
         <div className={componentClass(styles, "header-actions")} ref={headerActions}>

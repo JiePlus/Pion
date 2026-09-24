@@ -66,6 +66,17 @@ globalThis.fetch = async (url, options) => {
 
   const helper = resolve("src-tauri/src/pi-auth-bridge.mjs");
   const executable = join(root, "bin/pi");
+  const probe = spawnSync(process.execPath, ["--import", preload, helper, executable, "probe"], {
+    encoding: "utf8",
+    input: JSON.stringify({
+      baseUrl: "http://example.test/v1",
+      api: "openai-completions",
+      key: "test-key",
+    }),
+  });
+  assert.equal(probe.status, 0, probe.stdout);
+  assert.equal(JSON.parse(probe.stdout).type, "probe");
+  assert.ok(JSON.parse(probe.stdout).latencyMs >= 0);
   const listing = spawnSync(process.execPath, [helper, executable, "list"], { encoding: "utf8" });
   assert.equal(listing.status, 0);
   assert.deepEqual(JSON.parse(listing.stdout), {

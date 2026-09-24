@@ -604,18 +604,17 @@ test("Pi skills support project paths, overrides, and slash commands", async ({ 
   ).toBe("disabled");
 });
 
-test("custom Pi providers and models have a primary navigation entry", async ({ page }) => {
+test("model services connect providers and edit custom models", async ({ page }) => {
   await taskFixture(page);
   await page.goto("/");
   await page.getByRole("button", { name: "Pi models", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Connect Pi models" })).toBeVisible();
-  await page.getByLabel("Provider ID", { exact: true }).fill("openai");
-  await page.getByLabel("API key", { exact: true }).fill("sk-test-secret");
-  await page.getByRole("button", { name: "Save API key" }).click();
-  await expect(page.getByText("API key saved")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Model services" })).toBeVisible();
+  await page.getByRole("button", { name: "Configure OpenAI" }).click();
+  await page.getByLabel("OpenAI API Key").fill("sk-test-secret");
+  await page.getByRole("button", { name: /Save and connect/ }).click();
+  await expect(page.getByText("API key saved. Reopen tasks to apply changes.")).toBeVisible();
   await expect(page.getByText("sk-test-secret")).toHaveCount(0);
-  await page.screenshot({ path: "test-results/pi-access.png", fullPage: true });
-  await page.getByRole("button", { name: "Pi login" }).click();
+  await page.getByRole("radio", { name: "Pi login" }).check();
   await expect(page.getByRole("combobox", { name: "Provider" })).toHaveValue("openai-codex");
   await page.getByRole("button", { name: "Sign in with Pi" }).click();
   await page.getByRole("combobox", { name: "Choose login method" }).selectOption("browser");
@@ -630,8 +629,6 @@ test("custom Pi providers and models have a primary navigation entry", async ({ 
   await expect(
     page.getByText("Pi login completed. Reopen the task to use its models."),
   ).toBeVisible();
-  await expect(page.getByText("Signed in", { exact: true })).toBeVisible();
-  await page.screenshot({ path: "test-results/pi-login.png", fullPage: true });
   await expect
     .poll(() =>
       page.evaluate(
@@ -639,45 +636,43 @@ test("custom Pi providers and models have a primary navigation entry", async ({ 
       ),
     )
     .toBe("test-code");
-  await page.getByRole("combobox", { name: "Provider" }).selectOption("github-copilot");
-  await page.getByRole("button", { name: "Sign in with Pi" }).click();
-  await expect(page.getByText("ABCD-1234")).toBeVisible();
-  await expect(page.getByRole("link", { name: "https://example.test/device" })).toBeVisible();
-  await page.getByRole("button", { name: "Cancel" }).click();
-  await page.getByRole("button", { name: "Environment" }).click();
-  await expect(page.getByText("OPENAI_API_KEY")).toBeVisible();
-  await page.getByRole("button", { name: "Provider extension" }).click();
-  await page.getByRole("button", { name: "Open Pi packages" }).click();
-  await expect(page.getByRole("heading", { name: "Pi packages", exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "Pi models", exact: true }).click();
-  await page.getByRole("button", { name: "Custom endpoint" }).click();
-  await expect(page.getByRole("heading", { name: "Custom Pi models" })).toBeVisible();
-  await page.getByRole("button", { name: "Add provider" }).click();
+
+  await page.getByRole("button", { name: "Add custom endpoint", exact: true }).click();
+  await page.getByRole("button", { name: /Ollama Local/ }).click();
+  await expect(page.getByRole("textbox", { name: "Provider ID" })).toHaveValue("ollama-local");
+  await page.screenshot({ path: "test-results/endpoint-dialog.png" });
+  await page.evaluate(() => {
+    document.documentElement.dataset.theme = "dark";
+  });
+  await page.waitForTimeout(200);
+  await page.screenshot({ path: "test-results/endpoint-dialog-dark.png" });
+  await page.evaluate(() => {
+    document.documentElement.dataset.theme = "light";
+  });
   await page.getByRole("textbox", { name: "Provider ID" }).fill("ollama");
   await page.getByRole("textbox", { name: "Base URL" }).fill("http://localhost:11434/v1");
-  await page.getByRole("button", { name: "Save provider" }).click();
-  await expect(page.getByRole("navigation", { name: "Custom providers" })).toContainText("ollama");
-  await page.getByRole("button", { name: "Set API key" }).click();
-  await expect(page.getByRole("combobox", { name: "Custom provider" })).toHaveValue("ollama");
-  await expect(page.getByLabel("Provider ID", { exact: true })).toHaveValue("ollama");
-  await page.getByLabel("API key", { exact: true }).fill("ollama-test-key");
-  await page.getByRole("button", { name: "Save API key" }).click();
-  await expect
-    .poll(() =>
-      page.evaluate(
-        () => JSON.parse(localStorage.getItem("fixture.modelAuthAction") ?? "{}").provider,
-      ),
-    )
-    .toBe("ollama");
-  await page.getByRole("button", { name: "Custom endpoint" }).click();
-  await page.getByRole("button", { name: "Fetch model list" }).click();
+  await page.getByRole("button", { name: "Test connection (Ping)" }).click();
+  await expect(page.getByText("● 200 OK (14ms)")).toBeVisible();
+  await page.getByRole("button", { name: "Save and connect" }).click();
+  await expect(page.getByText("ollama", { exact: true }).first()).toBeVisible();
+  await page.getByRole("button", { name: /Fetch model list/ }).click();
+  await page.screenshot({ path: "test-results/discovery-dialog.png" });
+  await page.evaluate(() => {
+    document.documentElement.dataset.theme = "dark";
+  });
+  await page.waitForTimeout(200);
+  await page.screenshot({ path: "test-results/discovery-dialog-dark.png" });
+  await page.evaluate(() => {
+    document.documentElement.dataset.theme = "light";
+  });
   await expect(page.getByText("3 models found")).toBeVisible();
-  await page.screenshot({ path: "test-results/pi-model-discovery.png", fullPage: true });
   await page.getByRole("textbox", { name: "Search available models" }).fill("qwen");
   await page.getByRole("button", { name: "Select shown" }).click();
   await page.getByRole("button", { name: "Add selected models (1)" }).click();
-  await expect(page.getByText("Models added: 1")).toBeVisible();
-  await expect(page.getByText("Qwen Coder")).toBeVisible();
+  await expect(page.getByText("qwen2.5-coder:7b")).toBeVisible();
+  await page.getByRole("button", { name: /Fetch model list/ }).click();
+  await expect(page.getByText("Already added").first()).toBeVisible();
+  await page.getByRole("dialog").getByRole("button", { name: "Close" }).click();
   await expect
     .poll(() =>
       page.evaluate(
@@ -685,13 +680,16 @@ test("custom Pi providers and models have a primary navigation entry", async ({ 
       ),
     )
     .toBe("model.import");
-  await page.getByRole("button", { name: "Add model" }).click();
+  await page
+    .getByRole("button", { name: /Add model/ })
+    .first()
+    .click();
   await page.getByRole("textbox", { name: "Model ID" }).fill("manual-model");
   await page.getByRole("textbox", { name: "Display name" }).fill("Manual model");
-  await page.getByRole("spinbutton", { name: "Context window" }).fill("128000");
-  await page.getByRole("button", { name: "Save model" }).click();
-  await expect(page.getByText("Manual model")).toBeVisible();
-  await page.screenshot({ path: "test-results/pi-models.png", fullPage: true });
+  await page.getByRole("spinbutton", { name: /Context window/ }).fill("128000");
+  await page.screenshot({ path: "test-results/model-details.png", fullPage: true });
+  await page.getByRole("button", { name: /Save model/ }).click();
+  await expect(page.getByRole("button", { name: "manual-model" })).toBeVisible();
   await expect
     .poll(() =>
       page.evaluate(
@@ -699,6 +697,19 @@ test("custom Pi providers and models have a primary navigation entry", async ({ 
       ),
     )
     .toBe("model.save");
+
+  await page.getByRole("button", { name: "Add custom endpoint", exact: true }).click();
+  await page.getByRole("button", { name: "API key only" }).click();
+  await page.getByRole("combobox", { name: "Provider ID" }).fill("google");
+  await page.getByLabel("API key", { exact: true }).fill("google-test-key");
+  await page.getByRole("button", { name: /Save API key/ }).click();
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () => JSON.parse(localStorage.getItem("fixture.modelAuthAction") ?? "{}").provider,
+      ),
+    )
+    .toBe("google");
 });
 
 test("compact composer fits a narrow window and its menu closes accessibly", async ({ page }) => {

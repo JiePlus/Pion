@@ -22,10 +22,12 @@ import { ShellDialogs } from "./ShellDialogs.tsx";
 import { Workspace } from "./Workspace.tsx";
 import { ThemeProvider } from "../theme/ThemeProvider.tsx";
 import { Panel } from "../primitives/Panel.tsx";
+import { useState } from "react";
 import styles from "./Shell.module.css";
 
 export function Shell({ runtime, boot }: { runtime: Runtime; boot: Boot }) {
   const controller = useShellController(runtime, boot);
+  const [addProviderRequest, setAddProviderRequest] = useState(0);
   const {
     locale,
     page,
@@ -137,7 +139,7 @@ export function Shell({ runtime, boot }: { runtime: Runtime; boot: Boot }) {
   return (
     <ThemeProvider value={themePreference}>
       <div
-        className={`${componentClass(styles, "app")} ${page === "setup" ? componentClass(styles, "setup-page") : ""} ${railCollapsed ? componentClass(styles, "rail-collapsed") : ""}`}
+        className={`${componentClass(styles, "app")} ${page === "setup" ? componentClass(styles, "setup-page") : ""} ${page === "models" ? componentClass(styles, "model-view") : ""} ${railCollapsed ? componentClass(styles, "rail-collapsed") : ""}`}
         onContextMenu={(event) => {
           if (at("contextMenu").length) {
             event.preventDefault();
@@ -191,6 +193,7 @@ export function Shell({ runtime, boot }: { runtime: Runtime; boot: Boot }) {
               sessionBusy={sessionBusy}
               openHistory={openHistory}
               branch={branch}
+              onAddProvider={() => setAddProviderRequest((value) => value + 1)}
               setRenameValue={setRenameValue}
               setRenameOpen={setRenameOpen}
               perform={perform}
@@ -213,8 +216,14 @@ export function Shell({ runtime, boot }: { runtime: Runtime; boot: Boot }) {
             <SettingsTabs page={page} onNavigate={(next) => action("core.navigate", next)} />
           )}
           {page === "models" && (
-            <main className={`${componentClass(managementStyles, "management")} settings`}>
-              <ModelSettings onPackages={() => action("core.navigate", "packages")} />
+            <main className={componentClass(styles, "models-page")}>
+              <ModelSettings
+                onPackages={() => action("core.navigate", "packages")}
+                models={setupStatus?.models}
+                selectedModel={setupStatus?.selectedModel}
+                runtimeVersion={setupStatus?.installedVersion}
+                addProviderRequest={addProviderRequest}
+              />
             </main>
           )}
           {page === "setup" && (

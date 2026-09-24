@@ -71,6 +71,23 @@
   white-space: nowrap;
 }
 
+.page-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.add-provider {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  border-color: var(--pion-color-line);
+  background: var(--pion-color-surface);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
 .task-menu-button {
   width: 34px;
   padding-inline: 0;

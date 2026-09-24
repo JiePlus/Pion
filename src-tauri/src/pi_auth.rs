@@ -106,6 +106,34 @@ pub fn discover_models(
     Ok(result)
 }
 
+pub fn probe_endpoint(executable: &str, helper: &Path, request: &Value) -> Result<Value, String> {
+    let mut child = node_command(executable, helper)?
+        .arg("probe")
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null())
+        .spawn()
+        .map_err(|e| format!("Cannot start endpoint probe: {e}"))?;
+    child
+        .stdin
+        .take()
+        .ok_or("No endpoint probe input")?
+        .write_all(request.to_string().as_bytes())
+        .map_err(|e| e.to_string())?;
+    let output = child.wait_with_output().map_err(|e| e.to_string())?;
+    if output.stdout.len() > 64 * 1024 {
+        return Err("Endpoint probe response is too large".into());
+    }
+    let result: Value = serde_json::from_slice(&output.stdout).map_err(|e| e.to_string())?;
+    if !output.status.success() || result["type"] == "error" {
+        return Err(result["message"]
+            .as_str()
+            .unwrap_or("Endpoint probe failed")
+            .into());
+    }
+    Ok(result)
+}
+
 impl Login {
     pub fn start(
         app: tauri::AppHandle,

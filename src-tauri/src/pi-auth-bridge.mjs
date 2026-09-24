@@ -40,6 +40,39 @@ function modelNumber(value) {
   return Number.isSafeInteger(value) && value > 0 ? value : undefined;
 }
 
+async function probeEndpoint() {
+  const { baseUrl, api, key } = JSON.parse(readFileSync(0, "utf8"));
+  if (
+    typeof baseUrl !== "string" ||
+    ![
+      "openai-completions",
+      "openai-responses",
+      "anthropic-messages",
+      "google-generative-ai",
+    ].includes(api)
+  )
+    throw new Error("Invalid endpoint configuration");
+  const url = new URL(baseUrl);
+  if (!["http:", "https:"].includes(url.protocol) || url.username || url.password)
+    throw new Error("Invalid provider URL");
+  url.pathname = `${url.pathname.replace(/\/+$/, "")}/models`;
+  const headers = new Headers({ Accept: "application/json" });
+  if (typeof key === "string" && key) {
+    if (api === "anthropic-messages") headers.set("x-api-key", key);
+    else if (api === "google-generative-ai") headers.set("x-goog-api-key", key);
+    else headers.set("Authorization", `Bearer ${key}`);
+  }
+  if (api === "anthropic-messages") headers.set("anthropic-version", "2023-06-01");
+  const started = performance.now();
+  const response = await fetch(url, {
+    headers,
+    redirect: "error",
+    signal: AbortSignal.timeout(10000),
+  });
+  if (!response.ok) throw new Error(`Endpoint probe failed (${response.status})`);
+  return { type: "probe", latencyMs: Math.round(performance.now() - started) };
+}
+
 async function discoverModels(runtime, providerId, api) {
   if (
     ![
@@ -74,6 +107,7 @@ async function discoverModels(runtime, providerId, api) {
     else headers.delete(name);
   }
 
+  const started = performance.now();
   let response;
   try {
     response = await fetch(url, {
@@ -143,6 +177,7 @@ async function discoverModels(runtime, providerId, api) {
   return {
     type: "models",
     models: [...models.values()],
+    latencyMs: Math.round(performance.now() - started),
     truncated: entries.length > 1000 || !!result?.has_more || !!result?.nextPageToken,
   };
 }
@@ -152,7 +187,9 @@ const [, , executable, action, providerId, api] = process.argv;
 try {
   const { ModelRuntime } = await import(pathToFileURL(packageEntry(executable)).href);
   const runtime = await ModelRuntime.create({ allowModelNetwork: false, refreshOnCreate: false });
-  if (action === "list") {
+  if (action === "probe") {
+    send(await probeEndpoint());
+  } else if (action === "list") {
     const credentials = new Map(
       (await runtime.listCredentials()).map((item) => [item.providerId, item.type]),
     );

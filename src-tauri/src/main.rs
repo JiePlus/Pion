@@ -456,6 +456,11 @@ fn handle(app: &tauri::AppHandle, request: Value) -> Result<Value, String> {
                 api,
             )
         }
+        "model_config.probe" => pi_auth::probe_endpoint(
+            &configured_executable(&state.root),
+            &state.pi_auth_helper,
+            &request,
+        ),
         "model_config.change" => {
             let home = app.path().home_dir().map_err(|e| e.to_string())?;
             let result =

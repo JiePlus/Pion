@@ -188,6 +188,9 @@ export async function taskFixture(page: Page) {
                 return skillListing();
               case "model_config.list":
                 return modelConfig;
+              case "model_config.probe":
+                localStorage.setItem("fixture.modelProbe", JSON.stringify(request));
+                return { type: "probe", latencyMs: 14 };
               case "model_config.discover":
                 localStorage.setItem("fixture.modelDiscoveryProvider", request.provider);
                 return {
@@ -197,6 +200,7 @@ export async function taskFixture(page: Page) {
                     { id: "deepseek-r1:7b", name: "DeepSeek R1" },
                     { id: "embed-large" },
                   ],
+                  latencyMs: 38,
                   truncated: false,
                 };
               case "model_auth.list":

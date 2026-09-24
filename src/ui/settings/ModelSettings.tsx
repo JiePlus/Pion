@@ -6,6 +6,7 @@ import styles from "./ModelSettings.module.css";
 import { ApiKeyAccess } from "./ApiKeyAccess.tsx";
 import { PiLogin } from "./PiLogin.tsx";
 import { CustomModels } from "./CustomModels.tsx";
+import { ModelCatalog } from "./ModelCatalog.tsx";
 
 type AccessMethod = "key" | "login" | "environment" | "custom" | "extension";
 const methods: {
@@ -34,13 +35,31 @@ export function ModelSettings({
   onPackages,
   onChanged,
   embedded = false,
+  models,
+  selectedModel,
+  runtimeVersion,
+  addProviderRequest,
 }: {
   onPackages: () => void;
   onChanged?: () => void;
   embedded?: boolean;
+  models?: { provider: string; id: string; name?: string }[];
+  selectedModel?: { provider: string; id: string } | null;
+  runtimeVersion?: string;
+  addProviderRequest?: number;
 }) {
   const [method, setMethod] = useState<AccessMethod>("key");
   const [keyProvider, setKeyProvider] = useState("");
+  if (!embedded)
+    return (
+      <ModelCatalog
+        onChanged={onChanged}
+        models={models}
+        selectedModel={selectedModel}
+        runtimeVersion={runtimeVersion}
+        addProviderRequest={addProviderRequest}
+      />
+    );
   return (
     <div className={componentClass(styles, "model-management")}>
       {!embedded && (
