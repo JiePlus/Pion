@@ -1,5 +1,6 @@
 .rail {
   display: flex;
+  width: var(--pion-size-rail);
   min-width: 0;
   min-height: 0;
   flex-direction: column;
@@ -7,6 +8,9 @@
   overflow: hidden;
   border-right: 1px solid var(--pion-color-line);
   background: var(--pion-color-surface);
+  transition:
+    width var(--pion-duration-rail) var(--pion-ease-rail),
+    padding var(--pion-duration-rail) var(--pion-ease-rail);
 }
 
 .rail-header {
@@ -17,6 +21,9 @@
   margin: 0 -10px 14px;
   padding: 0 16px;
   border-bottom: 1px solid var(--pion-color-line);
+  transition:
+    min-height var(--pion-duration-rail) var(--pion-ease-rail),
+    margin-bottom var(--pion-duration-rail) var(--pion-ease-rail);
 }
 
 .brand {
@@ -475,10 +482,87 @@
   margin-left: auto;
 }
 
+/*
+ * Sidebar collapse/expand animation. Collapsing animates the rail's width
+ * while labels fade out and their footprint squeezes shut, so icons glide to
+ * their centered positions instead of snapping. Expanding reverses the fade
+ * with a short delay so text appears once the rail has room for it. These
+ * base transitions are the destination styles for the expand direction; the
+ * collapsed rules below redefine the timing for the collapse direction.
+ */
+.brand strong,
+.rail nav button > span:last-child,
+.rail nav .new-task-button > span:nth-child(2),
+.rail nav .new-task-button kbd,
+.task-browser-controls,
+.project-heading,
+.project-heading > span,
+.project-row .disclosure,
+.project-row .project-name,
+.project-row small,
+.task-list,
+.runtime-label > span:not(:global(.dot)) {
+  max-width: none;
+  transition:
+    opacity var(--pion-duration-fade) ease 40ms,
+    visibility 0s linear 40ms,
+    max-width var(--pion-duration-rail) var(--pion-ease-rail),
+    min-height var(--pion-duration-rail) var(--pion-ease-rail),
+    padding var(--pion-duration-rail) var(--pion-ease-rail);
+}
+
+/* Text spans keep an explicit max-width above their natural size so the
+   squeeze interpolates smoothly in both directions. */
+.rail nav button > span:last-child,
+.rail nav .new-task-button > span:nth-child(2) {
+  max-width: 120px;
+}
+
+.rail nav .new-task-button kbd,
+.runtime-label > span:not(:global(.dot)) {
+  max-width: 60px;
+}
+
+.project-row .disclosure {
+  max-width: 12px;
+}
+
+.project-row .project-name {
+  max-width: 220px;
+}
+
+.project-row small {
+  max-width: 40px;
+}
+
+/* Buttons keep their hover transitions (background/border/color) alongside
+   the collapse motion. */
+.rail nav button,
+.project-row button:first-child,
+.project-row button:last-child,
+.rail-bottom > button,
+.project-heading :global(.icon-button) {
+  transition:
+    background 120ms ease,
+    border-color 120ms ease,
+    color 120ms ease,
+    opacity var(--pion-duration-fade) ease 40ms,
+    visibility 0s linear 40ms,
+    max-width var(--pion-duration-rail) var(--pion-ease-rail),
+    min-height var(--pion-duration-rail) var(--pion-ease-rail),
+    padding var(--pion-duration-rail) var(--pion-ease-rail);
+}
+
 :global(.rail-collapsed) .rail {
   padding-inline: 8px;
 }
 
+/*
+ * Collapsed state. Instead of display:none (which cannot animate), labels fade
+ * out while their max-width squeezes to zero, so the remaining icons recenter
+ * continuously as the rail narrows. Elements keep occupying vertical space,
+ * which is invisible inside the fixed-height, overflow-hidden rail.
+ */
 :global(.rail-collapsed) .brand strong,
 :global(.rail-collapsed) .rail nav button > span:last-child,
 :global(.rail-collapsed) .new-task-button > span:nth-child(2),
@@ -493,7 +577,15 @@
 :global(.rail-collapsed) .task-list,
 :global(.rail-collapsed) .rail-bottom > button,
 :global(.rail-collapsed) .runtime-label > span:not(:global(.dot)) {
-  display: none;
+  overflow: hidden;
+  max-width: 0;
+  opacity: 0;
+  visibility: hidden;
+  white-space: nowrap;
+  transition:
+    opacity var(--pion-duration-fade) ease,
+    max-width var(--pion-duration-rail) var(--pion-ease-rail) 60ms,
+    visibility 0s linear calc(var(--pion-duration-fade) + 10ms);
 }
 
 :global(.rail-collapsed) .rail-header {
@@ -518,6 +610,15 @@
 :global(.rail-collapsed) .project-heading {
   min-height: 1px;
   padding: 0;
+}
+
+/* The heading's action buttons keep no height once hidden, so the collapsed
+   heading really collapses instead of leaving an invisible gap. */
+:global(.rail-collapsed) .project-heading :global(.icon-button) {
+  min-height: 0;
+  height: 0;
+  padding-block: 0;
+  border-width: 0;
 }
 
 :global(.rail-collapsed) .runtime-label {
