@@ -21,6 +21,9 @@ const translations = {
   "M modified · A added · D deleted · ?? untracked": "M 修改 · A 新增 · D 删除 · ?? 未跟踪",
   "Detached HEAD": "分离的 HEAD",
   Staged: "已暂存",
+  Unstaged: "未暂存",
+  Untracked: "未跟踪",
+  "No changes to review.": "没有需要审阅的改动。",
   "Working tree": "工作区",
   "Could not read Git status: {error}": "无法读取 Git 状态：{error}",
   "Could not read diff: {error}": "无法读取差异：{error}",
@@ -41,10 +44,6 @@ function tx(key, values = {}) {
   );
 }
 
-function flags(file) {
-  return `${file.index}${file.worktree}`;
-}
-
 function displayText(value) {
   if (value.binary) return tx("Binary file — no text diff to show.");
   if (!value.diff.trim()) return tx("No text changes on this side.");
@@ -53,14 +52,43 @@ function displayText(value) {
   return value.diff;
 }
 
-function fileButton(file) {
-  const stagedOnly =
-    file.index !== " " && file.index !== "?" && (file.worktree === " " || file.worktree === "?");
+function fileCode(file, staged) {
+  if (file.index === "?" && file.worktree === "?") return "??";
+  if (staged) return file.index === " " ? "M" : file.index;
+  return file.worktree === " " ? "M" : file.worktree;
+}
+
+function fileRow(file, staged) {
   return {
     type: "button",
-    label: `${flags(file)}  ${file.path}`,
+    variant: "row",
+    label: `${fileCode(file, staged)}  ${file.path}`,
     command: "git-diff.open",
-    args: { path: file.path, staged: stagedOnly },
+    args: { path: file.path, staged },
+  };
+}
+
+function section(title, files, staged) {
+  return [
+    { type: "text", text: `${title} · ${files.length}`, tone: "muted" },
+    ...files.slice(0, 60).map((file) => fileRow(file, staged)),
+  ];
+}
+
+function messageRow(message) {
+  return {
+    type: "row",
+    align: "between",
+    children: [
+      { type: "text", text: message, tone: "muted" },
+      {
+        type: "button",
+        label: tx("Refresh"),
+        command: "git-diff.refresh",
+        disabled: busy,
+        variant: "inline",
+      },
+    ],
   };
 }
 
@@ -69,17 +97,11 @@ function view() {
   if (error) children.push({ type: "text", text: error, tone: "error" });
   if (!status) {
     if (!error)
-      children.push({
-        type: "text",
-        text: busy ? tx("Reading Git status…") : tx("Open a workspace to view Git status."),
-        tone: "muted",
-      });
+      children.push(
+        messageRow(busy ? tx("Reading Git status…") : tx("Open a workspace to view Git status.")),
+      );
   } else if (!status.repo) {
-    children.push({
-      type: "text",
-      text: tx("This workspace is not a Git repository."),
-      tone: "muted",
-    });
+    children.push(messageRow(tx("This workspace is not a Git repository.")));
   } else {
     const branch = status.detached ? tx("Detached HEAD") : status.branch || "HEAD";
     const tracking =
@@ -87,29 +109,68 @@ function view() {
     const summary = status.clean
       ? tx("Working tree clean")
       : tx("{count} changed files", { count: status.files.length });
-    children.push({ type: "text", text: `${branch}${tracking} · ${summary}`, tone: "muted" });
-    if (!status.clean)
-      children.push({
-        type: "text",
-        text: tx("M modified · A added · D deleted · ?? untracked"),
-        tone: "muted",
-      });
+    children.push({
+      type: "row",
+      align: "between",
+      children: [
+        {
+          type: "row",
+          align: "start",
+          gap: "sm",
+          children: [
+            { type: "badge", text: branch },
+            {
+              type: "text",
+              text: [tracking.trim(), summary].filter(Boolean).join(" · "),
+              tone: "muted",
+            },
+          ],
+        },
+        {
+          type: "button",
+          label: tx("Refresh"),
+          command: "git-diff.refresh",
+          disabled: busy,
+          variant: "inline",
+        },
+      ],
+    });
 
-    const visible = status.files.slice(0, 150);
-    for (const file of visible) children.push(fileButton(file));
-    if (status.files.length > visible.length)
-      children.push({
-        type: "text",
-        text: tx("…and {count} more files", { count: status.files.length - visible.length }),
-        tone: "muted",
-      });
+    const staged = status.files.filter((file) => file.index !== " " && file.index !== "?");
+    const unstaged = status.files.filter((file) => file.worktree !== " " && file.worktree !== "?");
+    const untracked = status.files.filter((file) => file.index === "?" && file.worktree === "?");
+    const sections = [
+      [tx("Staged"), staged, true],
+      [tx("Unstaged"), unstaged, false],
+      [tx("Untracked"), untracked, false],
+    ];
+    for (const [title, files, isStaged] of sections) {
+      if (files.length) children.push(...section(title, files, isStaged));
+    }
+    if (status.clean)
+      children.push({ type: "text", text: tx("No changes to review."), tone: "muted" });
   }
 
   if (selected) {
     children.push({
-      type: "text",
-      text: `${selected.staged ? tx("Staged") : tx("Working tree")} · ${selected.path}`,
-      tone: "heading",
+      type: "row",
+      align: "between",
+      children: [
+        {
+          type: "row",
+          align: "start",
+          gap: "sm",
+          children: [
+            { type: "text", text: selected.path, tone: "heading" },
+            {
+              type: "text",
+              text: selected.staged ? tx("Staged") : tx("Unstaged"),
+              tone: "muted",
+            },
+          ],
+        },
+        { type: "button", label: tx("Close diff"), command: "git-diff.close", variant: "inline" },
+      ],
     });
     if (diff) {
       children.push({ type: "code", text: displayText(diff), language: "diff", variant: "diff" });
@@ -118,15 +179,8 @@ function view() {
     } else if (busy) {
       children.push({ type: "text", text: tx("Loading diff…"), tone: "muted" });
     }
-    children.push({ type: "button", label: tx("Close diff"), command: "git-diff.close" });
   }
 
-  children.push({
-    type: "button",
-    label: tx("Refresh"),
-    command: "git-diff.refresh",
-    disabled: busy,
-  });
   return { type: "stack", children };
 }
 

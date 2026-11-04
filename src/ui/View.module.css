@@ -138,8 +138,8 @@
 }
 
 .view-code .code-del {
-  background: rgb(220 38 38 / 12%);
-  color: #b42318;
+  background: var(--pion-color-danger-soft);
+  color: var(--pion-color-danger);
 }
 
 .view-code .code-hunk {
@@ -153,4 +153,122 @@
 
 .view-code .code-context {
   color: inherit;
+}
+
+.view-row {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  align-items: center;
+}
+
+.view-row[data-align="start"] {
+  justify-content: flex-start;
+}
+
+.view-row[data-align="between"] {
+  justify-content: space-between;
+}
+
+.view-row[data-gap="sm"] {
+  gap: 6px;
+}
+
+.view-row[data-gap="md"] {
+  gap: 10px;
+}
+
+.action-inline {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 26px;
+  padding: 0 10px;
+  border: 1px solid var(--pion-color-line);
+  border-radius: var(--pion-size-radius-sm);
+  background: var(--pion-color-surface);
+  color: var(--pion-color-ink-soft);
+  font-family: var(--pion-font-sans);
+  font-size: 11px;
+  font-weight: 550;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background 120ms ease,
+    border-color 120ms ease,
+    color 120ms ease;
+}
+
+.action-inline:hover:not(:disabled) {
+  border-color: var(--pion-color-line-strong);
+  background: var(--pion-color-surface-hover);
+  color: var(--pion-color-ink);
+}
+
+.action-inline:focus-visible,
+.action-row:focus-visible {
+  outline: 2px solid var(--pion-color-brand);
+  outline-offset: -1px;
+}
+
+.action-inline:disabled,
+.action-row:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.action-inline-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.action-row {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  align-items: center;
+  padding: 6px 8px;
+  border: 1px solid transparent;
+  border-radius: var(--pion-size-radius-sm);
+  background: transparent;
+  color: var(--pion-color-ink-soft);
+  font-family: var(--pion-font-mono);
+  font-size: 11.5px;
+  line-height: 1.5;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background 100ms ease,
+    color 100ms ease;
+}
+
+.action-row:hover:not(:disabled) {
+  background: var(--pion-color-surface-hover);
+  color: var(--pion-color-ink);
+}
+
+.action-row-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.view-code::-webkit-scrollbar,
+.view-stack::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.view-code::-webkit-scrollbar-thumb,
+.view-stack::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: var(--pion-color-line-strong);
+}
+
+.view-code::-webkit-scrollbar-track,
+.view-stack::-webkit-scrollbar-track {
+  background: transparent;
 }

@@ -32,6 +32,8 @@ export function ViewRenderer({ view, run }: { view: View; run: Run }) {
   switch (view.type) {
     case "stack":
       return <Stack view={view} run={run} />;
+    case "row":
+      return <Row view={view} run={run} />;
     case "text":
       return (
         <p
@@ -122,7 +124,24 @@ function Stack({ view, run }: { view: Extract<View, { type: "stack" }>; run: Run
     >
       {view.children.map((child, index) => (
         <ViewRenderer
-          key={"command" in child ? child.command : `${child.type}:${index}`}
+          key={`${child.type}:${"command" in child ? child.command : ""}:${index}`}
+          view={child}
+          run={run}
+        />
+      ))}
+    </div>
+  );
+}
+function Row({ view, run }: { view: Extract<View, { type: "row" }>; run: Run }) {
+  return (
+    <div
+      className={componentClass(styles, "view-row")}
+      data-align={view.align ?? "center"}
+      data-gap={view.gap ?? "md"}
+    >
+      {view.children.map((child, index) => (
+        <ViewRenderer
+          key={`${child.type}:${"command" in child ? child.command : ""}:${index}`}
           view={child}
           run={run}
         />
@@ -132,9 +151,12 @@ function Stack({ view, run }: { view: Extract<View, { type: "stack" }>; run: Run
 }
 function Action({ view, run }: { view: Extract<View, { type: "button" }>; run: Run }) {
   const [busy, setBusy] = useState(false);
+  const row = view.variant === "row";
   return (
     <button
+      className={componentClass(styles, row ? "action-row" : "action-inline")}
       disabled={view.disabled || busy}
+      aria-busy={busy}
       onClick={() => {
         setBusy(true);
         run(view.command, view.args)
@@ -142,7 +164,9 @@ function Action({ view, run }: { view: Extract<View, { type: "button" }>; run: R
           .finally(() => setBusy(false));
       }}
     >
-      {view.label}
+      <span className={componentClass(styles, row ? "action-row-label" : "action-inline-label")}>
+        {view.label}
+      </span>
     </button>
   );
 }

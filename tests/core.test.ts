@@ -51,6 +51,19 @@ test("Git/Diff plugin declares only the workspace.git permission and a valid cod
   assert.equal(validateView(view, gitManifest).type, "code");
   assert.throws(() => validateView({ ...view, variant: "html" }, gitManifest));
   assert.throws(() => validateView({ type: "code", text: "x".repeat(200000) }, gitManifest));
+  const rowView = {
+    type: "row",
+    align: "between",
+    children: [{ type: "button", label: "a.ts", variant: "row", command: "git-diff.refresh" }],
+  };
+  assert.equal(validateView(rowView, gitManifest).type, "row");
+  assert.throws(() => validateView({ ...rowView, align: "end" }, gitManifest));
+  assert.throws(() =>
+    validateView(
+      { type: "button", label: "x", variant: "weird", command: "git-diff.refresh" },
+      gitManifest,
+    ),
+  );
 });
 test("extension UI text strips terminal styling without changing content", () => {
   assert.equal(

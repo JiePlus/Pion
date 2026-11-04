@@ -77,6 +77,17 @@ export function validateView(value: unknown, manifest: Manifest): View {
         if (!Array.isArray(node.children)) throw new Error("Invalid children");
         node.children.forEach((child) => visit(child, depth + 1));
         break;
+      case "row":
+        if (!Array.isArray(node.children)) throw new Error("Invalid children");
+        if (
+          node.align !== undefined &&
+          !["start", "center", "between"].includes(node.align as string)
+        )
+          throw new Error("Invalid row align");
+        if (node.gap !== undefined && !["sm", "md"].includes(node.gap as string))
+          throw new Error("Invalid row gap");
+        node.children.forEach((child) => visit(child, depth + 1));
+        break;
       case "text":
       case "badge":
         if (typeof node.text !== "string" || node.text.length > 100_000)
@@ -111,8 +122,11 @@ export function validateView(value: unknown, manifest: Manifest): View {
           throw new Error("UI command must be owned and declared");
         if (node.disabled !== undefined && typeof node.disabled !== "boolean")
           throw new Error("Invalid disabled");
-        if (node.type === "button") text(node.label, 100);
-        else {
+        if (node.type === "button") {
+          text(node.label, 100);
+          if (node.variant !== undefined && !["inline", "row"].includes(node.variant as string))
+            throw new Error("Invalid button variant");
+        } else {
           text(node.placeholder, 300);
           text(node.submit, 100);
         }

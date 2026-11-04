@@ -92,14 +92,15 @@ test("opening a file renders its unified diff and reports binary/truncated state
   await plugin.activate(api);
   await commands.get("git-diff.open")!({ path: "src/a.ts", staged: false });
   const json = rendered();
-  assert.match(json, /Working tree · src\/a\.ts/);
+  assert.match(json, /"text":"src\/a\.ts"/);
+  assert.match(json, /"text":"Unstaged"/);
   assert.match(json, /"type":"code"/);
   assert.match(json, /\+two/);
   assert.match(json, /Diff truncated for display/);
 
   staged = true;
   await commands.get("git-diff.open")!({ path: "src/a.ts", staged: true });
-  assert.match(rendered(), /Staged · src\/a\.ts/);
+  assert.match(rendered(), /"text":"Staged"/);
   plugin.deactivate();
 });
 

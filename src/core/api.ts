@@ -96,11 +96,24 @@ export interface CoreEvents {
 export type EventName = keyof CoreEvents | `custom:${string}:${string}`;
 export type View =
   | { type: "stack"; children: View[] }
+  | {
+      type: "row";
+      children: View[];
+      align?: "start" | "center" | "between";
+      gap?: "sm" | "md";
+    }
   | { type: "text"; text: string; tone?: "muted" | "error" | "heading" }
   | { type: "badge"; text: string }
   | { type: "list"; items: { label: string; text: string }[] }
   | { type: "code"; text: string; language?: string; variant?: "plain" | "diff" }
-  | { type: "button"; label: string; command: string; args?: Json; disabled?: boolean }
+  | {
+      type: "button";
+      label: string;
+      command: string;
+      args?: Json;
+      disabled?: boolean;
+      variant?: "inline" | "row";
+    }
   | { type: "form"; command: string; placeholder: string; submit: string; disabled?: boolean };
 export interface PiDesktopPluginContext {
   i18n: { readonly locale: Locale; onDidChange(listener: (locale: Locale) => void): Dispose };
