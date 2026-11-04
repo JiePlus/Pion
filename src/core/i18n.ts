@@ -386,7 +386,7 @@ const zh = {
   "Add skill": "添加技能",
   "Additional skill paths": "额外技能路径",
   "No additional skill paths.": "尚无额外技能路径。",
-  "Detected skills": "已发现的技能",
+  "Installed skills": "已安装技能",
   "No Pi skills detected.": "尚未发现 Pi 技能。",
   Enabled: "已启用",
   Disabled: "已禁用",

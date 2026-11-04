@@ -492,7 +492,7 @@ test("Pi packages stay separate from desktop plugins and support both scopes", a
   ).toBe("project");
 });
 
-test("Pi skills use native paths and show discovered skills", async ({ page }) => {
+test("Pi skills use native paths and show installed skills", async ({ page }) => {
   await taskFixture(page);
   await page.goto("/");
   await page.getByRole("button", { name: "Pi skills", exact: true }).click();
@@ -513,8 +513,12 @@ test("Pi skills use native paths and show discovered skills", async ({ page }) =
       () => JSON.parse(localStorage.getItem("fixture.skillAction") ?? "{}").projectId,
     ),
   ).toBe("p1");
-  await page.getByRole("button", { name: "Disable review" }).click();
-  await expect(page.getByRole("button", { name: "Enable review" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Installed skills" })).toBeVisible();
+  const reviewSwitch = page.getByRole("switch", { name: "review", exact: true });
+  await expect(reviewSwitch).toBeChecked();
+  await reviewSwitch.focus();
+  await page.keyboard.press("Space");
+  await expect(reviewSwitch).not.toBeChecked();
   expect(
     await page.evaluate(
       () => JSON.parse(localStorage.getItem("fixture.skillAction") ?? "{}").enabled,
@@ -550,8 +554,10 @@ test("Pi package skills show source and can be toggled", async ({ page }) => {
   await page.reload();
   await page.getByRole("button", { name: "Pi skills", exact: true }).click();
   await expect(page.getByText("npm:example")).toBeVisible();
-  await page.getByRole("button", { name: "Disable package-skill" }).click();
-  await expect(page.getByRole("button", { name: "Enable package-skill" })).toBeVisible();
+  const packageSwitch = page.getByRole("switch", { name: "package-skill", exact: true });
+  await expect(packageSwitch).toBeChecked();
+  await packageSwitch.click();
+  await expect(packageSwitch).not.toBeChecked();
 });
 
 test("Pi skills support project paths, overrides, and slash commands", async ({ page }) => {

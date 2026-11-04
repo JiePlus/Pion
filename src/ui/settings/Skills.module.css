@@ -1,0 +1,164 @@
+.skillsPage {
+  container-type: inline-size;
+}
+
+.skillList {
+  display: grid;
+  gap: 16px;
+  margin: 20px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.skillRow {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  min-height: 52px;
+}
+
+.skillIcon {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  place-items: center;
+  border: 1px solid var(--pion-color-line-strong);
+  border-radius: var(--pion-size-radius-lg);
+  background: var(--pion-color-surface);
+  color: var(--pion-color-brand-strong);
+}
+
+.skillDetails {
+  min-width: 0;
+}
+
+.skillTitle {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 8px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.skillTitle strong {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.skillTitle span,
+.skillSource {
+  color: var(--pion-color-muted);
+  font-size: 12px;
+}
+
+.skillPath,
+.skillSource {
+  margin: 4px 0 0;
+  line-height: 1.5;
+}
+
+.skillPath {
+  overflow: hidden;
+  color: var(--pion-color-muted);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.skillSource {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.skillSwitch {
+  display: grid;
+  width: 44px;
+  min-height: 44px;
+  padding: 0;
+  place-items: center;
+  border: 0;
+  background: transparent;
+}
+
+.skillSwitch:hover:not(:disabled) {
+  background: var(--pion-color-surface-hover);
+}
+
+.switchTrack {
+  position: relative;
+  width: 36px;
+  height: 22px;
+  border: 1px solid var(--pion-color-muted);
+  border-radius: var(--pion-size-radius-pill);
+  background: var(--pion-color-surface-muted);
+}
+
+.switchTrack::after {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--pion-color-muted);
+  content: "";
+  transition: transform 120ms ease;
+}
+
+.skillSwitch[aria-checked="true"] .switchTrack {
+  border-color: var(--pion-color-ink);
+  background: var(--pion-color-ink);
+}
+
+.skillSwitch[aria-checked="true"] .switchTrack::after {
+  background: var(--pion-color-canvas);
+  transform: translateX(14px);
+}
+
+.projectOverride {
+  min-width: 100px;
+  font-size: 12px;
+}
+
+@container (max-width: 480px) {
+  .skillsPage > form {
+    flex-wrap: wrap;
+  }
+
+  .skillsPage > form label:first-child {
+    flex-basis: 100%;
+  }
+
+  .skillRow {
+    grid-template-columns: 40px minmax(0, 1fr) auto;
+    align-items: start;
+    gap: 10px;
+  }
+
+  .skillIcon {
+    width: 40px;
+    height: 40px;
+    border-radius: var(--pion-size-radius-md);
+  }
+
+  .skillPath,
+  .skillSource {
+    display: -webkit-box;
+    overflow-wrap: anywhere;
+    white-space: normal;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  .projectRow .skillDetails {
+    grid-column: 2 / -1;
+  }
+
+  .projectOverride {
+    grid-column: 2 / -1;
+    justify-self: start;
+  }
+}
