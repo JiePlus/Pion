@@ -197,7 +197,7 @@ function view() {
       ],
     });
     if (diff) {
-      children.push({ type: "code", text: displayText(diff), language: "diff", variant: "diff" });
+      children.push({ type: "diff", text: displayText(diff) });
       if (diff.truncated)
         children.push({ type: "text", text: tx("Diff truncated for display."), tone: "muted" });
     } else if (busy) {

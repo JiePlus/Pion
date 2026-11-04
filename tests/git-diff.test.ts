@@ -99,7 +99,7 @@ test("opening a file renders its unified diff and reports binary/truncated state
   assert.match(json, /"label":"a\.ts"/);
   assert.match(json, /"detail":"src"/);
   assert.match(json, /"text":"Unstaged"/);
-  assert.match(json, /"type":"code"/);
+  assert.match(json, /"type":"diff"/);
   assert.match(json, /\+two/);
   assert.match(json, /Diff truncated for display/);
 

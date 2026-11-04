@@ -104,35 +104,70 @@
   padding: 8px 10px 10px;
 }
 
-.view-code {
+.view-table-wrap {
   width: 100%;
-  max-width: 100%;
-  max-height: 480px;
+  overflow-x: auto;
+  border: 1px solid var(--pion-color-line);
+  border-radius: var(--pion-size-radius-md);
+}
+
+.view-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.view-table caption {
+  padding: 8px 10px;
+  color: var(--pion-color-muted);
+  font-size: 11px;
+  text-align: left;
+}
+
+.view-table th,
+.view-table td {
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--pion-color-line);
+  overflow-wrap: anywhere;
+  text-align: left;
+  vertical-align: top;
+  white-space: pre-wrap;
+}
+
+.view-table th {
+  background: var(--pion-color-surface-muted);
+  color: var(--pion-color-ink-soft);
+  font-weight: 620;
+}
+
+.view-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.view-code,
+.view-diff {
+  width: 100%;
+  max-height: 420px;
   margin: 0;
-  padding: 10px 12px;
+  padding: 12px 14px;
   overflow: auto;
   border: 1px solid var(--pion-color-line);
-  border-radius: 10px;
+  border-radius: var(--pion-size-radius-md);
   background: var(--pion-color-surface-muted);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 11.5px;
-  line-height: 1.55;
-  tab-size: 4;
+  font-family: var(--pion-font-mono);
+  font-size: 12px;
+  line-height: 1.6;
   white-space: pre;
 }
 
-.view-code code {
-  display: block;
-}
-
-.diff-line {
+.view-diff .diff-line {
   display: block;
   min-width: max-content;
   padding: 0 6px;
   margin: 0 -6px;
 }
 
-.diff-no {
+.view-diff .diff-no {
   display: inline-block;
   width: 3em;
   padding-right: 8px;
@@ -142,46 +177,96 @@
   -webkit-user-select: none;
 }
 
-.diff-sign {
+.view-diff .diff-sign {
   display: inline-block;
   width: 1.2em;
   color: var(--pion-color-muted);
 }
 
-.diff-text {
+.view-diff .diff-text {
   white-space: pre;
 }
 
-.diff-add {
+.view-diff .diff-add {
   background: rgb(16 185 129 / 13%);
 }
 
-.diff-add .diff-sign,
-.diff-add .diff-text {
+.view-diff .diff-add .diff-sign,
+.view-diff .diff-add .diff-text {
   color: var(--pion-color-brand-strong);
 }
 
-.diff-del {
+.view-diff .diff-del {
   background: var(--pion-color-danger-soft);
 }
 
-.diff-del .diff-sign,
-.diff-del .diff-text {
+.view-diff .diff-del .diff-sign,
+.view-diff .diff-del .diff-text {
   color: var(--pion-color-danger);
 }
 
-.diff-hunk {
+.view-diff .diff-hunk {
   background: var(--pion-color-surface-muted);
-  color: var(--pion-color-brand);
+  color: var(--pion-color-blue);
   font-weight: 600;
 }
 
-.diff-meta {
+.view-diff .diff-meta {
   color: var(--pion-color-muted);
 }
 
-.diff-context {
+.view-diff .diff-context {
   color: inherit;
+}
+
+.view-image {
+  margin: 0;
+  max-width: 100%;
+}
+
+.view-image img {
+  max-width: 100%;
+  border: 1px solid var(--pion-color-line);
+  border-radius: var(--pion-size-radius-md);
+}
+
+.view-image figcaption {
+  margin-top: 6px;
+  color: var(--pion-color-muted);
+  font-size: 11px;
+}
+
+.view-input {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.view-input label {
+  color: var(--pion-color-ink-soft);
+  font-size: 11px;
+  font-weight: 620;
+}
+
+.view-input-row {
+  display: flex;
+  gap: 8px;
+}
+
+.view-input-row input {
+  min-width: 0;
+  flex: 1;
+  padding: 8px 10px;
+  border: 1px solid var(--pion-color-line-strong);
+  border-radius: var(--pion-size-radius-sm);
+  background: var(--pion-color-surface);
+  font-size: 13px;
+}
+
+.view-input-row input:focus-visible {
+  border-color: var(--pion-color-brand);
+  outline: none;
 }
 
 .view-row {
@@ -209,6 +294,7 @@
 
 .action-inline {
   display: inline-flex;
+  flex-shrink: 0;
   align-items: center;
   justify-content: center;
   gap: 4px;
@@ -348,18 +434,21 @@
 }
 
 .view-code::-webkit-scrollbar,
+.view-diff::-webkit-scrollbar,
 .view-stack::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 
 .view-code::-webkit-scrollbar-thumb,
+.view-diff::-webkit-scrollbar-thumb,
 .view-stack::-webkit-scrollbar-thumb {
   border-radius: 999px;
   background: var(--pion-color-line-strong);
 }
 
 .view-code::-webkit-scrollbar-track,
+.view-diff::-webkit-scrollbar-track,
 .view-stack::-webkit-scrollbar-track {
   background: transparent;
 }

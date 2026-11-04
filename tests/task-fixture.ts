@@ -470,8 +470,16 @@ export async function taskFixture(page: Page) {
                 }
                 save();
                 return skillListing();
-              case "review":
-                return { bundle: { manifest, source }, digest: "fixture-builtin", enabled: true };
+              case "review": {
+                const override = read("fixture.reviewManifest", null);
+                return override
+                  ? {
+                      bundle: { manifest: override, source: "function activate() {}" },
+                      digest: "fixture-custom",
+                      enabled: true,
+                    }
+                  : { bundle: { manifest, source }, digest: "fixture-builtin", enabled: true };
+              }
               case "approve":
                 records.splice(0, records.length, {
                   bundle: { manifest, source },

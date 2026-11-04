@@ -60,28 +60,54 @@ export function ViewRenderer({ view, run }: { view: View; run: Run }) {
           ))}
         </div>
       );
+    case "table":
+      return <DataTable view={view} />;
     case "code":
-      return <CodeView text={view.text} language={view.language} variant={view.variant} />;
+      return (
+        <pre className={componentClass(styles, "view-code")} data-language={view.language}>
+          <code>{view.text}</code>
+        </pre>
+      );
+    case "diff":
+      return <Diff text={view.text} />;
+    case "image":
+      return (
+        <figure className={componentClass(styles, "view-image")}>
+          <img src={view.src} alt={view.alt ?? ""} />
+          {view.alt && <figcaption>{view.alt}</figcaption>}
+        </figure>
+      );
+    case "input":
+      return <InlineInput view={view} run={run} />;
     case "button":
       return <Action view={view} run={run} />;
     case "form":
       return <CommandForm view={view} run={run} />;
   }
 }
-function CodeView({
-  text,
-  language,
-  variant,
-}: {
-  text: string;
-  language?: string;
-  variant?: "plain" | "diff";
-}) {
-  if (variant === "diff") return <DiffView text={text} language={language} />;
+function DataTable({ view }: { view: Extract<View, { type: "table" }> }) {
   return (
-    <pre className={componentClass(styles, "view-code")} data-variant="plain" aria-label={language}>
-      <code>{text}</code>
-    </pre>
+    <div className={componentClass(styles, "view-table-wrap")}>
+      <table className={componentClass(styles, "view-table")}>
+        {view.caption && <caption>{view.caption}</caption>}
+        <thead>
+          <tr>
+            {view.columns.map((column) => (
+              <th key={column.key}>{column.label}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {view.rows.map((row, index) => (
+            <tr key={index}>
+              {view.columns.map((column) => (
+                <td key={column.key}>{row[column.key] ?? ""}</td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }
 function DiffLine({ className, text }: { className: string; text: string }) {
@@ -91,62 +117,99 @@ function DiffLine({ className, text }: { className: string; text: string }) {
     </span>
   );
 }
-function DiffView({ text, language }: { text: string; language?: string }) {
+function Diff({ text }: { text: string }) {
   const lines = text.split("\n");
   if (lines.length && lines[lines.length - 1] === "") lines.pop();
   let oldNumber = 0;
   let newNumber = 0;
   let inHunk = false;
   return (
-    <pre className={componentClass(styles, "view-code")} data-variant="diff" aria-label={language}>
-      <code>
-        {lines.map((line, index) => {
-          const hunk = /^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@/.exec(line);
-          if (hunk) {
-            oldNumber = Number(hunk[1]);
-            newNumber = Number(hunk[2]);
-            inHunk = true;
-            return (
-              <DiffLine key={index} className={componentClass(styles, "diff-hunk")} text={line} />
-            );
-          }
-          if (!inHunk) {
-            return (
-              <DiffLine key={index} className={componentClass(styles, "diff-meta")} text={line} />
-            );
-          }
-          const sign = line[0];
-          if (sign === "\\") {
-            return (
-              <DiffLine key={index} className={componentClass(styles, "diff-meta")} text={line} />
-            );
-          }
-          let oldText = "";
-          let newText = "";
-          if (sign === "+") newText = String(newNumber++);
-          else if (sign === "-") oldText = String(oldNumber++);
-          else {
-            oldText = String(oldNumber++);
-            newText = String(newNumber++);
-          }
-          const body = line.length ? line.slice(1) : "";
-          const tone = sign === "+" ? "diff-add" : sign === "-" ? "diff-del" : "diff-context";
+    <pre className={componentClass(styles, "view-diff")}>
+      {lines.map((line, index) => {
+        const hunk = /^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@/.exec(line);
+        if (hunk) {
+          oldNumber = Number(hunk[1]);
+          newNumber = Number(hunk[2]);
+          inHunk = true;
           return (
-            <span
-              key={index}
-              className={`${componentClass(styles, "diff-line")} ${componentClass(styles, tone)}`}
-            >
-              <span className={componentClass(styles, "diff-no")}>{oldText}</span>
-              <span className={componentClass(styles, "diff-no")}>{newText}</span>
-              <span className={componentClass(styles, "diff-sign")}>
-                {sign === " " ? " " : sign}
-              </span>
-              <span className={componentClass(styles, "diff-text")}>{body || " "}</span>
-            </span>
+            <DiffLine key={index} className={componentClass(styles, "diff-hunk")} text={line} />
           );
-        })}
-      </code>
+        }
+        if (!inHunk) {
+          return (
+            <DiffLine key={index} className={componentClass(styles, "diff-meta")} text={line} />
+          );
+        }
+        const sign = line[0];
+        if (sign === "\\") {
+          return (
+            <DiffLine key={index} className={componentClass(styles, "diff-meta")} text={line} />
+          );
+        }
+        let oldText = "";
+        let newText = "";
+        if (sign === "+") newText = String(newNumber++);
+        else if (sign === "-") oldText = String(oldNumber++);
+        else {
+          oldText = String(oldNumber++);
+          newText = String(newNumber++);
+        }
+        const body = line.length ? line.slice(1) : "";
+        const tone = sign === "+" ? "diff-add" : sign === "-" ? "diff-del" : "diff-context";
+        return (
+          <span
+            key={index}
+            className={`${componentClass(styles, "diff-line")} ${componentClass(styles, tone)}`}
+          >
+            <span className={componentClass(styles, "diff-no")}>{oldText}</span>
+            <span className={componentClass(styles, "diff-no")}>{newText}</span>
+            <span className={componentClass(styles, "diff-sign")}>{sign === " " ? " " : sign}</span>
+            <span className={componentClass(styles, "diff-text")}>{body || " "}</span>
+          </span>
+        );
+      })}
     </pre>
+  );
+}
+function InlineInput({ view, run }: { view: Extract<View, { type: "input" }>; run: Run }) {
+  const scope = useContext(DraftScope);
+  const draftKey = `pion.draft.${scope}.${view.command}`;
+  const [text, setText] = useState(() => localStorage.getItem(draftKey) ?? "");
+  const [busy, setBusy] = useState(false);
+  function updateText(value: string) {
+    setText(value);
+    if (value) localStorage.setItem(draftKey, value);
+    else localStorage.removeItem(draftKey);
+  }
+  return (
+    <form
+      className={componentClass(styles, "view-input")}
+      onSubmit={(event) => {
+        event.preventDefault();
+        if (busy || view.disabled) return;
+        setBusy(true);
+        run(view.command, { text })
+          .then(
+            () => updateText(""),
+            () => {},
+          )
+          .finally(() => setBusy(false));
+      }}
+    >
+      {view.label && <label>{view.label}</label>}
+      <div className={componentClass(styles, "view-input-row")}>
+        <input
+          aria-label={view.label ?? view.placeholder}
+          placeholder={view.placeholder}
+          value={text}
+          disabled={view.disabled || busy}
+          onChange={(event) => updateText(event.target.value)}
+        />
+        <button type="submit" disabled={view.disabled || busy}>
+          {view.submit}
+        </button>
+      </div>
+    </form>
   );
 }
 function Stack({ view, run }: { view: Extract<View, { type: "stack" }>; run: Run }) {

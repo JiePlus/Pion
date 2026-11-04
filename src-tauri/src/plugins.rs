@@ -10,11 +10,13 @@ use std::path::{Path, PathBuf};
 const LIMIT: u64 = 1024 * 1024;
 const PERMISSIONS: &[&str] = &[
     "workspace.read",
+    "workspace.write",
     "workspace.git",
     "pi.read",
     "pi.sendMessage",
     "storage",
     "notifications",
+    "network.fetch",
 ];
 const LOCATIONS: &[&str] = &[
     "sidebar",
@@ -100,6 +102,102 @@ fn validate_translations(value: Option<&Value>) -> Result<(), String> {
     Ok(())
 }
 
+fn valid_write_path(value: &str) -> bool {
+    !value.is_empty()
+        && value.len() <= 200
+        && !value.starts_with('/')
+        && !value.contains('\\')
+        && !value.contains('\0')
+        && value.split('/').all(|part| {
+            !part.is_empty()
+                && part != "."
+                && part != ".."
+                && part
+                    .bytes()
+                    .all(|b| b.is_ascii_alphanumeric() || matches!(b, b'.' | b'_' | b'-' | b'*'))
+        })
+}
+
+fn valid_host(value: &str) -> bool {
+    if value.is_empty() || value.len() > 253 || value != value.to_ascii_lowercase() {
+        return false;
+    }
+    let host = value.strip_prefix("*.").unwrap_or(value);
+    !host.is_empty()
+        && host.split('.').all(|label| {
+            !label.is_empty()
+                && label.len() <= 63
+                && label
+                    .bytes()
+                    .next()
+                    .is_some_and(|b| b.is_ascii_alphanumeric())
+                && label
+                    .bytes()
+                    .last()
+                    .is_some_and(|b| b.is_ascii_alphanumeric())
+                && label
+                    .bytes()
+                    .all(|b| b.is_ascii_alphanumeric() || b == b'-')
+        })
+}
+
+fn validate_access(value: Option<&Value>, permissions: &[String]) -> Result<(), String> {
+    let granted = |permission: &str| permissions.iter().any(|value| value == permission);
+    let value = match value {
+        Some(value) => value,
+        None => {
+            if granted("workspace.write") {
+                return Err("workspace.write requires an access.workspaceWrite allowlist".into());
+            }
+            if granted("network.fetch") {
+                return Err("network.fetch requires an access.network allowlist".into());
+            }
+            return Ok(());
+        }
+    };
+    let access = value.as_object().ok_or("Invalid access")?;
+    for key in access.keys() {
+        if key != "workspaceWrite" && key != "network" {
+            return Err("Unknown access key".into());
+        }
+    }
+    match access.get("workspaceWrite") {
+        Some(list) => {
+            let list = list.as_array().ok_or("Invalid workspace write allowlist")?;
+            if !granted("workspace.write") || list.is_empty() || list.len() > 32 {
+                return Err("Invalid workspace write allowlist".into());
+            }
+            for entry in list {
+                if !valid_write_path(entry.as_str().ok_or("Invalid workspace write allowlist")?) {
+                    return Err("Invalid workspace write allowlist".into());
+                }
+            }
+        }
+        None if granted("workspace.write") => {
+            return Err("workspace.write requires an access.workspaceWrite allowlist".into());
+        }
+        None => {}
+    }
+    match access.get("network") {
+        Some(list) => {
+            let list = list.as_array().ok_or("Invalid network allowlist")?;
+            if !granted("network.fetch") || list.is_empty() || list.len() > 32 {
+                return Err("Invalid network allowlist".into());
+            }
+            for entry in list {
+                if !valid_host(entry.as_str().ok_or("Invalid network allowlist")?) {
+                    return Err("Invalid network allowlist".into());
+                }
+            }
+        }
+        None if granted("network.fetch") => {
+            return Err("network.fetch requires an access.network allowlist".into());
+        }
+        None => {}
+    }
+    Ok(())
+}
+
 pub fn validate(bundle: &Bundle) -> Result<String, String> {
     let m = &bundle.manifest;
     let id = string(m, "id")?;
@@ -126,12 +224,15 @@ pub fn validate(bundle: &Bundle) -> Result<String, String> {
     }
     let permissions = m["permissions"].as_array().ok_or("Missing permissions")?;
     let mut seen = HashSet::new();
+    let mut granted = Vec::new();
     for permission in permissions {
         let permission = permission.as_str().ok_or("Invalid permission")?;
         if !PERMISSIONS.contains(&permission) || !seen.insert(permission) {
             return Err("Unknown/duplicate permission".into());
         }
+        granted.push(permission.to_string());
     }
+    validate_access(m.get("access"), &granted)?;
     seen.clear();
     for kind in ["commands", "panels"] {
         let contributions = m["contributes"][kind]
@@ -308,6 +409,27 @@ impl Plugins {
         Ok(())
     }
 
+    /// Returns the plugin's declared write-path and network allowlists.
+    pub fn allowlists(&self, id: &str) -> (Vec<String>, Vec<String>) {
+        let access = self
+            .installed
+            .get(id)
+            .and_then(|record| record.bundle.manifest.get("access"));
+        let list = |key: &str| -> Vec<String> {
+            access
+                .and_then(|access| access.get(key))
+                .and_then(Value::as_array)
+                .map(|items| {
+                    items
+                        .iter()
+                        .filter_map(|item| item.as_str().map(str::to_string))
+                        .collect()
+                })
+                .unwrap_or_default()
+        };
+        (list("workspaceWrite"), list("network"))
+    }
+
     pub fn storage(&self, id: &str, key: &str, value: Option<Value>) -> Result<Value, String> {
         self.require(id, "storage")?;
         if key.is_empty()
@@ -360,22 +482,6 @@ mod tests {
         bundle.manifest["main"] = json!("../escape.js");
         assert!(validate(&bundle).is_err());
     }
-
-    #[test]
-    fn git_diff_plugin_manifest_passes_review_validation() {
-        let mut bundle = Bundle {
-            manifest: serde_json::from_str(include_str!(
-                "../../plugins/git-diff-plugin/plugin.json"
-            ))
-            .unwrap(),
-            source: include_str!("../../plugins/git-diff-plugin/index.js").into(),
-        };
-        assert_eq!(validate(&bundle).unwrap(), "git-diff");
-        // The plugin requests only read-only Git access; write/exec permissions are rejected.
-        bundle.manifest["permissions"] = json!(["workspace.git", "process.spawn"]);
-        assert!(validate(&bundle).is_err());
-    }
-
     #[test]
     fn manifest_translation_boundary() {
         let mut bundle = Bundle {
@@ -394,6 +500,53 @@ mod tests {
         assert!(validate(&bundle).is_err());
         bundle.manifest["contributes"]["commands"][0]["titleI18n"] = json!({});
         bundle.manifest["contributes"]["panels"][0]["titleI18n"] = json!({"en": "x".repeat(101)});
+        assert!(validate(&bundle).is_err());
+    }
+    #[test]
+    fn manifest_requires_and_validates_allowlists() {
+        let mut bundle = Bundle {
+            manifest: serde_json::from_str(include_str!("../../examples/hello-plugin/plugin.json"))
+                .unwrap(),
+            source: "function activate() {}".into(),
+        };
+        bundle.manifest["permissions"] = json!(["workspace.write"]);
+        assert!(validate(&bundle).is_err());
+        bundle.manifest["access"] = json!({ "workspaceWrite": ["notes/**"] });
+        assert!(validate(&bundle).is_ok());
+        bundle.manifest["access"] = json!({ "workspaceWrite": ["../escape"] });
+        assert!(validate(&bundle).is_err());
+        bundle.manifest["permissions"] = json!(["network.fetch"]);
+        bundle.manifest["access"] = json!({ "network": ["api.example.com", "*.trusted.dev"] });
+        assert!(validate(&bundle).is_ok());
+        bundle.manifest["access"] = json!({ "network": ["https://evil.com"] });
+        assert!(validate(&bundle).is_err());
+        bundle.manifest["access"] = json!({ "network": ["evil.com"], "workspaceWrite": ["a/*"] });
+        assert!(validate(&bundle).is_err());
+    }
+    #[test]
+    fn example_plugin_api_demo_validates() {
+        let bundle = Bundle {
+            manifest: serde_json::from_str(include_str!(
+                "../../examples/plugin-api-demo/plugin.json"
+            ))
+            .unwrap(),
+            source: include_str!("../../examples/plugin-api-demo/index.js").into(),
+        };
+        assert_eq!(validate(&bundle).unwrap(), "plugin-api-demo");
+    }
+
+    #[test]
+    fn git_diff_plugin_manifest_passes_review_validation() {
+        let mut bundle = Bundle {
+            manifest: serde_json::from_str(include_str!(
+                "../../plugins/git-diff-plugin/plugin.json"
+            ))
+            .unwrap(),
+            source: include_str!("../../plugins/git-diff-plugin/index.js").into(),
+        };
+        assert_eq!(validate(&bundle).unwrap(), "git-diff");
+        // Read-only Git access only; write/exec permissions are rejected.
+        bundle.manifest["permissions"] = json!(["workspace.git", "process.spawn"]);
         assert!(validate(&bundle).is_err());
     }
     #[test]

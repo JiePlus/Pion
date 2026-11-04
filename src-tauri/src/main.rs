@@ -3,6 +3,7 @@
 mod git;
 mod images;
 mod models;
+mod net;
 mod packages;
 mod pi;
 mod pi_auth;
@@ -1135,6 +1136,23 @@ fn handle(app: &tauri::AppHandle, request: Value) -> Result<Value, String> {
                         )?))
                     }
                 }
+                "workspace.writeFile" => {
+                    state.plugins.require(id, "workspace.write")?;
+                    let root = state
+                        .workspace
+                        .as_ref()
+                        .ok_or("No workspace is open")?
+                        .clone();
+                    let (allow, _) = state.plugins.allowlists(id);
+                    workspace::write_file(
+                        &root,
+                        &allow,
+                        field(args, "path")?,
+                        field(args, "content")?,
+                        1024 * 1024,
+                    )?;
+                    Ok(Value::Null)
+                }
                 "workspace.gitStatus" => {
                     state.plugins.require(id, "workspace.git")?;
                     let root = state.workspace.as_ref().ok_or("No workspace is open")?;
@@ -1148,6 +1166,11 @@ fn handle(app: &tauri::AppHandle, request: Value) -> Result<Value, String> {
                         field(args, "path")?,
                         args["staged"].as_bool().unwrap_or(false),
                     )
+                }
+                "network.fetch" => {
+                    state.plugins.require(id, "network.fetch")?;
+                    let (_, allow) = state.plugins.allowlists(id);
+                    net::fetch(&allow, field(args, "url")?, &args["options"])
                 }
                 _ => {
                     let (permission, command) = match method {
