@@ -303,6 +303,21 @@ const zh = {
     "接入本地引擎、私有网关或兼容 API 协议的代理",
   "Quick presets": "快捷预设填充",
   "Click to fill a typical configuration": "单击即可填入典型配置",
+  "Local services": "本地服务",
+  "Scanning local services…": "正在扫描本地服务…",
+  "Scan again": "重新扫描",
+  "Detected automatically on common local ports": "已在常用本地端口自动发现",
+  "Detected automatically. Click to fill, then adjust as needed.":
+    "已自动发现，点击填入后可继续修改。",
+  "No local model service detected. Add a custom endpoint manually below.":
+    "未发现本地模型服务，可在下方手动填写自定义端点。",
+  "No local model service detected. Enter the endpoint manually below.":
+    "未发现本地模型服务，请在下方手动填写端点。",
+  "Scan failed: {error}": "扫描失败：{error}",
+  "Endpoint reachable": "端点可访问",
+  Connect: "连接",
+  "{count} models": "{count} 个模型",
+  "{count} model": "{count} 个模型",
   Instance: "实例",
   Gateway: "网关",
   "API protocol": "API 协议格式规范",

@@ -253,6 +253,29 @@ export async function taskFixture(page: Page) {
                 return skillListing();
               case "model_config.list":
                 return modelConfig;
+              case "model_config.scan":
+                return {
+                  services: read("fixture.localScan", [
+                    {
+                      name: "ollama-local",
+                      label: "Ollama",
+                      baseUrl: "http://127.0.0.1:11434/v1",
+                      api: "openai-completions",
+                      latencyMs: 8,
+                      models: ["qwen2.5-coder:7b", "deepseek-r1:7b"],
+                      modelCount: 2,
+                    },
+                    {
+                      name: "lmstudio-local",
+                      label: "LM Studio",
+                      baseUrl: "http://127.0.0.1:1234/v1",
+                      api: "openai-completions",
+                      latencyMs: 11,
+                      models: ["llama-3.2-3b"],
+                      modelCount: 1,
+                    },
+                  ]),
+                };
               case "model_config.probe":
                 localStorage.setItem("fixture.modelProbe", JSON.stringify(request));
                 return { type: "probe", latencyMs: 14 };

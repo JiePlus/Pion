@@ -9,6 +9,7 @@ mod pi;
 mod pi_auth;
 mod pi_setup;
 mod plugins;
+mod scan;
 mod sessions;
 mod skills;
 mod tasks;
@@ -442,6 +443,7 @@ fn handle(app: &tauri::AppHandle, request: Value) -> Result<Value, String> {
             let home = app.path().home_dir().map_err(|e| e.to_string())?;
             models::list(&models::path(&home))
         }
+        "model_config.scan" => Ok(scan::scan(800)),
         "model_config.discover" => {
             let provider = field(&request, "provider")?;
             let home = app.path().home_dir().map_err(|e| e.to_string())?;

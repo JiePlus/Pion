@@ -111,6 +111,18 @@
 .presetHeading small {
   font-size: 10px;
 }
+.rescan {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--catalog-muted);
+  cursor: pointer;
+  font-size: 11px;
+}
+.rescan:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
 .presets,
 .protocols {
   display: grid;

@@ -638,7 +638,10 @@ test("model services connect providers and edit custom models", async ({ page })
     .toBe("test-code");
 
   await page.getByRole("button", { name: "Add custom endpoint", exact: true }).click();
-  await page.getByRole("button", { name: /Ollama Local/ }).click();
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: /Ollama/ })
+    .click();
   await expect(page.getByRole("textbox", { name: "Provider ID" })).toHaveValue("ollama-local");
   await page.screenshot({ path: "test-results/endpoint-dialog.png" });
   await page.evaluate(() => {

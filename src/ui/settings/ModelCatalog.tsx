@@ -5,7 +5,14 @@ import { Icon } from "../primitives/Icon.tsx";
 import { PiLogin } from "./PiLogin.tsx";
 import { DiscoveryDialog, EndpointDialog } from "./ModelCatalogDialogs.tsx";
 import { blankModel } from "./modelTypes.ts";
-import type { Config, CustomModel, DiscoveredModel, Provider } from "./modelTypes.ts";
+import type {
+  Config,
+  CustomModel,
+  DetectedService,
+  DiscoveredModel,
+  LocalScan,
+  Provider,
+} from "./modelTypes.ts";
 import styles from "./ModelCatalog.module.css";
 
 interface Credential {
@@ -91,6 +98,7 @@ export function ModelCatalog({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [localScan, setLocalScan] = useState<LocalScan>({ status: "idle", services: [] });
 
   useEffect(() => {
     setKey("");
@@ -130,12 +138,28 @@ export function ModelCatalog({
     };
   }, []);
 
+  useEffect(() => {
+    void scanLocal();
+    // Auto-scan local model services once when the page opens.
+  }, []);
+
   async function refresh() {
     const auth = await host<{ providers: Credential[] }>({ op: "model_auth.list" });
     const next = await host<Config>({ op: "model_config.list" });
     setCredentials(auth.providers);
     setConfig(next);
     onChanged?.();
+  }
+
+  async function scanLocal() {
+    if (!native) return;
+    setLocalScan((current) => ({ ...current, status: "scanning", error: undefined }));
+    try {
+      const result = await host<{ services: DetectedService[] }>({ op: "model_config.scan" });
+      setLocalScan({ status: "done", services: result.services ?? [] });
+    } catch (failure) {
+      setLocalScan({ status: "error", services: [], error: String(failure) });
+    }
   }
 
   async function submit(request: Record<string, unknown>, success: string) {
@@ -273,6 +297,16 @@ export function ModelCatalog({
     }
   }
 
+  function openDetected(service: DetectedService) {
+    setProviderDraft({ name: service.name, baseUrl: service.baseUrl, api: service.api });
+    setEditingProvider(false);
+    setNewProviderMode("endpoint");
+    setEditingModel(false);
+    setEndpointKey("");
+    setProbe("");
+    setAddOpen(true);
+  }
+
   function openModel(provider: Provider, model?: CustomModel) {
     setExpanded(provider.name);
     setModelDraft({
@@ -341,10 +375,6 @@ export function ModelCatalog({
       (filter !== "local" ||
         /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(?::|\/)/.test(provider.baseUrl ?? "")),
   );
-  const showOllama =
-    filter !== "connected" &&
-    localCount === 0 &&
-    "Local Ollama 本地 Ollama ollama-local".toLowerCase().includes(query.toLowerCase());
   const found = discovery && custom.find((provider) => provider.name === discovery.provider);
 
   return (
@@ -860,19 +890,63 @@ export function ModelCatalog({
             </section>
           );
         })}
-        {showOllama && (
-          <button
-            className={styles.ollamaPrompt}
-            type="button"
-            onClick={() => openProvider(undefined, true)}
-          >
-            <span className={`${styles.mark} ${styles.ollama}`}>OL</span>
-            <span>
-              <strong>{t("Local Ollama")}</strong>
-              <small>{t("Connect to localhost:11434 and manage local models")}</small>
-            </span>
-            <span className={styles.promptArrow}>{t("Quick setup")} →</span>
-          </button>
+        {filter !== "connected" && !query.trim() && (
+          <section className={styles.localScan} aria-label={t("Local services")}>
+            <div className={styles.localScanHead}>
+              <div>
+                <strong>{t("Local services")}</strong>
+                <small>
+                  {localScan.status === "scanning"
+                    ? t("Scanning local services…")
+                    : t("Detected automatically on common local ports")}
+                </small>
+              </div>
+              <button
+                type="button"
+                className={styles.secondary}
+                disabled={localScan.status === "scanning" || !native}
+                onClick={() => void scanLocal()}
+              >
+                ⟳ {t("Scan again")}
+              </button>
+            </div>
+            {localScan.status === "error" && (
+              <p className={styles.help}>
+                {t("Scan failed: {error}", { error: localScan.error ?? "" })}
+              </p>
+            )}
+            {localScan.status === "done" && localScan.services.length === 0 && (
+              <p className={styles.help}>
+                {t("No local model service detected. Add a custom endpoint manually below.")}
+              </p>
+            )}
+            {!!localScan.services.length && (
+              <div className={styles.localScanList}>
+                {localScan.services.map((service) => (
+                  <button
+                    key={service.name}
+                    type="button"
+                    className={styles.localService}
+                    onClick={() => openDetected(service)}
+                  >
+                    <span className={`${styles.mark} ${styles.ollama}`}>OL</span>
+                    <span>
+                      <strong>{service.label}</strong>
+                      <small>{service.baseUrl.replace(/^https?:\/\//, "")}</small>
+                    </span>
+                    <span className={styles.serviceMeta}>
+                      {service.modelCount
+                        ? t(service.modelCount === 1 ? "{count} model" : "{count} models", {
+                            count: service.modelCount,
+                          })
+                        : t("Endpoint reachable")}
+                    </span>
+                    <span className={styles.promptArrow}>{t("Connect")} →</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </section>
         )}
         {filter === "all" && (
           <button className={styles.addPrompt} type="button" onClick={() => openProvider()}>
@@ -884,7 +958,7 @@ export function ModelCatalog({
             <small>{t("Quick setup")} →</small>
           </button>
         )}
-        {!visibleBuiltIns.length && !visibleCustom.length && !showOllama && (
+        {!visibleBuiltIns.length && !visibleCustom.length && (
           <p className={styles.empty}>{t("No matching providers or models.")}</p>
         )}
       </div>
@@ -900,6 +974,8 @@ export function ModelCatalog({
           setKeyProvider={setOtherProvider}
           busy={busy || !native}
           probe={probe}
+          serviceScan={localScan}
+          onRescan={() => void scanLocal()}
           onProbe={() => void testEndpoint()}
           onSave={() => void saveEndpoint()}
           onSaveKey={() => void saveKeyOnly()}
