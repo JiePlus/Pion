@@ -1,13 +1,19 @@
 name: Build installers
 
-# Builds platform installers for Pion:
-# - on every pull request / manual run: build only, upload the bundles as workflow artifacts
-# - on a version tag (e.g. v0.1.0): build and attach the bundles to a draft GitHub Release
+# Builds and packages Pion installers, restricted to the main branch:
+# - on pushes to main: build, upload the bundles as workflow artifacts and create/update a
+#   published GitHub Release (tag v<version>) with the installers attached
+# - on pull requests targeting main and manual runs: build only, upload workflow artifacts
+# - on a version tag (e.g. v0.1.0): build and attach the bundles to a GitHub Release
 on:
   push:
+    branches:
+      - main
     tags:
       - "v*"
   pull_request:
+    branches:
+      - main
   workflow_dispatch:
 
 permissions:
@@ -22,7 +28,7 @@ jobs:
     name: Build (${{ matrix.name }})
     runs-on: ${{ matrix.platform }}
     permissions:
-      # Needed to create/update the draft release when running on a tag.
+      # Needed to create/update the release on main pushes and version tags.
       contents: write
     strategy:
       fail-fast: false
@@ -77,11 +83,11 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           args: ${{ matrix.args }}
-          # Release creation is only enabled when the workflow runs for a tag.
-          tagName: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
-          releaseName: ${{ github.ref_type == 'tag' && format('Pion {0}', github.ref_name) || '' }}
+          # Publish a release (tagged v<version>) on main pushes and version tags; PR/manual only build.
+          tagName: ${{ (github.ref_type == 'tag' || (github.event_name == 'push' && github.ref == 'refs/heads/main')) && 'v__VERSION__' || '' }}
+          releaseName: ${{ (github.ref_type == 'tag' || (github.event_name == 'push' && github.ref == 'refs/heads/main')) && 'Pion v__VERSION__' || '' }}
           releaseBody: "Download the installer for your platform from the assets below."
-          releaseDraft: true
+          releaseDraft: false
           prerelease: false
           uploadWorkflowArtifacts: true
           workflowArtifactNamePattern: "Pion_[platform]_[arch]_[bundle]_[version]"
