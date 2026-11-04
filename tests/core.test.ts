@@ -12,6 +12,16 @@ const manifest = JSON.parse(
 const gitManifest = JSON.parse(
   readFileSync(new URL("../plugins/git-diff-plugin/plugin.json", import.meta.url), "utf8"),
 );
+const sdkTypes = readFileSync(new URL("../sdk/index.d.ts", import.meta.url), "utf8");
+const pluginDocs = readFileSync(new URL("../PLUGIN_API.md", import.meta.url), "utf8");
+test("SDK and docs cover the workspace.git permission and row view", () => {
+  assert.match(sdkTypes, /"workspace\.git"/);
+  assert.match(sdkTypes, /gitStatus\(\): Promise<GitStatus>/);
+  assert.match(sdkTypes, /gitDiff\(path: string, staged\?: boolean\): Promise<GitDiff>/);
+  assert.match(sdkTypes, /type: "row"/);
+  assert.match(pluginDocs, /workspace\.git/);
+  assert.match(pluginDocs, /`row`\s+/);
+});
 test("manifest enforces API, ownership, permissions and paths", () => {
   assert.equal(parseManifest(manifest).id, "agent-chat");
   assert.throws(() => parseManifest({ ...manifest, id: "core" }));

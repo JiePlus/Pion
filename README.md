@@ -82,6 +82,17 @@ npm run dev
 
 > 更新地址使用 GitHub 公开 Release 的 `latest.json`，因此仓库与 Release 必须可匿名访问：把仓库设为公开即可（或把 `plugins.updater.endpoints` 指向其他公开静态地址）。签名私钥只放在 GitHub Actions Secrets，公钥本来就可以公开。
 
+## macOS 签名与公证（未启用）
+
+当前发布的 macOS 包为 **未签名 / 未公证**，首次打开会被 Gatekeeper 拦截，用户需在“系统设置 → 隐私与安全性”中允许。启用签名与公证需要 Apple Developer 账号（付费），并在仓库 Actions Secrets 中配置：
+
+1. 在 Apple Developer 后台创建 Developer ID Application 证书，导出为 `.p12` 后 base64 编码填入 `APPLE_CERTIFICATE`，证书密码填 `APPLE_CERTIFICATE_PASSWORD`。
+2. 把证书导入 CI 的登录钥匙串（`macos-latest` 上用 `apple-actions/import-certificate` 导入 `APPLE_CERTIFICATE`）。
+3. 配置 `APPLE_ID`（Apple ID 邮箱）、`APPLE_PASSWORD`（App-specific Password）、`APPLE_TEAM_ID`（Team ID）。
+4. Tauri 构建时开启 `bundle > macOS > signingIdentity`（或环境变量 `APPLE_SIGNING_IDENTITY`），并在打包后执行 `notarytool submit --wait`、再 `stapler staple`；Tauri v2 可通过 `bundle.macOS.minimumSystemVersion` / `frameworks` 配合 `tauri-action` 的签名支持完成。
+
+未配置上述 Secrets 前不要把包标注为“可直接安装”：本地 `npm run desktop:build` 产物同样未签名。
+
 ## 界面语言
 
 支持简体中文和英文。首次启动按系统语言选择，不支持的语言回退英文；在 **设置 → 界面语言 / Settings → Language** 手动切换，立即生效并保存在本机。Shell、核心 Pi 对话、权限审核和命令面板均支持切换。插件独立维护翻译，用户消息、模型回复和原始诊断信息保留原文。
@@ -100,7 +111,7 @@ npm run dev
 - 最多 4 个 Task 同时保持独立 Pi 进程；侧栏标出后台运行任务，切换不会停止其 Agent。
 - 从设置页批量扫描并导入有效的旧 `~/.pi/agent/sessions`；导入副本成为独立 Pion Task。
 - 通过 Pi 0.87.0 公开 Extension API 实现完整、只读、仅聊天工具预设，并随当前 Pi session 分支恢复。
-- Desktop Plugin API v1：命令、事件、声明式 UI（含 table / code / diff / input / image）、Pi、workspace 只读与白名单写入、独立 storage、受限网络请求。
+- Desktop Plugin API v1：命令、事件、声明式 UI（含 table / code / diff / input / image）、Pi、workspace 只读与白名单写入、Git 只读（`workspace.git`）、独立 storage、受限网络请求。
 - 插件权限扩展：`workspace.write`（路径白名单、大小限制）与 `network.fetch`（域名白名单，由宿主代理、不跟随重定向）；审核界面展示新增权限与白名单。
 - 本地文件夹/ZIP 审核安装；内容快照授权、自动加载已启用插件、手动 Reload、Disable、Uninstall。
 - 左侧 **Pi 技能** 使用 Pi 资源解析结果显示用户、项目和 Pi 包内的 Skill 及启用状态。可按用户或项目范围添加、移除本地 Skill 路径；用户范围可启用或禁用 Skill，项目范围可为每个 Skill 选择继承、加载或卸载，并可设置是否在命令菜单中显示 `/skill:name`。左侧 **Pi 包** 支持用户或项目范围的安装、更新和移除。
