@@ -52,6 +52,7 @@ A plugin is a folder (or ZIP with `plugin.json` and the entry file at its root).
 | ----------------- | ---------------------------------------------------------------- | ------------------------------------------------------------ |
 | `workspace.read`  | `workspace.get`, `workspace.readFile`, `workspace:opened` events | Reads relative paths inside the open workspace, ≤ 1 MB.      |
 | `workspace.write` | `workspace.writeFile`                                            | Requires `access.workspaceWrite`; ≤ 1 MB per write.          |
+| `workspace.git`   | `workspace.gitStatus`, `workspace.gitDiff`                       | Read-only Git status / unified diff of the open workspace.   |
 | `pi.read`         | `pi.getState/getMessages/getModels/getCommands`, `pi:event`      | Read-only view of the current Pi task.                       |
 | `pi.sendMessage`  | `pi.prompt`, `pi.abort`, `pi.setModel`                           | High risk: drives Pi, whose tools run with your permissions. |
 | `storage`         | `storage.get`, `storage.set`                                     | Per-plugin JSON storage, ≤ 1 MB total.                       |
@@ -97,7 +98,7 @@ interface PiDesktopPluginContext {
   commands: { register(id, handler); execute(id, args) };
   events: { on(name, listener); emit(name, payload) };
   ui: { registerPanel(id, view); updatePanel(id, view) };
-  workspace: { get(); readFile(path); writeFile(path, content) };
+  workspace: { get(); readFile(path); writeFile(path, content); gitStatus(); gitDiff(path, staged?) };
   network: { fetch(url, options?) };
   pi: { prompt; abort; getState; getMessages; getModels; setModel; getCommands; onEvent };
   storage: { get(key); set(key, value) };
@@ -140,6 +141,7 @@ inject DOM, HTML, scripts or styles. A view tree is limited to 256 nodes, depth
 | `type`   | Fields                                                                       |
 | -------- | ---------------------------------------------------------------------------- |
 | `stack`  | `children: View[]`                                                           |
+| `row`    | `children: View[]`, `align?: "start" \| "center" \| "between"`, `gap?: "sm" \| "md"` |
 | `text`   | `text`, `tone?: "muted" \| "error" \| "heading"`                             |
 | `badge`  | `text`                                                                       |
 | `list`   | `items: { label, text }[]`                                                   |
@@ -148,7 +150,7 @@ inject DOM, HTML, scripts or styles. A view tree is limited to 256 nodes, depth
 | `diff`   | `text` (unified diff; `+`/`-`/`@@` lines are tinted)                         |
 | `image`  | `src` (must be a `data:image/…;base64,` URL), `alt?`                         |
 | `input`  | `command`, `placeholder`, `submit`, `label?`, `disabled?` (single-line form) |
-| `button` | `command`, `label`, `args?`, `disabled?`                                     |
+| `button` | `command`, `label`, `args?`, `disabled?`, `variant?: "inline" \| "row"`, `detail?`, `badge?: { text, tone }` |
 | `form`   | `command`, `placeholder`, `submit`, `disabled?` (multi-line text)            |
 
 Any `command` referenced by a view must be a declared, owned command. Table cells

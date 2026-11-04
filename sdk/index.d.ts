@@ -21,6 +21,7 @@ export type Location =
 export type Permission =
   | "workspace.read"
   | "workspace.write"
+  | "workspace.git"
   | "pi.read"
   | "pi.sendMessage"
   | "storage"
@@ -61,12 +62,41 @@ export interface Workspace {
   path: string;
   name: string;
 }
+/** One changed path as reported by `git status --porcelain`. */
+export interface GitFile {
+  path: string;
+  index: string;
+  worktree: string;
+}
+export interface GitStatus {
+  repo: boolean;
+  branch?: string;
+  detached?: boolean;
+  ahead?: number;
+  behind?: number;
+  clean: boolean;
+  truncated?: boolean;
+  files: GitFile[];
+}
+export interface GitDiff {
+  path: string;
+  staged: boolean;
+  binary: boolean;
+  truncated: boolean;
+  diff: string;
+}
 export interface ViewTableColumn {
   key: string;
   label: string;
 }
 export type View =
   | { type: "stack"; children: View[] }
+  | {
+      type: "row";
+      children: View[];
+      align?: "start" | "center" | "between";
+      gap?: "sm" | "md";
+    }
   | { type: "text"; text: string; tone?: "muted" | "error" | "heading" }
   | { type: "badge"; text: string }
   | { type: "list"; items: { label: string; text: string }[] }
@@ -82,7 +112,19 @@ export type View =
       disabled?: boolean;
     }
   | { type: "image"; src: string; alt?: string }
-  | { type: "button"; label: string; command: string; args?: Json; disabled?: boolean }
+  | {
+      type: "button";
+      label: string;
+      command: string;
+      args?: Json;
+      disabled?: boolean;
+      variant?: "inline" | "row";
+      detail?: string;
+      badge?: {
+        text: string;
+        tone: "neutral" | "add" | "modify" | "delete" | "rename" | "untracked";
+      };
+    }
   | { type: "form"; command: string; placeholder: string; submit: string; disabled?: boolean };
 
 export interface NetworkRequestOptions {
@@ -130,6 +172,8 @@ export interface PiDesktopPluginContext {
     get(): Promise<Workspace>;
     readFile(path: string): Promise<string>;
     writeFile(path: string, content: string): Promise<void>;
+    gitStatus(): Promise<GitStatus>;
+    gitDiff(path: string, staged?: boolean): Promise<GitDiff>;
   };
   network: {
     fetch(url: string, options?: NetworkRequestOptions): Promise<NetworkResponse>;

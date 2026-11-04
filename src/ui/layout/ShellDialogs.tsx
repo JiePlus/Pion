@@ -18,6 +18,7 @@ const permissionLabels: Record<string, MessageKey> = {
     "High risk: drive Pi tasks; its tools may write files, execute commands, or access the network",
   "workspace.read": "Read text files in the current workspace",
   "workspace.write": "Write files only under the allowlisted workspace paths",
+  "workspace.git": "Read Git status and diffs in the current workspace",
   "network.fetch": "Make network requests only to allowlisted hosts, proxied through the host",
   storage: "Read and write this plugin’s own persistent data",
   notifications: "Show in-app notifications",
