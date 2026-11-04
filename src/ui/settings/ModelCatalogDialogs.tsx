@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { t } from "../../core/i18n.ts";
 import { Dialog } from "../primitives/Dialog.tsx";
-import type { DiscoveredModel, Provider } from "./modelTypes.ts";
+import type { DiscoveredModel, LocalScan, Provider } from "./modelTypes.ts";
 import styles from "./ModelCatalogDialogs.module.css";
 
 export type EndpointDraft = { name: string; baseUrl: string; api: string };
@@ -27,6 +27,8 @@ export function EndpointDialog({
   setKeyProvider,
   busy,
   probe,
+  serviceScan,
+  onRescan,
   onProbe,
   onSave,
   onSaveKey,
@@ -42,6 +44,8 @@ export function EndpointDialog({
   setKeyProvider: (value: string) => void;
   busy: boolean;
   probe: string;
+  serviceScan: LocalScan;
+  onRescan: () => void;
   onProbe: () => void;
   onSave: () => void;
   onSaveKey: () => void;
@@ -51,8 +55,8 @@ export function EndpointDialog({
   const [advanced, setAdvanced] = useState(false);
   useEscape(onClose);
 
-  function preset(name: string, baseUrl: string) {
-    setDraft({ name, baseUrl, api: "openai-completions" });
+  function preset(name: string, baseUrl: string, api = "openai-completions") {
+    setDraft({ name, baseUrl, api });
   }
 
   return (
@@ -93,29 +97,43 @@ export function EndpointDialog({
             }}
           >
             <div className={styles.presetHeading}>
-              <span>{t("Quick presets")}</span>
-              <small>{t("Click to fill a typical configuration")}</small>
-            </div>
-            <div className={styles.presets}>
+              <span>{t("Local services")}</span>
+              <small>
+                {serviceScan.status === "scanning"
+                  ? t("Scanning local services…")
+                  : t("Detected automatically. Click to fill, then adjust as needed.")}
+              </small>
               <button
                 type="button"
-                onClick={() => preset("ollama-local", "http://localhost:11434/v1")}
+                className={styles.rescan}
+                disabled={serviceScan.status === "scanning"}
+                onClick={onRescan}
               >
-                <strong>Ollama {t("Local")}</strong>
-                <small>:11434/v1</small>
-              </button>
-              <button
-                type="button"
-                onClick={() => preset("vllm-local", "http://localhost:8000/v1")}
-              >
-                <strong>vLLM {t("Instance")}</strong>
-                <small>:8000/v1</small>
-              </button>
-              <button type="button" onClick={() => preset("one-api", "http://localhost:3000/v1")}>
-                <strong>One-API {t("Gateway")}</strong>
-                <small>:3000/v1</small>
+                ⟳ {t("Scan again")}
               </button>
             </div>
+            {!!serviceScan.services.length && (
+              <div className={styles.presets}>
+                {serviceScan.services.map((service) => (
+                  <button
+                    key={service.name}
+                    type="button"
+                    onClick={() => preset(service.name, service.baseUrl, service.api)}
+                  >
+                    <strong>{service.label}</strong>
+                    <small>{service.baseUrl.replace(/^https?:\/\//, "")}</small>
+                  </button>
+                ))}
+              </div>
+            )}
+            {(serviceScan.status === "error" ||
+              (serviceScan.status === "done" && !serviceScan.services.length)) && (
+              <p className={styles.note}>
+                {serviceScan.status === "error"
+                  ? t("Scan failed: {error}", { error: serviceScan.error ?? "" })
+                  : t("No local model service detected. Enter the endpoint manually below.")}
+              </p>
+            )}
             <div className={styles.formFields}>
               <label>
                 {t("Provider ID")}

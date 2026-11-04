@@ -24,6 +24,20 @@ export interface DiscoveredModel {
   contextWindow?: number;
   maxTokens?: number;
 }
+export interface DetectedService {
+  name: string;
+  label: string;
+  baseUrl: string;
+  api: string;
+  latencyMs: number;
+  models: string[];
+  modelCount: number;
+}
+export type LocalScan = {
+  status: "idle" | "scanning" | "done" | "error";
+  services: DetectedService[];
+  error?: string;
+};
 export const blankModel = {
   id: "",
   name: "",

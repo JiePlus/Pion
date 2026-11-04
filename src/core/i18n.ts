@@ -305,6 +305,21 @@ const zh = {
     "接入本地引擎、私有网关或兼容 API 协议的代理",
   "Quick presets": "快捷预设填充",
   "Click to fill a typical configuration": "单击即可填入典型配置",
+  "Local services": "本地服务",
+  "Scanning local services…": "正在扫描本地服务…",
+  "Scan again": "重新扫描",
+  "Detected automatically on common local ports": "已在常用本地端口自动发现",
+  "Detected automatically. Click to fill, then adjust as needed.":
+    "已自动发现，点击填入后可继续修改。",
+  "No local model service detected. Add a custom endpoint manually below.":
+    "未发现本地模型服务，可在下方手动填写自定义端点。",
+  "No local model service detected. Enter the endpoint manually below.":
+    "未发现本地模型服务，请在下方手动填写端点。",
+  "Scan failed: {error}": "扫描失败：{error}",
+  "Endpoint reachable": "端点可访问",
+  Connect: "连接",
+  "{count} models": "{count} 个模型",
+  "{count} model": "{count} 个模型",
   Instance: "实例",
   Gateway: "网关",
   "API protocol": "API 协议格式规范",
@@ -408,6 +423,15 @@ const zh = {
   PANELS: "面板",
   "Your plugins live here.": "已启用的插件将显示在这里。",
   "Pi runtime": "Pi 引擎执行环境",
+  "Detected Pi installations": "已检测到的 Pi 安装",
+  "Scanning…": "扫描中…",
+  "Choose a detected path or enter your own below. Save settings to apply.":
+    "选择检测到的路径，或在下方手动填写，保存设置后生效。",
+  "Pi scanning requires the desktop app.": "请在桌面应用中扫描 Pi 安装。",
+  Selected: "已选择",
+  Use: "使用",
+  "No Pi installation found. Enter the executable path manually.":
+    "未发现 Pi 安装，请手动填写可执行文件路径。",
   "Pi setup": "Pi 初始设置",
   "Set up Pi": "配置 Pi",
   "Open Pi setup": "打开 Pi 初始设置",

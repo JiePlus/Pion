@@ -9,6 +9,7 @@ mod pi;
 mod pi_auth;
 mod pi_setup;
 mod plugins;
+mod scan;
 mod sessions;
 mod skills;
 mod tasks;
@@ -442,6 +443,10 @@ fn handle(app: &tauri::AppHandle, request: Value) -> Result<Value, String> {
             let home = app.path().home_dir().map_err(|e| e.to_string())?;
             models::list(&models::path(&home))
         }
+        "model_config.scan" => {
+            drop(state);
+            Ok(scan::scan(800))
+        }
         "model_config.discover" => {
             let provider = field(&request, "provider")?;
             let home = app.path().home_dir().map_err(|e| e.to_string())?;
@@ -553,6 +558,15 @@ fn handle(app: &tauri::AppHandle, request: Value) -> Result<Value, String> {
             let tasks: Vec<String> = state.tasks.keys().cloned().collect();
             state.stale_tasks.extend(tasks);
             Ok(result)
+        }
+        "pi_setup.scan" => {
+            let home = app.path().home_dir().map_err(|e| e.to_string())?;
+            let executable = request["executable"]
+                .as_str()
+                .map(str::to_owned)
+                .unwrap_or_else(|| configured_executable(&state.root));
+            drop(state);
+            Ok(pi_setup::scan(&executable, &home))
         }
         "pi_setup.status" => {
             let home = app.path().home_dir().map_err(|e| e.to_string())?;

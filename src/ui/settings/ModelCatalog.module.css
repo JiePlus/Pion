@@ -706,3 +706,71 @@
   background: var(--catalog-panel);
   font-size: 12px;
 }
+
+.localScan {
+  display: grid;
+  gap: 12px;
+  padding: 16px 18px;
+  border: 1px solid var(--catalog-line);
+  border-radius: 12px;
+  background: var(--catalog-panel);
+}
+.localScanHead {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.localScanHead > div {
+  display: grid;
+  gap: 3px;
+}
+.localScanHead strong {
+  font-size: 13px;
+}
+.localScanHead small {
+  color: var(--catalog-muted);
+  font-size: 11px;
+}
+.localScanHead .secondary {
+  min-height: 32px;
+  margin-left: auto;
+  border-color: var(--catalog-line);
+  background: var(--catalog-panel);
+  font-size: 12px;
+}
+.localScanList {
+  display: grid;
+  gap: 10px;
+}
+.localService {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px dashed var(--catalog-line);
+  border-radius: 10px;
+  background: var(--catalog-panel);
+  color: var(--catalog-text);
+  text-align: left;
+}
+.localService:hover {
+  border-color: #4fcaac;
+}
+.localService > span:nth-child(2) {
+  display: grid;
+  gap: 3px;
+}
+.localService strong {
+  font-size: 13px;
+}
+.localService small {
+  color: var(--catalog-muted);
+  font-family: var(--pion-font-mono);
+  font-size: 11px;
+}
+.serviceMeta {
+  margin-left: auto;
+  color: var(--catalog-muted);
+  font-size: 11px;
+}

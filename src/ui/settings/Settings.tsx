@@ -3,7 +3,8 @@ import { Button } from "../primitives/Button.tsx";
 import managementStyles from "./Management.module.css";
 import { componentClass } from "../componentClass.ts";
 import type { Dispatch, SetStateAction } from "react";
-import { native } from "../../core/host.ts";
+import { useEffect, useState } from "react";
+import { host, native } from "../../core/host.ts";
 import type { PiSetupStatus } from "../../core/host.ts";
 import type { Locale } from "../../core/api.ts";
 import { t } from "../../core/i18n.ts";
@@ -73,6 +74,37 @@ export function Settings({
   importLegacySessions,
   runtime,
 }: SettingsProps) {
+  const [piCandidates, setPiCandidates] = useState<{ executable: string; version: string }[]>([]);
+  const [piScanning, setPiScanning] = useState(native);
+  const [piScanError, setPiScanError] = useState("");
+  const [piScanRevision, setPiScanRevision] = useState(0);
+
+  useEffect(() => {
+    if (!native) return;
+    let cancelled = false;
+    setPiScanning(true);
+    setPiScanError("");
+    setPiCandidates([]);
+    host<{ candidates: { executable: string; version: string }[] }>({
+      op: "pi_setup.scan",
+      executable,
+    })
+      .then((result) => {
+        if (!cancelled) setPiCandidates(result.candidates);
+      })
+      .catch((failure) => {
+        if (!cancelled) setPiScanError(String(failure));
+      })
+      .finally(() => {
+        if (!cancelled) setPiScanning(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+    // Scan on entry or an explicit retry, never on each keystroke. Results only
+    // offer choices; they cannot overwrite a path edited while scanning.
+  }, [piScanRevision]);
+
   return (
     <main className={`${componentClass(managementStyles, "management")} settings`}>
       <header className={componentClass(styles, "page-heading")}>
@@ -145,6 +177,63 @@ export function Settings({
         <p className="muted">
           {t("Pion starts your installed Pi with its existing model and authentication settings.")}
         </p>
+        <section
+          className={componentClass(styles, "pi-scan")}
+          aria-label={t("Detected Pi installations")}
+          aria-busy={piScanning}
+        >
+          <div className={componentClass(styles, "pi-scan-head")}>
+            <span>{t("Detected Pi installations")}</span>
+            <button
+              type="button"
+              disabled={piScanning || !native}
+              onClick={() => setPiScanRevision((revision) => revision + 1)}
+            >
+              {t(piScanning ? "Scanning…" : "Scan again")}
+            </button>
+          </div>
+          <p className="muted">
+            {t("Choose a detected path or enter your own below. Save settings to apply.")}
+          </p>
+          {piScanError && (
+            <p className="error" role="alert">
+              {piScanError}
+            </p>
+          )}
+          {!!piCandidates.length && (
+            <div className={componentClass(styles, "pi-scan-list")}>
+              {piCandidates.map((candidate) => {
+                const chosen = executable === candidate.executable;
+                return (
+                  <button
+                    key={candidate.executable}
+                    type="button"
+                    className={`${componentClass(styles, "pi-scan-item")} ${chosen ? componentClass(styles, "selected") : ""}`}
+                    title={candidate.executable}
+                    aria-pressed={chosen}
+                    onClick={() => setExecutable(candidate.executable)}
+                  >
+                    <code>{candidate.executable}</code>
+                    <small>v{candidate.version}</small>
+                    <span>{chosen ? t("Selected") : t("Use")}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+          <div role="status">
+            {piScanning && <p className="muted">{t("Scanning…")}</p>}
+            {!piScanning && !piCandidates.length && !piScanError && (
+              <p className="muted">
+                {t(
+                  native
+                    ? "No Pi installation found. Enter the executable path manually."
+                    : "Pi scanning requires the desktop app.",
+                )}
+              </p>
+            )}
+          </div>
+        </section>
         <form
           onSubmit={(event) => {
             event.preventDefault();
