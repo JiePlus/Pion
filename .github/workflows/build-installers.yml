@@ -1,13 +1,18 @@
 name: Build installers
 
-# Builds platform installers for Pion:
-# - on every pull request / manual run: build only, upload the bundles as workflow artifacts
+# Builds platform installers for Pion, restricted to the main branch:
+# - on pushes to main, pull requests targeting main and manual runs: build only,
+#   upload the bundles as workflow artifacts
 # - on a version tag (e.g. v0.1.0): build and attach the bundles to a draft GitHub Release
 on:
   push:
+    branches:
+      - main
     tags:
       - "v*"
   pull_request:
+    branches:
+      - main
   workflow_dispatch:
 
 permissions:

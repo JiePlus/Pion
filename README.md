@@ -138,6 +138,6 @@ npm run desktop:build
 
 macOS 本地构建产物位于 `src-tauri/target/release/bundle/macos/Pion.app`；`npm run desktop:build` 默认仅打包本机 `.app`，没有签名或公证流程。
 
-`.github/workflows/build-installers.yml` 在 Pull Request、手动触发以及推送 `v*` 标签时自动编译并打包各平台安装包：macOS（universal `.app` 与 `.dmg`）、Linux（`.deb` 与 `.AppImage`）和 Windows（NSIS `-setup.exe` 与 `.msi`）。Pull Request 与手动运行会把产物作为 workflow artifact 上传；推送标签时还会创建草稿 Release 并附加安装包。当前安装包未签名/公证，Windows/Linux 的浏览器沙箱与运行时行为仍需在对应平台人工验收。
+`.github/workflows/build-installers.yml` 仅在 `main` 分支相关事件（推送到 `main`、面向 `main` 的 Pull Request、推送 `v*` 标签）与手动触发时自动编译并打包各平台安装包：macOS（universal `.app` 与 `.dmg`）、Linux（`.deb` 与 `.AppImage`）和 Windows（NSIS `-setup.exe` 与 `.msi`）。推送 `main`、Pull Request 与手动运行会把产物作为 workflow artifact 上传；推送标签时还会创建草稿 Release 并附加安装包。当前安装包未签名/公证，Windows/Linux 的浏览器沙箱与运行时行为仍需在对应平台人工验收。
 
 插件沙箱采用 opaque-origin iframe + Blob Worker + CSP，适合当前受控 MVP。它不是 OS 容器，不能保证抵御浏览器漏洞或恶意内存耗尽。正式开放不受信任插件分发前需要独立安全评审和多平台原生验证。
