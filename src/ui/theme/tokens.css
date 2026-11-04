@@ -28,7 +28,6 @@
   --pion-size-topbar: 56px;
   --pion-size-rail-collapsed: 60px;
   --pion-duration-rail: 260ms;
-  --pion-duration-fade: 150ms;
   --pion-ease-rail: cubic-bezier(0.32, 0.72, 0, 1);
   --pion-size-radius-sm: 5px;
   --pion-size-radius-md: 8px;
