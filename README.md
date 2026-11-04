@@ -88,10 +88,13 @@ npm run dev
 - 每插件隔离 Worker、禁止直接联网/DOM/Tauri、激活 timeout、heartbeat、payload 限额、崩溃清理。
 - Rust Pi JSONL：真实 `pi --mode rpc`、串行请求/响应关联、独立事件流、超时/退出处理。
 - 无需修改 Core 的 [Hello 插件](examples/hello-plugin)。
+- 一方 [Git/Diff 插件](plugins/git-diff-plugin)：只读展示当前工作区分支、staged/unstaged/untracked 改动与 unified diff，通过插件审核安装后加载，仅申请 `workspace.git` 权限。
 
 ## 安装自己的插件
 
 在桌面“设置 → 插件”中输入本地绝对目录路径，例如本项目的 `examples/hello-plugin`，点击 Review installation，再批准权限。
+
+一方 Git/Diff 插件同样按此流程安装，输入本项目的 `plugins/git-diff-plugin` 目录即可。它只读取 Git 状态与 diff（`workspace.git` 权限），不写文件、不联网；在“设置 → 扩展面板”里可把它移动到主区域、右侧栏或底部面板。首方插件表示随仓库提供的示例实现，仍走与第三方一致的审核、权限与沙箱流程。
 
 ZIP 必须让 `plugin.json` 和 `main` 相对文件处于包根目录：
 

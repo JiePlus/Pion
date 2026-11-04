@@ -84,6 +84,8 @@ const context = Object.freeze({
   workspace: {
     get: () => call("workspace.get"),
     readFile: (path) => call("workspace.readFile", { path }),
+    gitStatus: () => call("workspace.gitStatus"),
+    gitDiff: (path, staged = false) => call("workspace.gitDiff", { path, staged }),
   },
   pi: {
     prompt: (message) => call("pi.prompt", { message }),

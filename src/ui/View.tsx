@@ -58,11 +58,52 @@ export function ViewRenderer({ view, run }: { view: View; run: Run }) {
           ))}
         </div>
       );
+    case "code":
+      return <CodeView text={view.text} language={view.language} variant={view.variant} />;
     case "button":
       return <Action view={view} run={run} />;
     case "form":
       return <CommandForm view={view} run={run} />;
   }
+}
+function CodeView({
+  text,
+  language,
+  variant,
+}: {
+  text: string;
+  language?: string;
+  variant?: "plain" | "diff";
+}) {
+  const diff = variant === "diff";
+  return (
+    <pre
+      className={componentClass(styles, "view-code")}
+      data-variant={variant ?? "plain"}
+      aria-label={language}
+    >
+      <code>
+        {text.split("\n").map((line, index) => (
+          <span key={index} className={diff ? componentClass(styles, diffClass(line)) : undefined}>
+            {line || " "}
+            {"\n"}
+          </span>
+        ))}
+      </code>
+    </pre>
+  );
+}
+function diffClass(line: string): string {
+  if (
+    /^(diff --git|index |--- |\+\+\+ |new file|deleted file|old mode|new mode|similarity|rename |copy )/.test(
+      line,
+    )
+  )
+    return "code-meta";
+  if (line.startsWith("@@")) return "code-hunk";
+  if (line.startsWith("+")) return "code-add";
+  if (line.startsWith("-")) return "code-del";
+  return "code-context";
 }
 function Stack({ view, run }: { view: Extract<View, { type: "stack" }>; run: Run }) {
   const element = useRef<HTMLDivElement>(null);

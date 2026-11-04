@@ -94,6 +94,17 @@ export function validateView(value: unknown, manifest: Manifest): View {
             throw new Error("Invalid row");
         });
         break;
+      case "code":
+        if (typeof node.text !== "string" || node.text.length > 100_000)
+          throw new Error("Invalid code text");
+        if (
+          node.language !== undefined &&
+          (typeof node.language !== "string" || node.language.length > 40)
+        )
+          throw new Error("Invalid code language");
+        if (node.variant !== undefined && !["plain", "diff"].includes(node.variant as string))
+          throw new Error("Invalid code variant");
+        break;
       case "button":
       case "form":
         if (!manifest.contributes.commands.some((c) => c.id === node.command))

@@ -45,6 +45,8 @@ const methods: Record<string, Permission> = {
   "pi.getCommands": "pi.read",
   "workspace.get": "workspace.read",
   "workspace.readFile": "workspace.read",
+  "workspace.gitStatus": "workspace.git",
+  "workspace.gitDiff": "workspace.git",
   "storage.get": "storage",
   "storage.set": "storage",
   "notifications.show": "notifications",
@@ -235,8 +237,11 @@ export class Runtime {
           if (instance.subscriptions.has(name)) break;
           if (instance.subscriptions.size >= 64) throw new Error("Too many subscriptions");
           if (name.startsWith("pi:")) this.require(instance, "pi.read");
-          else if (name === "workspace:opened") this.require(instance, "workspace.read");
-          else if (
+          else if (name === "workspace:opened") {
+            const granted = instance.bundle.manifest.permissions;
+            if (!granted.includes("workspace.read") && !granted.includes("workspace.git"))
+              throw new Error("Permission denied: workspace.read");
+          } else if (
             !["app:ready", "app:localeChanged", "plugin:loaded", "plugin:unloaded"].includes(
               name,
             ) &&

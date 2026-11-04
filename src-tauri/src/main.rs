@@ -1,5 +1,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod git;
 mod images;
 mod models;
 mod packages;
@@ -1133,6 +1134,20 @@ fn handle(app: &tauri::AppHandle, request: Value) -> Result<Value, String> {
                             1024 * 1024
                         )?))
                     }
+                }
+                "workspace.gitStatus" => {
+                    state.plugins.require(id, "workspace.git")?;
+                    let root = state.workspace.as_ref().ok_or("No workspace is open")?;
+                    git::status(root)
+                }
+                "workspace.gitDiff" => {
+                    state.plugins.require(id, "workspace.git")?;
+                    let root = state.workspace.as_ref().ok_or("No workspace is open")?;
+                    git::diff(
+                        root,
+                        field(args, "path")?,
+                        args["staged"].as_bool().unwrap_or(false),
+                    )
                 }
                 _ => {
                     let (permission, command) = match method {

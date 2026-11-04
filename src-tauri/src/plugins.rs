@@ -10,6 +10,7 @@ use std::path::{Path, PathBuf};
 const LIMIT: u64 = 1024 * 1024;
 const PERMISSIONS: &[&str] = &[
     "workspace.read",
+    "workspace.git",
     "pi.read",
     "pi.sendMessage",
     "storage",
@@ -359,6 +360,22 @@ mod tests {
         bundle.manifest["main"] = json!("../escape.js");
         assert!(validate(&bundle).is_err());
     }
+
+    #[test]
+    fn git_diff_plugin_manifest_passes_review_validation() {
+        let mut bundle = Bundle {
+            manifest: serde_json::from_str(include_str!(
+                "../../plugins/git-diff-plugin/plugin.json"
+            ))
+            .unwrap(),
+            source: include_str!("../../plugins/git-diff-plugin/index.js").into(),
+        };
+        assert_eq!(validate(&bundle).unwrap(), "git-diff");
+        // The plugin requests only read-only Git access; write/exec permissions are rejected.
+        bundle.manifest["permissions"] = json!(["workspace.git", "process.spawn"]);
+        assert!(validate(&bundle).is_err());
+    }
+
     #[test]
     fn manifest_translation_boundary() {
         let mut bundle = Bundle {

@@ -69,6 +69,71 @@ export async function taskFixture(page: Page) {
         selectedModel: { provider: "openai", id: "gpt-test" },
         models: [model, { provider: "anthropic", id: "claude-test", name: "Claude Test" }],
       });
+      const gitStatus = read("fixture.gitStatus", {
+        repo: true,
+        branch: "main",
+        detached: false,
+        ahead: 0,
+        behind: 0,
+        clean: false,
+        files: [
+          { path: "src/core/runtime.ts", index: " ", worktree: "M" },
+          { path: "plugins/git-diff-plugin/index.js", index: "A", worktree: " " },
+          { path: "README.md", index: "?", worktree: "?" },
+        ],
+      });
+      const gitDiffs = read("fixture.gitDiffs", {
+        "src/core/runtime.ts": {
+          path: "src/core/runtime.ts",
+          staged: false,
+          binary: false,
+          truncated: false,
+          diff: [
+            "diff --git a/src/core/runtime.ts b/src/core/runtime.ts",
+            "index 1a2b3c4..5d6e7f8 100644",
+            "--- a/src/core/runtime.ts",
+            "+++ b/src/core/runtime.ts",
+            "@@ -44,6 +44,8 @@ const methods: Record<string, Permission> = {",
+            '   "workspace.readFile": "workspace.read",',
+            '+  "workspace.gitStatus": "workspace.git",',
+            '+  "workspace.gitDiff": "workspace.git",',
+            '   "storage.get": "storage",',
+            '   "storage.set": "storage",',
+            '   "notifications.show": "notifications",',
+          ].join("\n"),
+        },
+        "plugins/git-diff-plugin/index.js": {
+          path: "plugins/git-diff-plugin/index.js",
+          staged: true,
+          binary: false,
+          truncated: false,
+          diff: [
+            "diff --git a/plugins/git-diff-plugin/index.js b/plugins/git-diff-plugin/index.js",
+            "new file mode 100644",
+            "--- /dev/null",
+            "+++ b/plugins/git-diff-plugin/index.js",
+            "@@ -0,0 +1,3 @@",
+            "+async function refresh() {",
+            "+  status = await api.workspace.gitStatus();",
+            "+}",
+          ].join("\n"),
+        },
+        "README.md": {
+          path: "README.md",
+          staged: false,
+          binary: false,
+          truncated: false,
+          diff: [
+            "diff --git a/README.md b/README.md",
+            "new file mode 100644",
+            "--- /dev/null",
+            "+++ b/README.md",
+            "@@ -0,0 +1,2 @@",
+            "+## First-party Git/Diff plugin",
+            "+Review-install plugins/git-diff-plugin to view status and diffs.",
+          ].join("\n"),
+        },
+      });
       const emit = (name: string, payload: unknown) =>
         callbacks.get(listeners.get(name)!)?.({ event: name, payload });
       const piEvent = (event: unknown) =>
@@ -854,6 +919,19 @@ export async function taskFixture(page: Page) {
                 throw new Error("Unknown core Pi command");
               }
               case "plugin":
+                if (request.method === "workspace.gitStatus") return gitStatus;
+                if (request.method === "workspace.gitDiff") {
+                  const found = gitDiffs[request.args.path];
+                  return (
+                    found ?? {
+                      path: request.args.path,
+                      staged: request.args.staged === true,
+                      binary: false,
+                      truncated: false,
+                      diff: "",
+                    }
+                  );
+                }
                 if (!active) throw new Error("No task open");
                 if (request.method === "pi.getState") return { isStreaming: running.has(active) };
                 if (request.method === "pi.getMessages")

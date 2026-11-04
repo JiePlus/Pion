@@ -17,6 +17,7 @@ export const locations = [
 export type Location = (typeof locations)[number];
 export const permissions = [
   "workspace.read",
+  "workspace.git",
   "pi.read",
   "pi.sendMessage",
   "storage",
@@ -54,6 +55,31 @@ export interface Workspace {
   path: string;
   name: string;
 }
+/** One changed path as reported by `git status --porcelain`. `index` is the staged status
+ *  (X), `worktree` the unstaged status (Y); a space means no change on that side, and "?"
+ *  marks an untracked path. */
+export interface GitFile {
+  path: string;
+  index: string;
+  worktree: string;
+}
+export interface GitStatus {
+  repo: boolean;
+  branch?: string;
+  detached?: boolean;
+  ahead?: number;
+  behind?: number;
+  clean: boolean;
+  truncated?: boolean;
+  files: GitFile[];
+}
+export interface GitDiff {
+  path: string;
+  staged: boolean;
+  binary: boolean;
+  truncated: boolean;
+  diff: string;
+}
 export interface PiEvent {
   type: string;
   [key: string]: unknown;
@@ -73,6 +99,7 @@ export type View =
   | { type: "text"; text: string; tone?: "muted" | "error" | "heading" }
   | { type: "badge"; text: string }
   | { type: "list"; items: { label: string; text: string }[] }
+  | { type: "code"; text: string; language?: string; variant?: "plain" | "diff" }
   | { type: "button"; label: string; command: string; args?: Json; disabled?: boolean }
   | { type: "form"; command: string; placeholder: string; submit: string; disabled?: boolean };
 export interface PiDesktopPluginContext {
@@ -90,7 +117,12 @@ export interface PiDesktopPluginContext {
     registerPanel(id: string, view: View): Dispose;
     updatePanel(id: string, view: View): void;
   };
-  workspace: { get(): Promise<Workspace>; readFile(path: string): Promise<string> };
+  workspace: {
+    get(): Promise<Workspace>;
+    readFile(path: string): Promise<string>;
+    gitStatus(): Promise<GitStatus>;
+    gitDiff(path: string, staged?: boolean): Promise<GitDiff>;
+  };
   pi: {
     prompt(message: string): Promise<void>;
     abort(): Promise<void>;
