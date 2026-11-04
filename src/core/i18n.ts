@@ -421,6 +421,15 @@ const zh = {
   PANELS: "面板",
   "Your plugins live here.": "已启用的插件将显示在这里。",
   "Pi runtime": "Pi 引擎执行环境",
+  "Detected Pi installations": "已检测到的 Pi 安装",
+  "Scanning…": "扫描中…",
+  "Choose a detected path or enter your own below. Save settings to apply.":
+    "选择检测到的路径，或在下方手动填写，保存设置后生效。",
+  "Pi scanning requires the desktop app.": "请在桌面应用中扫描 Pi 安装。",
+  Selected: "已选择",
+  Use: "使用",
+  "No Pi installation found. Enter the executable path manually.":
+    "未发现 Pi 安装，请手动填写可执行文件路径。",
   "Pi setup": "Pi 初始设置",
   "Set up Pi": "配置 Pi",
   "Open Pi setup": "打开 Pi 初始设置",

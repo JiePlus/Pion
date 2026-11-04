@@ -216,12 +216,30 @@ export async function taskFixture(page: Page) {
                   catalog,
                   settings: { executable: "pi", workspace: "/projects/Pion" },
                 };
+              case "pi_setup.scan":
+                if (localStorage.getItem("fixture.delayPiScan"))
+                  await new Promise((resolve) => setTimeout(resolve, 450));
+                if (localStorage.getItem("fixture.failPiScan"))
+                  throw new Error("Pi scan failed; retry or enter the path manually");
+                return {
+                  candidates: read("fixture.piCandidates", [
+                    { executable: "/usr/local/bin/pi", version: "0.87.0", verified: true },
+                    {
+                      executable: "/Users/test/.nvm/versions/node/v22.19.0/bin/pi",
+                      version: "0.87.1",
+                      verified: true,
+                    },
+                  ]),
+                };
               case "pi_setup.status":
                 if (localStorage.getItem("fixture.delaySetupStatus"))
                   await new Promise((resolve) => setTimeout(resolve, 450));
                 localStorage.setItem("fixture.setupStatusFinished", "yes");
                 return {
                   ...setupStatus,
+                  // The default fixture resolves whichever path is being tested;
+                  // explicit setup-status fixtures can still model fallback paths.
+                  ...(setupStatus.executable === "pi" ? { executable: request.executable } : {}),
                   selectedModel: request.model ?? setupStatus.selectedModel,
                 };
               case "pi_setup.check_update":
@@ -624,6 +642,7 @@ export async function taskFixture(page: Page) {
                 });
                 return { catalog, reused };
               case "settings.save":
+                localStorage.setItem("fixture.savedExecutable", request.executable);
                 return null;
               case "session.branch": {
                 const source = catalog.tasks.find((item: any) => item.id === active);

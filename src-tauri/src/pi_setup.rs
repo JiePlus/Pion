@@ -5,7 +5,8 @@ use std::ffi::OsStr;
 use std::fs;
 use std::io::Read;
 use std::path::{Path, PathBuf};
-use std::process::{Command, ExitStatus, Stdio};
+use std::process::{Child, Command, ExitStatus, Stdio};
+use std::sync::mpsc::{self, Receiver};
 use std::thread;
 use std::time::{Duration, Instant};
 
@@ -37,7 +38,8 @@ pub fn hidden_command(program: impl AsRef<OsStr>) -> Command {
     command
 }
 
-fn drain(mut reader: impl Read + Send + 'static) -> thread::JoinHandle<Vec<u8>> {
+fn drain(mut reader: impl Read + Send + 'static) -> Receiver<Vec<u8>> {
+    let (sender, receiver) = mpsc::channel();
     thread::spawn(move || {
         let mut kept = Vec::new();
         let mut buffer = [0; 4096];
@@ -48,11 +50,28 @@ fn drain(mut reader: impl Read + Send + 'static) -> thread::JoinHandle<Vec<u8>> 
             let remaining = MAX_OUTPUT.saturating_sub(kept.len());
             kept.extend_from_slice(&buffer[..size.min(remaining)]);
         }
-        kept
-    })
+        let _ = sender.send(kept);
+    });
+    receiver
+}
+
+fn stop_command(child: &mut Child) {
+    // npm and executable shims can leave descendants holding the output pipes.
+    #[cfg(unix)]
+    unsafe {
+        libc::kill(-(child.id() as i32), libc::SIGKILL);
+    }
+    let _ = child.kill();
+    let _ = child.wait();
 }
 
 fn run(command: &mut Command, timeout: Duration) -> Result<Output, String> {
+    #[cfg(unix)]
+    {
+        use std::os::unix::process::CommandExt;
+        command.process_group(0);
+    }
+    let deadline = Instant::now() + timeout;
     let mut child = command
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
@@ -61,28 +80,37 @@ fn run(command: &mut Command, timeout: Duration) -> Result<Output, String> {
         .map_err(|error| error.to_string())?;
     let stdout = drain(child.stdout.take().ok_or("No command stdout")?);
     let stderr = drain(child.stderr.take().ok_or("No command stderr")?);
-    let deadline = Instant::now() + timeout;
-    let status = loop {
-        if let Some(status) = child.try_wait().map_err(|error| error.to_string())? {
-            break status;
-        }
-        if Instant::now() >= deadline {
-            let _ = child.kill();
-            let _ = child.wait();
-            return Err("Command timed out".into());
-        }
-        thread::sleep(Duration::from_millis(100));
-    };
-    let stdout = stdout.join().map_err(|_| "Cannot read command stdout")?;
-    let stderr = stderr.join().map_err(|_| "Cannot read command stderr")?;
-    Ok(Output {
-        status,
-        stdout: String::from_utf8_lossy(&stdout).trim().into(),
-        stderr: String::from_utf8_lossy(&stderr).trim().into(),
-    })
+    let result = (|| {
+        let status = loop {
+            if let Some(status) = child.try_wait().map_err(|error| error.to_string())? {
+                break status;
+            }
+            let remaining = deadline.saturating_duration_since(Instant::now());
+            if remaining.is_zero() {
+                return Err("Command timed out".into());
+            }
+            thread::sleep(remaining.min(Duration::from_millis(25)));
+        };
+        let read_output = |receiver: Receiver<Vec<u8>>| {
+            receiver
+                .recv_timeout(deadline.saturating_duration_since(Instant::now()))
+                .map_err(|_| "Command timed out reading output".to_string())
+        };
+        let stdout = read_output(stdout)?;
+        let stderr = read_output(stderr)?;
+        Ok(Output {
+            status,
+            stdout: String::from_utf8_lossy(&stdout).trim().into(),
+            stderr: String::from_utf8_lossy(&stderr).trim().into(),
+        })
+    })();
+    if result.is_err() {
+        stop_command(&mut child);
+    }
+    result
 }
 
-fn command_path(name: &str, home: &Path) -> Option<PathBuf> {
+fn search_dirs(home: &Path) -> Vec<PathBuf> {
     let mut directories: Vec<PathBuf> =
         env::split_paths(&env::var_os("PATH").unwrap_or_default()).collect();
     #[cfg(target_os = "macos")]
@@ -91,6 +119,9 @@ fn command_path(name: &str, home: &Path) -> Option<PathBuf> {
             PathBuf::from("/opt/homebrew/bin"),
             PathBuf::from("/usr/local/bin"),
         ]);
+    }
+    #[cfg(unix)]
+    {
         if let Ok(entries) = fs::read_dir(home.join(".nvm/versions/node")) {
             let mut versions: Vec<PathBuf> = entries
                 .filter_map(Result::ok)
@@ -112,6 +143,10 @@ fn command_path(name: &str, home: &Path) -> Option<PathBuf> {
     }
     let _ = home;
     directories
+}
+
+fn command_path(name: &str, home: &Path) -> Option<PathBuf> {
+    search_dirs(home)
         .into_iter()
         .map(|directory| directory.join(name))
         .find(|path| path.is_file())
@@ -200,9 +235,13 @@ fn with_path(command: &mut Command, executable: &Path) {
 }
 
 fn version(executable: &Path) -> Result<String, String> {
+    version_with_timeout(executable, Duration::from_secs(15))
+}
+
+fn version_with_timeout(executable: &Path, timeout: Duration) -> Result<String, String> {
     let mut command = pi_command(executable)?;
     with_path(&mut command, executable);
-    let output = run(command.arg("--version"), Duration::from_secs(15))?;
+    let output = run(command.arg("--version"), timeout)?;
     if !output.status.success() {
         return Err(if output.stderr.is_empty() {
             output.stdout
@@ -215,9 +254,13 @@ fn version(executable: &Path) -> Result<String, String> {
 }
 
 fn npm_prefix(npm: &Path) -> Result<PathBuf, String> {
+    npm_prefix_with_timeout(npm, Duration::from_secs(20))
+}
+
+fn npm_prefix_with_timeout(npm: &Path, timeout: Duration) -> Result<PathBuf, String> {
     let mut command = npm_command(npm)?;
     with_path(&mut command, npm);
-    let output = run(command.args(["prefix", "-g"]), Duration::from_secs(20))?;
+    let output = run(command.args(["prefix", "-g"]), timeout)?;
     if !output.status.success() || output.stdout.is_empty() {
         return Err(format!(
             "Cannot locate global npm prefix: {}",
@@ -300,6 +343,69 @@ pub fn inspect(executable: &str, home: &Path) -> Value {
         "npmManaged":npm_managed,
         "canInstall":npm.is_some()
     })
+}
+
+const MAX_SCAN_CANDIDATES: usize = 10;
+const SCAN_PROBE_TIMEOUT: Duration = Duration::from_secs(3);
+
+fn add_candidate(paths: &mut Vec<PathBuf>, path: PathBuf) {
+    #[cfg(target_os = "windows")]
+    let path = if path.extension().is_none() && path.with_extension("cmd").is_file() {
+        path.with_extension("cmd")
+    } else {
+        path
+    };
+    // A discovered path must keep working after Pi changes its working directory.
+    if paths.len() >= MAX_SCAN_CANDIDATES || !path.is_absolute() || !path.is_file() {
+        return;
+    }
+    if paths.iter().any(|existing| same_file(existing, &path)) {
+        return;
+    }
+    paths.push(path);
+}
+
+fn probe_candidates(paths: Vec<PathBuf>, timeout: Duration) -> Value {
+    let handles: Vec<_> = paths
+        .into_iter()
+        .map(|path| {
+            thread::spawn(move || {
+                version_with_timeout(&path, timeout).ok().map(
+                    |installed| json!({"executable": path, "version": installed, "verified": true}),
+                )
+            })
+        })
+        .collect();
+    let candidates: Vec<Value> = handles
+        .into_iter()
+        .filter_map(|handle| handle.join().ok().flatten())
+        .collect();
+    json!({"candidates": candidates})
+}
+
+/// List Pi executables without changing configuration. Probe at most ten paths
+/// in parallel, with three seconds for npm discovery and three for verification.
+pub fn scan(executable: &str, home: &Path) -> Value {
+    let mut paths: Vec<PathBuf> = Vec::new();
+    if Path::new(executable).is_absolute() {
+        add_candidate(&mut paths, PathBuf::from(executable));
+    } else if let Some(path) = command_path(executable, home) {
+        add_candidate(&mut paths, path);
+    }
+    for directory in search_dirs(home) {
+        add_candidate(&mut paths, directory.join(PI_NAME));
+        if paths.len() >= MAX_SCAN_CANDIDATES {
+            break;
+        }
+    }
+    if paths.len() < MAX_SCAN_CANDIDATES {
+        if let Some(npm) = npm_path(executable, home) {
+            if let Ok(prefix) = npm_prefix_with_timeout(&npm, SCAN_PROBE_TIMEOUT) {
+                add_candidate(&mut paths, global_pi(&prefix));
+            }
+        }
+    }
+    probe_candidates(paths, SCAN_PROBE_TIMEOUT)
 }
 
 pub fn check_model(executable: &Path, provider: &str, model_id: &str) -> Result<bool, String> {
@@ -458,6 +564,97 @@ mod tests {
             })
         );
         assert!(Version::parse(VERIFIED_VERSION).unwrap() <= Version::parse("0.87.1").unwrap());
+    }
+
+    #[test]
+    fn scan_candidates_dedupe_real_files() {
+        let root = env::temp_dir().join(format!("pion-pi-scan-{}", std::process::id()));
+        let first = root.join("a/bin");
+        let second = root.join("b/bin");
+        fs::create_dir_all(&first).unwrap();
+        fs::create_dir_all(&second).unwrap();
+        let one = first.join(PI_NAME);
+        let two = second.join(PI_NAME);
+        fs::write(&one, b"").unwrap();
+        fs::write(&two, b"").unwrap();
+        let mut paths = Vec::new();
+        add_candidate(&mut paths, one.clone());
+        add_candidate(&mut paths, one);
+        assert_eq!(paths.len(), 1);
+        add_candidate(&mut paths, two);
+        assert_eq!(paths.len(), 2);
+        add_candidate(&mut paths, root.join("missing/pi"));
+        assert_eq!(paths.len(), 2);
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn scan_verifies_versions_in_parallel_and_keeps_selected_path() {
+        use std::os::unix::fs::{symlink, PermissionsExt};
+
+        let root = env::temp_dir().join(format!("pion-pi-scan-probes-{}", std::process::id()));
+        fs::create_dir_all(&root).unwrap();
+        let valid = root.join("valid-pi");
+        let selected = root.join("selected-pi");
+        fs::write(
+            &valid,
+            "#!/bin/sh\n[ \"$1\" = --version ] || exit 1\necho 0.87.1\n",
+        )
+        .unwrap();
+        fs::set_permissions(&valid, fs::Permissions::from_mode(0o755)).unwrap();
+        symlink(&valid, &selected).unwrap();
+        let invalid = root.join("invalid-pi");
+        fs::write(&invalid, "#!/bin/sh\necho not-a-version\n").unwrap();
+        fs::set_permissions(&invalid, fs::Permissions::from_mode(0o755)).unwrap();
+        let mut paths = Vec::new();
+        add_candidate(&mut paths, selected.clone());
+        add_candidate(&mut paths, valid);
+        add_candidate(&mut paths, invalid);
+        for index in 0..6 {
+            let slow = root.join(format!("slow-{index}"));
+            fs::write(&slow, "#!/bin/sh\nexec sleep 5\n").unwrap();
+            fs::set_permissions(&slow, fs::Permissions::from_mode(0o755)).unwrap();
+            add_candidate(&mut paths, slow);
+        }
+        assert_eq!(paths.len(), 8);
+        let started = Instant::now();
+        let result = probe_candidates(paths, Duration::from_secs(1));
+        assert!(started.elapsed() < Duration::from_secs(4));
+        assert_eq!(result["candidates"].as_array().unwrap().len(), 1);
+        assert_eq!(result["candidates"][0]["executable"], json!(selected));
+        assert_eq!(result["candidates"][0]["version"], "0.87.1");
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn command_timeout_includes_inherited_output_pipes() {
+        let started = Instant::now();
+        let error = run(
+            Command::new("/bin/sh").args(["-c", "sleep 5 & exit 0"]),
+            Duration::from_millis(150),
+        )
+        .err()
+        .unwrap();
+        assert!(error.contains("timed out"));
+        assert!(started.elapsed() < Duration::from_secs(1));
+    }
+
+    #[test]
+    fn scan_candidate_count_is_bounded_and_paths_are_absolute() {
+        let root = env::temp_dir().join(format!("pion-pi-scan-limit-{}", std::process::id()));
+        fs::create_dir_all(&root).unwrap();
+        let mut paths = Vec::new();
+        add_candidate(&mut paths, PathBuf::from("Cargo.toml"));
+        for index in 0..20 {
+            let path = root.join(format!("pi-{index}"));
+            fs::write(&path, b"").unwrap();
+            add_candidate(&mut paths, path);
+        }
+        assert_eq!(paths.len(), MAX_SCAN_CANDIDATES);
+        assert!(paths.iter().all(|path| path.is_absolute()));
+        fs::remove_dir_all(root).unwrap();
     }
 
     #[cfg(unix)]

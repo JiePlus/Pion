@@ -195,3 +195,82 @@
     padding: 16px;
   }
 }
+
+.pi-scan {
+  display: grid;
+  min-width: 0;
+  gap: 10px;
+  margin: 4px 0 18px;
+}
+
+.pi-scan p {
+  margin: 0;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.pi-scan [role="status"]:empty {
+  display: none;
+}
+
+.pi-scan-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.pi-scan-head button {
+  font-size: 11px;
+}
+
+.pi-scan-list {
+  display: grid;
+  gap: 8px;
+}
+
+.pi-scan-item {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 12px;
+  border: 1px solid var(--pion-color-line);
+  border-radius: 8px;
+  background: var(--pion-color-surface);
+  color: var(--pion-color-ink);
+  text-align: left;
+}
+
+.pi-scan-item code {
+  min-width: 0;
+  overflow: hidden;
+  font-family: var(--pion-font-mono);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pi-scan-item small {
+  flex-shrink: 0;
+  color: var(--pion-color-muted);
+  font-size: 11px;
+}
+
+.pi-scan-item span {
+  flex-shrink: 0;
+  margin-left: auto;
+  color: var(--pion-color-muted);
+  font-size: 11px;
+}
+
+.pi-scan-item.selected {
+  border-color: var(--pion-color-brand);
+  background: var(--pion-color-brand-soft);
+}
+
+.pi-scan-item.selected span {
+  color: var(--pion-color-brand-strong);
+}
