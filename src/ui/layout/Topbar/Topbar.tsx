@@ -163,13 +163,12 @@ export function Topbar({
             ref={usageButton}
             type="button"
             className={componentClass(styles, "header-button")}
-            aria-label={t("Usage")}
             aria-expanded={usageOpen}
             onClick={() => showUsage().catch((error) => runtime.notice("Pi", String(error)))}
           >
             {usageStats?.contextUsage?.percent === undefined
               ? t("Usage")
-              : t("Context {percent}%", { percent: usageStats.contextUsage.percent })}
+              : t("Context {percent}%", { percent: usageStats.contextUsage.percent.toFixed(2) })}
           </button>
           {usageOpen && (
             <section

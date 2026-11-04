@@ -759,9 +759,14 @@ export async function taskFixture(page: Page) {
                 if (request.command === "get_session_stats") {
                   if (localStorage.getItem("fixture.failStats"))
                     throw new Error("Usage unavailable for test");
+                  const rawPercent = localStorage.getItem("fixture.statsPercent");
                   return {
                     cost: 0.012,
-                    contextUsage: { tokens: 1200, contextWindow: 12000, percent: 10 },
+                    contextUsage: {
+                      tokens: 1200,
+                      contextWindow: 12000,
+                      percent: rawPercent === null ? 10 : Number(rawPercent),
+                    },
                   };
                 }
                 if (request.command === "set_model") {

@@ -421,12 +421,16 @@ export function useShellController(runtime: Runtime, boot: Boot) {
       live = false;
     };
   }, [executable, page, projectId, runtime, setupStatus?.modelReady, task]);
+  const fetchUsageRef = useRef<() => Promise<void>>(async () => {});
   useEffect(
     () =>
       hostEvents.on("pi:event", (value) => {
         const event = value as { type: string };
         if (event.type === "agent_start") setWorking(true);
-        if (event.type === "agent_settled") setWorking(false);
+        if (event.type === "agent_settled") {
+          setWorking(false);
+          fetchUsageRef.current().catch(() => {});
+        }
       }),
     [],
   );
@@ -487,11 +491,8 @@ export function useShellController(runtime: Runtime, boot: Boot) {
     }
   }
 
-  async function showUsage() {
-    const next = !usageOpen;
-    setUsageOpen(next);
-    setTaskMenuOpen(false);
-    if (!next || usageStats || usageLoading || !task) return;
+  async function fetchUsage() {
+    if (!task || usageLoading) return;
     setUsageLoading(true);
     setUsageError("");
     try {
@@ -501,6 +502,20 @@ export function useShellController(runtime: Runtime, boot: Boot) {
     } finally {
       setUsageLoading(false);
     }
+  }
+  useEffect(() => {
+    fetchUsageRef.current = fetchUsage;
+  });
+  useEffect(() => {
+    if (!task || !connected) return;
+    fetchUsage().catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [task?.id, connected]);
+  async function showUsage() {
+    const next = !usageOpen;
+    setUsageOpen(next);
+    setTaskMenuOpen(false);
+    if (next && !usageStats && task) await fetchUsage();
   }
   function setConversationView(value: ViewMode) {
     localStorage.setItem("pion.viewMode", value);
