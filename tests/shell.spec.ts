@@ -932,15 +932,14 @@ test("long project histories contract behind a show-more control", async ({ page
   await expect(firstProject.locator(".task-list button")).toHaveCount(12);
 });
 
-test("usage and task menus load on demand, recover from failure and restore focus", async ({
-  page,
-}) => {
+test("usage loads automatically, recovers from failure and restores focus", async ({ page }) => {
   await taskFixture(page);
   await page.goto("/");
+  await page.evaluate(() => localStorage.setItem("fixture.failStats", "yes"));
   await page.getByRole("textbox", { name: "Describe your task" }).fill("Usage task");
   await page.getByRole("button", { name: "Start task" }).click();
 
-  await page.evaluate(() => localStorage.setItem("fixture.failStats", "yes"));
+  await expect(page.getByRole("button", { name: "Usage", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Usage", exact: true }).click();
   await expect(page.getByText(/Usage unavailable for test/)).toBeVisible();
   await page.keyboard.press("Escape");
@@ -951,6 +950,12 @@ test("usage and task menus load on demand, recover from failure and restore focu
   await expect(page.getByText("$0.0120")).toBeVisible();
 
   await page.keyboard.press("Escape");
+  await expect(page.getByRole("button", { name: "Context 10.00%", exact: true })).toBeFocused();
+
+  await page.evaluate(() => localStorage.setItem("fixture.statsPercent", "12.3456"));
+  await page.evaluate(() => (window as any).fixturePiEvent({ type: "agent_settled" }));
+  await expect(page.getByRole("button", { name: "Context 12.35%", exact: true })).toBeVisible();
+
   await openTaskActions(page);
   await expect(page.getByRole("menuitem", { name: "History", exact: true })).toBeEnabled();
   await page.keyboard.press("Escape");
