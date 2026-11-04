@@ -10,6 +10,31 @@ Plugins = Features
 
 第一批只实现 Core、Plugin Runtime、Pi RPC Adapter 和 Pi 基础任务界面。Git、Terminal、Diff、Worktree 不在 Core 中。
 
+## macOS 安装
+
+Pion 在 macOS 上从源码运行，首次使用前先安装以下依赖：
+
+1. **Xcode 命令行工具**：提供 Rust 与 Tauri 编译所需的系统工具链。
+
+   ```bash
+   xcode-select --install
+   ```
+
+2. **Node.js 22.19+**：例如使用 Homebrew 安装，也可使用 nvm 等版本管理器。
+
+   ```bash
+   brew install node
+   ```
+
+3. **Rust 工具链**：使用 rustup 安装，并在当前终端加载环境变量。
+
+   ```bash
+   curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+   source "$HOME/.cargo/env"
+   ```
+
+macOS 自带 WebKit，无需像 Linux 那样额外安装 Tauri 系统依赖。依赖就绪后，按下方“启动”章节安装项目依赖并启动桌面应用。
+
 ## 启动
 
 开发需要 Node.js 22.19+、Rust 和平台 Tauri 依赖。桌面应用启动时会检查 Pi 与模型认证；缺少 Pi 时可在初设页使用 npm 全局安装。当前通过 Pion 验证的 Pi 版本为 macOS **0.87.1**、Windows **0.87.0**；左侧 **Pi 模型** 可管理模型配置和 API Key，已有凭据不会返回给界面。
