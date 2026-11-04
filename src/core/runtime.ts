@@ -45,6 +45,8 @@ const methods: Record<string, Permission> = {
   "pi.getCommands": "pi.read",
   "workspace.get": "workspace.read",
   "workspace.readFile": "workspace.read",
+  "workspace.writeFile": "workspace.write",
+  "network.fetch": "network.fetch",
   "storage.get": "storage",
   "storage.set": "storage",
   "notifications.show": "notifications",

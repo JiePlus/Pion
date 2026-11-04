@@ -17,9 +17,12 @@ const permissionLabels: Record<string, MessageKey> = {
   "pi.sendMessage":
     "High risk: drive Pi tasks; its tools may write files, execute commands, or access the network",
   "workspace.read": "Read text files in the current workspace",
+  "workspace.write": "Write files only under the allowlisted workspace paths",
+  "network.fetch": "Make network requests only to allowlisted hosts, proxied through the host",
   storage: "Read and write this plugin’s own persistent data",
   notifications: "Show in-app notifications",
 };
+const sensitivePermissions = new Set(["pi.sendMessage", "workspace.write", "network.fetch"]);
 
 export function ShellDialogs({
   controller,
@@ -266,11 +269,25 @@ export function ShellDialogs({
                 <li
                   key={permission}
                   className={
-                    permission === "pi.sendMessage" ? componentClass(styles, "sensitive") : ""
+                    sensitivePermissions.has(permission) ? componentClass(styles, "sensitive") : ""
                   }
                 >
                   <strong>{permission}</strong>
                   <p>{t(permissionLabels[permission])}</p>
+                  {permission === "workspace.write" && (
+                    <p className="muted">
+                      {t("Allowed paths: {paths}", {
+                        paths: (review.bundle.manifest.access?.workspaceWrite ?? []).join(", "),
+                      })}
+                    </p>
+                  )}
+                  {permission === "network.fetch" && (
+                    <p className="muted">
+                      {t("Allowed hosts: {hosts}", {
+                        hosts: (review.bundle.manifest.access?.network ?? []).join(", "),
+                      })}
+                    </p>
+                  )}
                 </li>
               ))}
             </ul>

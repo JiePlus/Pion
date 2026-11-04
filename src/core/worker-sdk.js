@@ -84,6 +84,10 @@ const context = Object.freeze({
   workspace: {
     get: () => call("workspace.get"),
     readFile: (path) => call("workspace.readFile", { path }),
+    writeFile: (path, content) => call("workspace.writeFile", { path, content }),
+  },
+  network: {
+    fetch: (url, options = {}) => call("network.fetch", { url, options }),
   },
   pi: {
     prompt: (message) => call("pi.prompt", { message }),

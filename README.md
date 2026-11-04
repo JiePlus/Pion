@@ -82,12 +82,13 @@ npm run dev
 - 最多 4 个 Task 同时保持独立 Pi 进程；侧栏标出后台运行任务，切换不会停止其 Agent。
 - 从设置页批量扫描并导入有效的旧 `~/.pi/agent/sessions`；导入副本成为独立 Pion Task。
 - 通过 Pi 0.87.0 公开 Extension API 实现完整、只读、仅聊天工具预设，并随当前 Pi session 分支恢复。
-- Desktop Plugin API v1：命令、事件、声明式 UI、Pi、workspace 只读、独立 storage。
+- Desktop Plugin API v1：命令、事件、声明式 UI（含 table / code / diff / input / image）、Pi、workspace 只读与白名单写入、独立 storage、受限网络请求。
+- 插件权限扩展：`workspace.write`（路径白名单、大小限制）与 `network.fetch`（域名白名单，由宿主代理、不跟随重定向）；审核界面展示新增权限与白名单。
 - 本地文件夹/ZIP 审核安装；内容快照授权、自动加载已启用插件、手动 Reload、Disable、Uninstall。
 - 左侧 **Pi 技能** 使用 Pi 资源解析结果显示用户、项目和 Pi 包内的 Skill 及启用状态。可按用户或项目范围添加、移除本地 Skill 路径；用户范围可启用或禁用 Skill，项目范围可为每个 Skill 选择继承、加载或卸载，并可设置是否在命令菜单中显示 `/skill:name`。左侧 **Pi 包** 支持用户或项目范围的安装、更新和移除。
-- 每插件隔离 Worker、禁止直接联网/DOM/Tauri、激活 timeout、heartbeat、payload 限额、崩溃清理。
+- 每插件隔离 Worker、禁止直接 DOM/Tauri/其他插件；写文件与联网仅经宿主且受白名单约束；激活 timeout、heartbeat、payload 限额、崩溃清理。
 - Rust Pi JSONL：真实 `pi --mode rpc`、串行请求/响应关联、独立事件流、超时/退出处理。
-- 无需修改 Core 的 [Hello 插件](examples/hello-plugin)。
+- 无需修改 Core 的 [Hello 插件](examples/hello-plugin)，以及演示写入/联网/丰富 UI 的 [Plugin API 示例](examples/plugin-api-demo)。
 
 ## 安装自己的插件
 
@@ -105,10 +106,12 @@ zip /tmp/hello-plugin.zip plugin.json index.js
 ## 设计与扩展
 
 - [公开 TypeScript API](src/core/api.ts)
+- [Desktop Plugin 开发者文档（API、权限、manifest、审核流程）](PLUGIN_API.md)
+- [插件类型 SDK](sdk/index.d.ts) · [脚手架脚本](scripts/create-plugin.mjs) · [模板](templates/plugin)
 
 项目和任务元数据存于 app-data 的 `tasks.json`，新任务使用独立 `sessions/<task-id>` 目录；Fork/Clone 任务保存经 Rust 校验的私有 session 文件映射，路径不发送给前端。Pi 从根用户消息 Fork 时会把 JSONL 延迟到首个 assistant 响应才创建；Pion 只暂存父目录已验证的待创建映射，重新打开时若文件仍不存在则回到该任务的独立 session，并保留待编辑草稿，不伪造 Pi 消息或写入 Pi 私有格式。历史由 Pi 持久化。最多保留 4 个已连接 Task；切换时后台 Agent 继续运行，旧 generation 和其他 taskId 的事件不会进入当前对话。后台 Extension dialog 明确取消，避免无界等待或替用户确认。同一工作区的并行 Agent 仍可能同时修改文件，Pion 只提示风险，不尝试合并或锁定项目。
 
-设置页可以扫描固定的 `~/.pi/agent/sessions`。Rust 只接受官方 JSONL session header、现存且可 canonicalize 的 cwd、普通 `.jsonl` 文件和受限大小/数量；忽略 symlink、损坏文件和已不存在的项目。选中的文件批量复制到 Pion 私有 session root，Task 映射一次提交；失败时移除本次新副本，原文件不修改也不保持同步。opaque source ID 用于防止重复导入，路径不交给前端。复杂自定义 DOM、网络、shell、文件写入、文件 watch、第三方模块加载、自动 hot reload、Marketplace 暂不提供；未知权限直接拒绝。API v1 使用三段数值版本，不支持 prerelease/range。
+设置页可以扫描固定的 `~/.pi/agent/sessions`。Rust 只接受官方 JSONL session header、现存且可 canonicalize 的 cwd、普通 `.jsonl` 文件和受限大小/数量；忽略 symlink、损坏文件和已不存在的项目。选中的文件批量复制到 Pion 私有 session root，Task 映射一次提交；失败时移除本次新副本，原文件不修改也不保持同步。opaque source ID 用于防止重复导入，路径不交给前端。复杂自定义 DOM、shell、文件 watch、第三方模块加载、自动 hot reload、Marketplace 暂不提供；文件写入与联网仅在 manifest 白名单内开放（见 [PLUGIN_API.md](PLUGIN_API.md)），未知权限直接拒绝。API v1 使用三段数值版本，不支持 prerelease/range。
 
 Pi 0.87.0 RPC 没有直接查询或设置 active tools 的 command。Pion 因此加载一份固定、随应用发布的 Pi Extension，由 Rust allowlist 把三个枚举值转换为固定命令，再由公开的 `getAllTools()` / `setActiveTools()` 完成切换。完整模式启用 Pi 当前注册的全部工具；只读模式只启用 Pi 内建 `read`、`grep`、`find`、`ls`；仅聊天模式不向模型暴露工具。选择记录写入 Pi session 的 custom entry，不另建 Pion 会话状态。
 

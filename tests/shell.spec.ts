@@ -941,6 +941,28 @@ test("project picker selection and plugin lifecycle remain available inside sett
   await page.screenshot({ path: "test-results/new-task.png", fullPage: true });
 });
 
+test("plugin review explains write and network permissions with allowlists", async ({ page }) => {
+  const demo = JSON.parse(readFileSync("examples/plugin-api-demo/plugin.json", "utf8"));
+  await taskFixture(page);
+  await page.goto("/");
+  await page.evaluate(
+    (manifest) => localStorage.setItem("fixture.reviewManifest", JSON.stringify(manifest)),
+    demo,
+  );
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await page.getByRole("button", { name: "Desktop plugins", exact: true }).click();
+  await page.getByRole("textbox", { name: "Local plugin folder or ZIP" }).fill("/plugin");
+  await page.getByRole("button", { name: "Review installation" }).click();
+  await expect(
+    page.getByText("Write files only under the allowlisted workspace paths"),
+  ).toBeVisible();
+  await expect(page.getByText("Allowed paths: pion-plugin-demo.md, plugin-demo/**")).toBeVisible();
+  await expect(
+    page.getByText("Make network requests only to allowlisted hosts, proxied through the host"),
+  ).toBeVisible();
+  await expect(page.getByText("Allowed hosts: example.com")).toBeVisible();
+});
+
 test("sandbox denies network, host DOM, Tauri, other plugin commands, and undeclared APIs", async ({
   page,
 }) => {
@@ -971,6 +993,81 @@ test("sandbox denies network, host DOM, Tauri, other plugin commands, and undecl
   await page.goto("/");
   await expect(page.locator('[data-panel="probe.panel"]')).toContainText(
     "NO_DOM NO_TAURI NO_NETWORK NO_PERMISSION NO_COMMAND",
+  );
+});
+
+test("extended declarative views render tables, code, diffs, images and inputs", async ({
+  page,
+}) => {
+  const manifest = {
+    id: "views",
+    name: "Views",
+    version: "0.1.0",
+    apiVersion: "1",
+    minDesktopVersion: "0.1.0",
+    main: "index.js",
+    permissions: [],
+    contributes: {
+      commands: [{ id: "views.go", title: "Go" }],
+      panels: [{ id: "views.panel", title: "Views", location: "mainPanel" }],
+    },
+  };
+  const source = `async function activate(context) {
+    context.ui.registerPanel('views.panel', {
+      type: 'stack',
+      children: [
+        { type: 'text', text: 'Extended views', tone: 'heading' },
+        { type: 'table', columns: [{ key: 'k', label: 'Key' }, { key: 'v', label: 'Value' }],
+          rows: [{ k: 'alpha', v: '1' }, { k: 'beta', v: '2' }] },
+        { type: 'code', text: 'const answer = 42;', language: 'ts' },
+        { type: 'diff', text: '@@ hunk @@\\n+added line\\n-removed line' },
+        { type: 'image', src: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=', alt: 'demo dot' },
+        { type: 'input', command: 'views.go', placeholder: 'Type here', submit: 'Send' },
+      ],
+    });
+  }`;
+  await page.addInitScript(
+    (records) => localStorage.setItem("pion.preview.plugins", JSON.stringify(records)),
+    [installed(manifest, source)],
+  );
+  await page.goto("/");
+  const panel = page.locator('[data-panel="views.panel"]');
+  await expect(panel).toContainText("Extended views");
+  await expect(panel).toContainText("alpha");
+  await expect(panel).toContainText("const answer = 42;");
+  await expect(panel).toContainText("added line");
+  await expect(panel.getByRole("img", { name: "demo dot" })).toBeVisible();
+  await expect(panel.getByPlaceholder("Type here")).toBeVisible();
+});
+
+test("workspace write, network and read are denied without permissions", async ({ page }) => {
+  const manifest = {
+    id: "gate",
+    name: "Gate",
+    version: "0.1.0",
+    apiVersion: "1",
+    minDesktopVersion: "0.1.0",
+    main: "index.js",
+    permissions: [],
+    contributes: {
+      commands: [{ id: "gate.run", title: "Run" }],
+      panels: [{ id: "gate.panel", title: "Gate", location: "mainPanel" }],
+    },
+  };
+  const source = `async function activate(context) {
+    const results = [];
+    try { await context.workspace.writeFile('x.md', 'x'); results.push('FAIL_WRITE'); } catch { results.push('NO_WRITE'); }
+    try { await context.network.fetch('https://example.com'); results.push('FAIL_NETWORK'); } catch { results.push('NO_NETWORK'); }
+    try { await context.workspace.readFile('x.md'); results.push('FAIL_READ'); } catch { results.push('NO_READ'); }
+    context.ui.registerPanel('gate.panel', { type: 'text', text: results.join(' ') });
+  }`;
+  await page.addInitScript(
+    (records) => localStorage.setItem("pion.preview.plugins", JSON.stringify(records)),
+    [installed(manifest, source)],
+  );
+  await page.goto("/");
+  await expect(page.locator('[data-panel="gate.panel"]')).toContainText(
+    "NO_WRITE NO_NETWORK NO_READ",
   );
 });
 

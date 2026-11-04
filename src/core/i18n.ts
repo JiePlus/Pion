@@ -529,8 +529,16 @@ const zh = {
   "High risk: drive Pi tasks; its tools may write files, execute commands, or access the network":
     "高风险：驱动 Pi 执行任务；Pi 的工具可能读写文件、执行命令或联网",
   "Read text files in the current workspace": "读取当前工作目录内的文本文件",
+  "Write files only under the allowlisted workspace paths": "仅在允许写入的工作区路径下写入文件",
+  "Make network requests only to allowlisted hosts, proxied through the host":
+    "仅向允许的域名发起网络请求（经宿主代理）",
   "Read and write this plugin’s own persistent data": "读写本插件的独立持久化数据",
   "Show in-app notifications": "显示应用内通知",
+  "Allowed paths: {paths}": "允许写入的路径：{paths}",
+  "Allowed hosts: {hosts}": "允许访问的域名：{hosts}",
+  Table: "表格",
+  "Allowed write paths": "允许写入路径",
+  "Allowed network hosts": "允许访问域名",
   Language: "界面语言",
   "Choose the display language. Changes apply immediately and are saved on this device.":
     "选择界面语言，修改立即生效并保存在本机。",

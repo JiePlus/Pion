@@ -58,11 +58,117 @@ export function ViewRenderer({ view, run }: { view: View; run: Run }) {
           ))}
         </div>
       );
+    case "table":
+      return <DataTable view={view} />;
+    case "code":
+      return (
+        <pre className={componentClass(styles, "view-code")} data-language={view.language}>
+          <code>{view.text}</code>
+        </pre>
+      );
+    case "diff":
+      return <Diff text={view.text} />;
+    case "image":
+      return (
+        <figure className={componentClass(styles, "view-image")}>
+          <img src={view.src} alt={view.alt ?? ""} />
+          {view.alt && <figcaption>{view.alt}</figcaption>}
+        </figure>
+      );
+    case "input":
+      return <InlineInput view={view} run={run} />;
     case "button":
       return <Action view={view} run={run} />;
     case "form":
       return <CommandForm view={view} run={run} />;
   }
+}
+function DataTable({ view }: { view: Extract<View, { type: "table" }> }) {
+  return (
+    <div className={componentClass(styles, "view-table-wrap")}>
+      <table className={componentClass(styles, "view-table")}>
+        {view.caption && <caption>{view.caption}</caption>}
+        <thead>
+          <tr>
+            {view.columns.map((column) => (
+              <th key={column.key}>{column.label}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {view.rows.map((row, index) => (
+            <tr key={index}>
+              {view.columns.map((column) => (
+                <td key={column.key}>{row[column.key] ?? ""}</td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+function Diff({ text }: { text: string }) {
+  return (
+    <pre className={componentClass(styles, "view-diff")}>
+      {text.split("\n").map((line, index) => {
+        const kind = line.startsWith("+")
+          ? "add"
+          : line.startsWith("-")
+            ? "remove"
+            : line.startsWith("@@")
+              ? "hunk"
+              : "context";
+        return (
+          <span key={index} className={componentClass(styles, kind)}>
+            {line || " "}
+            {"\n"}
+          </span>
+        );
+      })}
+    </pre>
+  );
+}
+function InlineInput({ view, run }: { view: Extract<View, { type: "input" }>; run: Run }) {
+  const scope = useContext(DraftScope);
+  const draftKey = `pion.draft.${scope}.${view.command}`;
+  const [text, setText] = useState(() => localStorage.getItem(draftKey) ?? "");
+  const [busy, setBusy] = useState(false);
+  function updateText(value: string) {
+    setText(value);
+    if (value) localStorage.setItem(draftKey, value);
+    else localStorage.removeItem(draftKey);
+  }
+  return (
+    <form
+      className={componentClass(styles, "view-input")}
+      onSubmit={(event) => {
+        event.preventDefault();
+        if (busy || view.disabled) return;
+        setBusy(true);
+        run(view.command, { text })
+          .then(
+            () => updateText(""),
+            () => {},
+          )
+          .finally(() => setBusy(false));
+      }}
+    >
+      {view.label && <label>{view.label}</label>}
+      <div className={componentClass(styles, "view-input-row")}>
+        <input
+          aria-label={view.label ?? view.placeholder}
+          placeholder={view.placeholder}
+          value={text}
+          disabled={view.disabled || busy}
+          onChange={(event) => updateText(event.target.value)}
+        />
+        <button type="submit" disabled={view.disabled || busy}>
+          {view.submit}
+        </button>
+      </div>
+    </form>
+  );
 }
 function Stack({ view, run }: { view: Extract<View, { type: "stack" }>; run: Run }) {
   const element = useRef<HTMLDivElement>(null);
