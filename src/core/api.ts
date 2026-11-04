@@ -113,6 +113,11 @@ export type View =
       args?: Json;
       disabled?: boolean;
       variant?: "inline" | "row";
+      detail?: string;
+      badge?: {
+        text: string;
+        tone: "neutral" | "add" | "modify" | "delete" | "rename" | "untracked";
+      };
     }
   | { type: "form"; command: string; placeholder: string; submit: string; disabled?: boolean };
 export interface PiDesktopPluginContext {

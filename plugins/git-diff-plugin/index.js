@@ -20,6 +20,8 @@ const translations = {
   "{count} changed files": "{count} 个文件有改动",
   "M modified · A added · D deleted · ?? untracked": "M 修改 · A 新增 · D 删除 · ?? 未跟踪",
   "Detached HEAD": "分离的 HEAD",
+  "Staged Changes": "已暂存的更改",
+  Changes: "更改",
   Staged: "已暂存",
   Unstaged: "未暂存",
   Untracked: "未跟踪",
@@ -52,25 +54,49 @@ function displayText(value) {
   return value.diff;
 }
 
-function fileCode(file, staged) {
-  if (file.index === "?" && file.worktree === "?") return "??";
-  if (staged) return file.index === " " ? "M" : file.index;
-  return file.worktree === " " ? "M" : file.worktree;
+const STATUS_TONE = {
+  M: "modify",
+  A: "add",
+  D: "delete",
+  R: "rename",
+  C: "add",
+  U: "modify",
+  T: "modify",
+  "!": "neutral",
+};
+
+function splitPath(path) {
+  const index = path.lastIndexOf("/");
+  return index < 0
+    ? { name: path, dir: "" }
+    : { name: path.slice(index + 1), dir: path.slice(0, index) };
+}
+
+function fileStatus(file, staged) {
+  if (file.index === "?" && file.worktree === "?") return { code: "U", tone: "untracked" };
+  const raw = staged ? file.index : file.worktree;
+  const code = raw === " " ? "M" : raw;
+  return { code, tone: STATUS_TONE[code] || "neutral" };
 }
 
 function fileRow(file, staged) {
-  return {
+  const status = fileStatus(file, staged);
+  const { name, dir } = splitPath(file.path);
+  const row = {
     type: "button",
     variant: "row",
-    label: `${fileCode(file, staged)}  ${file.path}`,
+    label: name,
+    badge: { text: status.code, tone: status.tone },
     command: "git-diff.open",
     args: { path: file.path, staged },
   };
+  if (dir) row.detail = dir;
+  return row;
 }
 
 function section(title, files, staged) {
   return [
-    { type: "text", text: `${title} · ${files.length}`, tone: "muted" },
+    { type: "text", text: `${title} (${files.length})`, tone: "muted" },
     ...files.slice(0, 60).map((file) => fileRow(file, staged)),
   ];
 }
@@ -140,8 +166,8 @@ function view() {
     const unstaged = status.files.filter((file) => file.worktree !== " " && file.worktree !== "?");
     const untracked = status.files.filter((file) => file.index === "?" && file.worktree === "?");
     const sections = [
-      [tx("Staged"), staged, true],
-      [tx("Unstaged"), unstaged, false],
+      [tx("Staged Changes"), staged, true],
+      [tx("Changes"), unstaged, false],
       [tx("Untracked"), untracked, false],
     ];
     for (const [title, files, isStaged] of sections) {
@@ -152,23 +178,21 @@ function view() {
   }
 
   if (selected) {
+    const current = splitPath(selected.path);
+    const heading = [
+      { type: "text", text: current.name, tone: "heading" },
+      ...(current.dir ? [{ type: "text", text: current.dir, tone: "muted" }] : []),
+      {
+        type: "text",
+        text: selected.staged ? tx("Staged") : tx("Unstaged"),
+        tone: "muted",
+      },
+    ];
     children.push({
       type: "row",
       align: "between",
       children: [
-        {
-          type: "row",
-          align: "start",
-          gap: "sm",
-          children: [
-            { type: "text", text: selected.path, tone: "heading" },
-            {
-              type: "text",
-              text: selected.staged ? tx("Staged") : tx("Unstaged"),
-              tone: "muted",
-            },
-          ],
-        },
+        { type: "row", align: "start", gap: "sm", children: heading },
         { type: "button", label: tx("Close diff"), command: "git-diff.close", variant: "inline" },
       ],
     });

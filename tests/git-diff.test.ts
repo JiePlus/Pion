@@ -67,8 +67,12 @@ test("git status panel lists branch and changed files through a validated View",
   const json = rendered();
   assert.match(json, /main/);
   assert.match(json, /2 changed files/);
-  assert.match(json, /M\s+src\/a\.ts/);
-  assert.match(json, /\?\?\s+new\.txt/);
+  assert.match(json, /Staged Changes \(1\)/);
+  assert.match(json, /"label":"a\.ts"/);
+  assert.match(json, /"detail":"src"/);
+  assert.match(json, /"text":"M","tone":"modify"/);
+  assert.match(json, /"label":"new\.txt"/);
+  assert.match(json, /"text":"U","tone":"untracked"/);
   plugin.deactivate();
 });
 
@@ -92,7 +96,8 @@ test("opening a file renders its unified diff and reports binary/truncated state
   await plugin.activate(api);
   await commands.get("git-diff.open")!({ path: "src/a.ts", staged: false });
   const json = rendered();
-  assert.match(json, /"text":"src\/a\.ts"/);
+  assert.match(json, /"label":"a\.ts"/);
+  assert.match(json, /"detail":"src"/);
   assert.match(json, /"text":"Unstaged"/);
   assert.match(json, /"type":"code"/);
   assert.match(json, /\+two/);

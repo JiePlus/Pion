@@ -45,7 +45,7 @@ test("Git/Diff plugin shows branch, changed files and a unified diff", async ({
 
   await panel.getByRole("button", { name: /runtime\.ts/ }).click();
   await expect(panel.locator("pre")).toContainText('+  "workspace.gitStatus": "workspace.git"');
-  await expect(panel).toContainText("Unstaged · 1");
+  await expect(panel).toContainText("Changes (1)");
 
   await page.screenshot({
     path: `artifacts/ui-qa/${testInfo.project.name}-git-diff-after.png`,

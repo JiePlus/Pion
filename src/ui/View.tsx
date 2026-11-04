@@ -77,35 +77,77 @@ function CodeView({
   language?: string;
   variant?: "plain" | "diff";
 }) {
-  const diff = variant === "diff";
+  if (variant === "diff") return <DiffView text={text} language={language} />;
   return (
-    <pre
-      className={componentClass(styles, "view-code")}
-      data-variant={variant ?? "plain"}
-      aria-label={language}
-    >
-      <code>
-        {text.split("\n").map((line, index) => (
-          <span key={index} className={diff ? componentClass(styles, diffClass(line)) : undefined}>
-            {line || " "}
-            {"\n"}
-          </span>
-        ))}
-      </code>
+    <pre className={componentClass(styles, "view-code")} data-variant="plain" aria-label={language}>
+      <code>{text}</code>
     </pre>
   );
 }
-function diffClass(line: string): string {
-  if (
-    /^(diff --git|index |--- |\+\+\+ |new file|deleted file|old mode|new mode|similarity|rename |copy )/.test(
-      line,
-    )
-  )
-    return "code-meta";
-  if (line.startsWith("@@")) return "code-hunk";
-  if (line.startsWith("+")) return "code-add";
-  if (line.startsWith("-")) return "code-del";
-  return "code-context";
+function DiffLine({ className, text }: { className: string; text: string }) {
+  return (
+    <span className={`${componentClass(styles, "diff-line")} ${className}`}>
+      <span className={componentClass(styles, "diff-text")}>{text || " "}</span>
+    </span>
+  );
+}
+function DiffView({ text, language }: { text: string; language?: string }) {
+  const lines = text.split("\n");
+  if (lines.length && lines[lines.length - 1] === "") lines.pop();
+  let oldNumber = 0;
+  let newNumber = 0;
+  let inHunk = false;
+  return (
+    <pre className={componentClass(styles, "view-code")} data-variant="diff" aria-label={language}>
+      <code>
+        {lines.map((line, index) => {
+          const hunk = /^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@/.exec(line);
+          if (hunk) {
+            oldNumber = Number(hunk[1]);
+            newNumber = Number(hunk[2]);
+            inHunk = true;
+            return (
+              <DiffLine key={index} className={componentClass(styles, "diff-hunk")} text={line} />
+            );
+          }
+          if (!inHunk) {
+            return (
+              <DiffLine key={index} className={componentClass(styles, "diff-meta")} text={line} />
+            );
+          }
+          const sign = line[0];
+          if (sign === "\\") {
+            return (
+              <DiffLine key={index} className={componentClass(styles, "diff-meta")} text={line} />
+            );
+          }
+          let oldText = "";
+          let newText = "";
+          if (sign === "+") newText = String(newNumber++);
+          else if (sign === "-") oldText = String(oldNumber++);
+          else {
+            oldText = String(oldNumber++);
+            newText = String(newNumber++);
+          }
+          const body = line.length ? line.slice(1) : "";
+          const tone = sign === "+" ? "diff-add" : sign === "-" ? "diff-del" : "diff-context";
+          return (
+            <span
+              key={index}
+              className={`${componentClass(styles, "diff-line")} ${componentClass(styles, tone)}`}
+            >
+              <span className={componentClass(styles, "diff-no")}>{oldText}</span>
+              <span className={componentClass(styles, "diff-no")}>{newText}</span>
+              <span className={componentClass(styles, "diff-sign")}>
+                {sign === " " ? " " : sign}
+              </span>
+              <span className={componentClass(styles, "diff-text")}>{body || " "}</span>
+            </span>
+          );
+        })}
+      </code>
+    </pre>
+  );
 }
 function Stack({ view, run }: { view: Extract<View, { type: "stack" }>; run: Run }) {
   const element = useRef<HTMLDivElement>(null);
@@ -164,9 +206,21 @@ function Action({ view, run }: { view: Extract<View, { type: "button" }>; run: R
           .finally(() => setBusy(false));
       }}
     >
-      <span className={componentClass(styles, row ? "action-row-label" : "action-inline-label")}>
-        {view.label}
-      </span>
+      {row && view.badge && (
+        <span className={componentClass(styles, `action-badge-${view.badge.tone}`)}>
+          {view.badge.text}
+        </span>
+      )}
+      {row ? (
+        <span className={componentClass(styles, "action-row-body")}>
+          <span className={componentClass(styles, "action-row-label")}>{view.label}</span>
+          {view.detail && (
+            <span className={componentClass(styles, "action-row-detail")}>{view.detail}</span>
+          )}
+        </span>
+      ) : (
+        <span className={componentClass(styles, "action-inline-label")}>{view.label}</span>
+      )}
     </button>
   );
 }

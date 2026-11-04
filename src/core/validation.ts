@@ -126,6 +126,17 @@ export function validateView(value: unknown, manifest: Manifest): View {
           text(node.label, 100);
           if (node.variant !== undefined && !["inline", "row"].includes(node.variant as string))
             throw new Error("Invalid button variant");
+          if (node.detail !== undefined) text(node.detail, 300);
+          if (node.badge !== undefined) {
+            const badge = object(node.badge);
+            text(badge.text, 4);
+            if (
+              !["neutral", "add", "modify", "delete", "rename", "untracked"].includes(
+                badge.tone as string,
+              )
+            )
+              throw new Error("Invalid badge tone");
+          }
         } else {
           text(node.placeholder, 300);
           text(node.submit, 100);
