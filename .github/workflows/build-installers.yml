@@ -1,14 +1,20 @@
 name: Build installers
 
-# Builds platform installers for Pion:
-# - on every pull request / manual run: build only, upload the bundles as workflow artifacts
-# - on a version tag (e.g. v0.1.0): build, attach the bundles to a draft GitHub Release and
-#   produce the signed updater artifacts plus latest.json used by in-app updates
+# Builds and packages Pion installers, restricted to the main branch:
+# - on pushes to main: build, upload the bundles as workflow artifacts and create/update a
+#   published GitHub Release (tag v<version>) with the installers and signed updater
+#   artifacts (latest.json) used by in-app updates
+# - on pull requests targeting main and manual runs: build only, upload workflow artifacts
+# - on a version tag (e.g. v0.1.0): build and attach the bundles to a GitHub Release
 on:
   push:
+    branches:
+      - main
     tags:
       - "v*"
   pull_request:
+    branches:
+      - main
   workflow_dispatch:
 
 permissions:
@@ -23,7 +29,7 @@ jobs:
     name: Build (${{ matrix.name }})
     runs-on: ${{ matrix.platform }}
     permissions:
-      # Needed to create/update the draft release when running on a tag.
+      # Needed to create/update the release on main pushes and version tags.
       contents: write
     strategy:
       fail-fast: false
@@ -72,24 +78,36 @@ jobs:
       - name: Install frontend dependencies
         run: npm ci
 
+      - name: Validate release signing
+        if: github.event_name == 'push' && (github.ref_type == 'tag' || github.ref == 'refs/heads/main')
+        shell: bash
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+        run: |
+          if [ -z "$TAURI_SIGNING_PRIVATE_KEY" ]; then
+            echo '::error::Configure TAURI_SIGNING_PRIVATE_KEY before publishing updater artifacts.'
+            exit 1
+          fi
+
       - name: Build and package
         uses: tauri-apps/tauri-action@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Required to sign updater artifacts. Pull-request builds skip updater artifacts,
-          # so these can be empty there; tag releases need the values set as repo secrets.
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          # Required to sign updater artifacts on release builds (main pushes and tags).
+          # Keep signing credentials out of pull-request and manual builds.
+          TAURI_SIGNING_PRIVATE_KEY: ${{ (github.event_name == 'push' && (github.ref_type == 'tag' || github.ref == 'refs/heads/main')) && secrets.TAURI_SIGNING_PRIVATE_KEY || '' }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ (github.event_name == 'push' && (github.ref_type == 'tag' || github.ref == 'refs/heads/main')) && secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD || '' }}
         with:
-          # On a tag, enable updater artifacts so tauri-action also uploads latest.json.
-          args: ${{ matrix.args }}${{ github.ref_type == 'tag' && ' --config src-tauri/tauri.updater.conf.json' || '' }}
-          # Release creation is only enabled when the workflow runs for a tag.
-          tagName: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
-          releaseName: ${{ github.ref_type == 'tag' && format('Pion {0}', github.ref_name) || '' }}
-          releaseBody: "Download the installer for your platform from the assets below. Pion checks these releases for in-app updates."
-          releaseDraft: true
+          # Release builds (main pushes and version tags) also enable updater artifacts so
+          # tauri-action uploads the signed bundles and latest.json.
+          args: ${{ matrix.args }}${{ (github.event_name == 'push' && (github.ref_type == 'tag' || github.ref == 'refs/heads/main')) && ' --config src-tauri/tauri.updater.conf.json' || '' }}
+          # Publish a release (tagged v<version>) on main pushes and version tags; PR/manual only build.
+          tagName: ${{ (github.event_name == 'push' && (github.ref_type == 'tag' || github.ref == 'refs/heads/main')) && 'v__VERSION__' || '' }}
+          releaseName: ${{ (github.event_name == 'push' && (github.ref_type == 'tag' || github.ref == 'refs/heads/main')) && 'Pion v__VERSION__' || '' }}
+          releaseBody: "Download the installer for your platform from the assets below. Pion uses these releases for in-app updates."
+          releaseDraft: false
           prerelease: false
-          # Uploads the signed updater artifacts and the static latest.json used by the app.
+          # Signed updater artifacts and the static latest.json used by the app.
           uploadUpdaterJson: true
           uploadUpdaterSignatures: true
           uploadWorkflowArtifacts: true

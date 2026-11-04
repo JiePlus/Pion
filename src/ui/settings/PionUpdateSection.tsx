@@ -9,8 +9,9 @@ import { Icon } from "../primitives/Icon.tsx";
 import styles from "./Settings.module.css";
 
 export function PionUpdateSection({ update }: { update: AppUpdateController }) {
-  const { state, checkForUpdate, installUpdate, restart, setAutoCheck, setAutoInstall } = update;
-  const busy = state.phase === "checking" || state.phase === "downloading";
+  const { state, checkForUpdate, downloadUpdate, restart, setAutoCheck, setAutoInstall } = update;
+  const busy =
+    state.phase === "checking" || state.phase === "downloading" || state.phase === "installing";
   const percent =
     state.total && state.total > 0
       ? Math.min(100, Math.round((state.downloaded / state.total) * 100))
@@ -23,7 +24,7 @@ export function PionUpdateSection({ update }: { update: AppUpdateController }) {
         {t("Pion updates")}
       </h2>
       <p className="muted">
-        {t("Pion can check for new releases and install them silently in the background.")}
+        {t("Pion can check for new releases and download them in the background.")}
       </p>
       <p className={`settings-note ${utilityStyles.settingsNote}`}>
         {t("Current version: {version}", { version: state.currentVersion || "—" })}
@@ -32,24 +33,24 @@ export function PionUpdateSection({ update }: { update: AppUpdateController }) {
         <Button
           variant="outline"
           type="button"
-          disabled={!native || busy}
+          disabled={!native || busy || state.phase === "ready"}
           onClick={() => void checkForUpdate(true)}
         >
           {t("Check for updates")}
         </Button>
-        {state.phase === "available" && (
+        {(state.phase === "available" || (state.phase === "error" && state.updateVersion)) && (
           <Button
             variant="primary"
             type="button"
             disabled={!native}
-            onClick={() => void installUpdate()}
+            onClick={() => void downloadUpdate()}
           >
-            {t("Download and install")}
+            {t("Download update")}
           </Button>
         )}
         {state.phase === "ready" && (
           <Button variant="primary" type="button" disabled={!native} onClick={() => void restart()}>
-            {t("Restart Pion")}
+            {t(state.installed ? "Restart Pion" : "Install and restart Pion")}
           </Button>
         )}
       </div>
@@ -76,9 +77,18 @@ export function PionUpdateSection({ update }: { update: AppUpdateController }) {
             </div>
           </>
         )}
-        {state.phase === "ready" && <p>{t("Update installed — restart Pion to finish.")}</p>}
+        {state.phase === "ready" && (
+          <p>
+            {t(
+              state.installed
+                ? "Update installed — restart Pion to finish."
+                : "Update downloaded — restart Pion to install.",
+            )}
+          </p>
+        )}
+        {state.phase === "installing" && <p>{t("Installing update and restarting Pion…")}</p>}
         {state.phase === "current" && <p>{t("Pion is up to date.")}</p>}
-        {state.phase === "error" && (
+        {state.error && (
           <p className="error" role="alert">
             {t("Update failed: {error}", { error: state.error ?? "" })}
           </p>
@@ -96,11 +106,11 @@ export function PionUpdateSection({ update }: { update: AppUpdateController }) {
           checked={state.autoInstall}
           onChange={(event) => setAutoInstall(event.target.checked)}
         />
-        {t("Automatically download and install updates in the background")}
+        {t("Automatically download updates in the background")}
       </label>
       <p className={`settings-note ${utilityStyles.settingsNote}`}>
         {t(
-          "Silent updates install in the background and take effect the next time Pion starts. You still choose when to restart.",
+          "Updates download without interrupting your work. Choose Install and restart Pion when you are ready. Closing Pion before installing discards the download.",
         )}
       </p>
       {!native && (

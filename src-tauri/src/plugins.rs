@@ -11,6 +11,7 @@ const LIMIT: u64 = 1024 * 1024;
 const PERMISSIONS: &[&str] = &[
     "workspace.read",
     "workspace.write",
+    "workspace.git",
     "pi.read",
     "pi.sendMessage",
     "storage",
@@ -532,6 +533,21 @@ mod tests {
             source: include_str!("../../examples/plugin-api-demo/index.js").into(),
         };
         assert_eq!(validate(&bundle).unwrap(), "plugin-api-demo");
+    }
+
+    #[test]
+    fn git_diff_plugin_manifest_passes_review_validation() {
+        let mut bundle = Bundle {
+            manifest: serde_json::from_str(include_str!(
+                "../../plugins/git-diff-plugin/plugin.json"
+            ))
+            .unwrap(),
+            source: include_str!("../../plugins/git-diff-plugin/index.js").into(),
+        };
+        assert_eq!(validate(&bundle).unwrap(), "git-diff");
+        // Read-only Git access only; write/exec permissions are rejected.
+        bundle.manifest["permissions"] = json!(["workspace.git", "process.spawn"]);
+        assert!(validate(&bundle).is_err());
     }
     #[test]
     fn install_snapshot_authorization_storage_and_zip() {

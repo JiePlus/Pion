@@ -66,17 +66,19 @@ npm run dev
 
 ## 应用更新
 
-**设置 → 通用 → Pion 更新** 显示当前版本并可手动检查更新。可分别开启“自动检查更新”和“后台自动下载并安装更新”：开启后 Pion 启动时静默检查，有新版本即在后台下载并安装，不会打断当前任务；安装完成后在设置页提示重启，重启时机仍由用户决定，下次启动即为新版本。
+**设置 → 通用 → Pion 更新** 显示当前版本并可手动检查更新。可分别开启“自动检查更新”和“后台自动下载更新”：开启后 Pion 启动时静默检查，有新版本即在后台下载，不会打断当前任务。下载完成后由用户点击“安装并重启 Pion”完成安装；Windows 安装器会退出当前应用，因此后台检查与下载不会自动调用安装器。下载暂存于当前进程，直接关闭应用会丢弃暂存，下次启动将重新检查并下载。
 
-更新包由 `.github/workflows/build-installers.yml` 在推送 `v*` 版本标签时生成。该工作流会创建草稿 Release，附带各平台安装包、签名后的更新包和 `latest.json`；发布该 Release 后，应用通过 `plugins.updater.endpoints` 中的 GitHub `releases/latest/download/latest.json` 获取更新。
+更新包由 `.github/workflows/build-installers.yml` 在推送到 `main` 或推送 `v*` 版本标签时生成：工作流会按版本号 `v<version>` 创建/更新公开的 GitHub Release，附带各平台安装包、签名后的更新包和 `latest.json`；应用通过 `plugins.updater.endpoints` 中的 GitHub `releases/latest/download/latest.json` 获取更新。Pull Request 与手动运行只构建、不发布。
 
-发布前需配置签名，否则更新包无法通过校验：
+本仓库已配置更新签名公钥及对应的 Actions 私钥 Secret，更新地址也已指向本仓库 Release。更新功能合并到 `main` 后，发布构建会生成签名更新包；仓库公开后客户端才能匿名读取更新地址。首个带更新能力的版本为 **0.1.1**，旧版安装包需先手动安装一次；以后发布前同步递增 `package.json`、`package-lock.json`、`src-tauri/Cargo.toml`、`src-tauri/Cargo.lock` 和 `src-tauri/tauri.conf.json` 的应用版本号，同版本构建不会触发客户端更新。
+
+迁移到其他仓库或需要替换密钥时，再按以下步骤配置（已有用户必须先通过旧密钥签名的版本接收新公钥，不能直接替换后要求旧安装包信任）：
 
 1. 生成签名密钥（私钥不要提交到仓库）：`npm run tauri signer generate -- -w ~/.tauri/pion.key`
 2. 把生成的公钥内容填入 `src-tauri/tauri.conf.json` 的 `plugins.updater.pubkey`。
 3. 在仓库 Secrets 中添加 `TAURI_SIGNING_PRIVATE_KEY`（私钥文件内容）和 `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`（生成时设置的密码，可为空）。
 
-> GitHub 的 `releases/latest/download/...` 只能匿名访问公开 Release。若仓库保持私有，需要把 `plugins.updater.endpoints` 指向一个公开可访问的静态地址（例如公开仓库、对象存储或自有更新服务器），否则应用无法获取 `latest.json`。
+> 更新地址使用 GitHub 公开 Release 的 `latest.json`，因此仓库与 Release 必须可匿名访问：把仓库设为公开即可（或把 `plugins.updater.endpoints` 指向其他公开静态地址）。签名私钥只放在 GitHub Actions Secrets，公钥本来就可以公开。
 
 ## 界面语言
 
@@ -101,13 +103,16 @@ npm run dev
 - 本地文件夹/ZIP 审核安装；内容快照授权、自动加载已启用插件、手动 Reload、Disable、Uninstall。
 - 左侧 **Pi 技能** 使用 Pi 资源解析结果显示用户、项目和 Pi 包内的 Skill 及启用状态。可按用户或项目范围添加、移除本地 Skill 路径；用户范围可启用或禁用 Skill，项目范围可为每个 Skill 选择继承、加载或卸载，并可设置是否在命令菜单中显示 `/skill:name`。左侧 **Pi 包** 支持用户或项目范围的安装、更新和移除。
 - 每插件隔离 Worker、禁止直接 DOM/Tauri/其他插件；写文件与联网仅经宿主且受白名单约束；激活 timeout、heartbeat、payload 限额、崩溃清理。
-- Pion 自身更新：设置页手动检查，可开启启动时自动检查并在后台静默下载安装，重启后生效。
+- Pion 自身更新：设置页手动检查，可开启启动时自动检查并在后台静默下载，用户确认安装并重启后生效。
 - Rust Pi JSONL：真实 `pi --mode rpc`、串行请求/响应关联、独立事件流、超时/退出处理。
 - 无需修改 Core 的 [Hello 插件](examples/hello-plugin)，以及演示写入/联网/丰富 UI 的 [Plugin API 示例](examples/plugin-api-demo)。
+- 一方 [Git/Diff 插件](plugins/git-diff-plugin)：只读展示当前工作区分支、staged/unstaged/untracked 改动与带行号的 unified diff（参考 VS Code / GitHub Desktop 的文件行与状态徽标），通过插件审核安装后加载，仅申请 `workspace.git` 权限。
 
 ## 安装自己的插件
 
 在桌面“设置 → 插件”中输入本地绝对目录路径，例如本项目的 `examples/hello-plugin`，点击 Review installation，再批准权限。
+
+一方 Git/Diff 插件同样按此流程安装，输入本项目的 `plugins/git-diff-plugin` 目录即可。它只读取 Git 状态与 diff（`workspace.git` 权限），不写文件、不联网；在“设置 → 扩展面板”里可把它移动到主区域、右侧栏或底部面板。
 
 ZIP 必须让 `plugin.json` 和 `main` 相对文件处于包根目录：
 
@@ -150,6 +155,6 @@ npm run desktop:build
 
 macOS 本地构建产物位于 `src-tauri/target/release/bundle/macos/Pion.app`；`npm run desktop:build` 默认仅打包本机 `.app`，没有签名或公证流程。
 
-`.github/workflows/build-installers.yml` 在 Pull Request、手动触发以及推送 `v*` 标签时自动编译并打包各平台安装包：macOS（universal `.app` 与 `.dmg`）、Linux（`.deb` 与 `.AppImage`）和 Windows（NSIS `-setup.exe` 与 `.msi`）。Pull Request 与手动运行会把产物作为 workflow artifact 上传；推送标签时还会创建草稿 Release 并附加安装包。当前安装包未签名/公证，Windows/Linux 的浏览器沙箱与运行时行为仍需在对应平台人工验收。
+`.github/workflows/build-installers.yml` 仅在 `main` 分支相关事件（推送到 `main`、面向 `main` 的 Pull Request、推送 `v*` 标签）与手动触发时自动编译并打包各平台安装包：macOS（universal `.app` 与 `.dmg`）、Linux（`.deb` 与 `.AppImage`）和 Windows（NSIS `-setup.exe` 与 `.msi`）。推送到 `main` 与推送 `v*` 标签会按版本号 `v<version>` 创建或更新公开的 GitHub Release 并附加安装包；Pull Request 与手动运行只把产物作为 workflow artifact 上传。当前安装包未签名/公证，Windows/Linux 的浏览器沙箱与运行时行为仍需在对应平台人工验收。
 
 插件沙箱采用 opaque-origin iframe + Blob Worker + CSP，适合当前受控 MVP。它不是 OS 容器，不能保证抵御浏览器漏洞或恶意内存耗尽。正式开放不受信任插件分发前需要独立安全评审和多平台原生验证。

@@ -886,6 +886,52 @@ test("task search, state filters and project collapse preserve grouped navigatio
     .toContain("p1");
 });
 
+test("long project histories contract behind a show-more control", async ({ page }) => {
+  await taskFixture(page);
+  await page.goto("/");
+  await page.evaluate(() => {
+    const tasks = Array.from({ length: 12 }, (_, i) => ({
+      id: `a${i}`,
+      projectId: "p1",
+      title: `Pion chat ${i + 1}`,
+    }));
+    const others = Array.from({ length: 3 }, (_, i) => ({
+      id: `b${i}`,
+      projectId: "p2",
+      title: `Pioneer chat ${i + 1}`,
+    }));
+    localStorage.setItem(
+      "fixture.catalog",
+      JSON.stringify({
+        projects: [
+          { id: "p1", name: "Pion", path: "/projects/Pion" },
+          { id: "p2", name: "Pioneer", path: "/projects/Pioneer" },
+        ],
+        tasks: [...tasks, ...others],
+      }),
+    );
+  });
+  await page.reload();
+
+  const firstProject = page.locator(".project-group").first();
+  await expect(firstProject.locator(".task-list button")).toHaveCount(8);
+  await expect(firstProject.getByRole("button", { name: "Show 4 more" })).toBeVisible();
+  await expect(
+    page.locator(".project-group").nth(1).getByRole("button", { name: "Pioneer chat 1" }),
+  ).toBeVisible();
+
+  await firstProject.getByRole("button", { name: "Show 4 more" }).click();
+  await expect(firstProject.locator(".task-list button")).toHaveCount(12);
+  await expect(firstProject.getByRole("button", { name: "Show less" })).toBeVisible();
+
+  await firstProject.getByRole("button", { name: "Show less" }).click();
+  await expect(firstProject.locator(".task-list button")).toHaveCount(8);
+
+  await page.getByRole("button", { name: "Search tasks" }).click();
+  await page.getByRole("textbox", { name: "Search tasks" }).fill("Pion chat");
+  await expect(firstProject.locator(".task-list button")).toHaveCount(12);
+});
+
 test("usage and task menus load on demand, recover from failure and restore focus", async ({
   page,
 }) => {

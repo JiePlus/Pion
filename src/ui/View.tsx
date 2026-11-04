@@ -32,6 +32,8 @@ export function ViewRenderer({ view, run }: { view: View; run: Run }) {
   switch (view.type) {
     case "stack":
       return <Stack view={view} run={run} />;
+    case "row":
+      return <Row view={view} run={run} />;
     case "text":
       return (
         <p
@@ -108,21 +110,61 @@ function DataTable({ view }: { view: Extract<View, { type: "table" }> }) {
     </div>
   );
 }
+function DiffLine({ className, text }: { className: string; text: string }) {
+  return (
+    <span className={`${componentClass(styles, "diff-line")} ${className}`}>
+      <span className={componentClass(styles, "diff-text")}>{text || " "}</span>
+    </span>
+  );
+}
 function Diff({ text }: { text: string }) {
+  const lines = text.split("\n");
+  if (lines.length && lines[lines.length - 1] === "") lines.pop();
+  let oldNumber = 0;
+  let newNumber = 0;
+  let inHunk = false;
   return (
     <pre className={componentClass(styles, "view-diff")}>
-      {text.split("\n").map((line, index) => {
-        const kind = line.startsWith("+")
-          ? "add"
-          : line.startsWith("-")
-            ? "remove"
-            : line.startsWith("@@")
-              ? "hunk"
-              : "context";
+      {lines.map((line, index) => {
+        const hunk = /^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@/.exec(line);
+        if (hunk) {
+          oldNumber = Number(hunk[1]);
+          newNumber = Number(hunk[2]);
+          inHunk = true;
+          return (
+            <DiffLine key={index} className={componentClass(styles, "diff-hunk")} text={line} />
+          );
+        }
+        if (!inHunk) {
+          return (
+            <DiffLine key={index} className={componentClass(styles, "diff-meta")} text={line} />
+          );
+        }
+        const sign = line[0];
+        if (sign === "\\") {
+          return (
+            <DiffLine key={index} className={componentClass(styles, "diff-meta")} text={line} />
+          );
+        }
+        let oldText = "";
+        let newText = "";
+        if (sign === "+") newText = String(newNumber++);
+        else if (sign === "-") oldText = String(oldNumber++);
+        else {
+          oldText = String(oldNumber++);
+          newText = String(newNumber++);
+        }
+        const body = line.length ? line.slice(1) : "";
+        const tone = sign === "+" ? "diff-add" : sign === "-" ? "diff-del" : "diff-context";
         return (
-          <span key={index} className={componentClass(styles, kind)}>
-            {line || " "}
-            {"\n"}
+          <span
+            key={index}
+            className={`${componentClass(styles, "diff-line")} ${componentClass(styles, tone)}`}
+          >
+            <span className={componentClass(styles, "diff-no")}>{oldText}</span>
+            <span className={componentClass(styles, "diff-no")}>{newText}</span>
+            <span className={componentClass(styles, "diff-sign")}>{sign === " " ? " " : sign}</span>
+            <span className={componentClass(styles, "diff-text")}>{body || " "}</span>
           </span>
         );
       })}
@@ -187,7 +229,24 @@ function Stack({ view, run }: { view: Extract<View, { type: "stack" }>; run: Run
     >
       {view.children.map((child, index) => (
         <ViewRenderer
-          key={"command" in child ? child.command : `${child.type}:${index}`}
+          key={`${child.type}:${"command" in child ? child.command : ""}:${index}`}
+          view={child}
+          run={run}
+        />
+      ))}
+    </div>
+  );
+}
+function Row({ view, run }: { view: Extract<View, { type: "row" }>; run: Run }) {
+  return (
+    <div
+      className={componentClass(styles, "view-row")}
+      data-align={view.align ?? "center"}
+      data-gap={view.gap ?? "md"}
+    >
+      {view.children.map((child, index) => (
+        <ViewRenderer
+          key={`${child.type}:${"command" in child ? child.command : ""}:${index}`}
           view={child}
           run={run}
         />
@@ -197,9 +256,12 @@ function Stack({ view, run }: { view: Extract<View, { type: "stack" }>; run: Run
 }
 function Action({ view, run }: { view: Extract<View, { type: "button" }>; run: Run }) {
   const [busy, setBusy] = useState(false);
+  const row = view.variant === "row";
   return (
     <button
+      className={componentClass(styles, row ? "action-row" : "action-inline")}
       disabled={view.disabled || busy}
+      aria-busy={busy}
       onClick={() => {
         setBusy(true);
         run(view.command, view.args)
@@ -207,7 +269,21 @@ function Action({ view, run }: { view: Extract<View, { type: "button" }>; run: R
           .finally(() => setBusy(false));
       }}
     >
-      {view.label}
+      {row && view.badge && (
+        <span className={componentClass(styles, `action-badge-${view.badge.tone}`)}>
+          {view.badge.text}
+        </span>
+      )}
+      {row ? (
+        <span className={componentClass(styles, "action-row-body")}>
+          <span className={componentClass(styles, "action-row-label")}>{view.label}</span>
+          {view.detail && (
+            <span className={componentClass(styles, "action-row-detail")}>{view.detail}</span>
+          )}
+        </span>
+      ) : (
+        <span className={componentClass(styles, "action-inline-label")}>{view.label}</span>
+      )}
     </button>
   );
 }

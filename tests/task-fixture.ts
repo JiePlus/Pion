@@ -10,6 +10,9 @@ export async function taskFixture(page: Page) {
       const callbacks = new Map<number, (event: unknown) => void>();
       const listeners = new Map<string, number>();
       let sequence = 0;
+      let updaterResourceSequence = 0;
+      const updaterResources = new Set<number>();
+      const downloadedUpdates = new Set<number>();
       let authLoginSequence = 0;
       let generation = 0;
       let active = "";
@@ -68,6 +71,71 @@ export async function taskFixture(page: Page) {
         modelReady: true,
         selectedModel: { provider: "openai", id: "gpt-test" },
         models: [model, { provider: "anthropic", id: "claude-test", name: "Claude Test" }],
+      });
+      const gitStatus = read("fixture.gitStatus", {
+        repo: true,
+        branch: "main",
+        detached: false,
+        ahead: 0,
+        behind: 0,
+        clean: false,
+        files: [
+          { path: "src/core/runtime.ts", index: " ", worktree: "M" },
+          { path: "plugins/git-diff-plugin/index.js", index: "A", worktree: " " },
+          { path: "README.md", index: "?", worktree: "?" },
+        ],
+      });
+      const gitDiffs = read("fixture.gitDiffs", {
+        "src/core/runtime.ts": {
+          path: "src/core/runtime.ts",
+          staged: false,
+          binary: false,
+          truncated: false,
+          diff: [
+            "diff --git a/src/core/runtime.ts b/src/core/runtime.ts",
+            "index 1a2b3c4..5d6e7f8 100644",
+            "--- a/src/core/runtime.ts",
+            "+++ b/src/core/runtime.ts",
+            "@@ -44,6 +44,8 @@ const methods: Record<string, Permission> = {",
+            '   "workspace.readFile": "workspace.read",',
+            '+  "workspace.gitStatus": "workspace.git",',
+            '+  "workspace.gitDiff": "workspace.git",',
+            '   "storage.get": "storage",',
+            '   "storage.set": "storage",',
+            '   "notifications.show": "notifications",',
+          ].join("\n"),
+        },
+        "plugins/git-diff-plugin/index.js": {
+          path: "plugins/git-diff-plugin/index.js",
+          staged: true,
+          binary: false,
+          truncated: false,
+          diff: [
+            "diff --git a/plugins/git-diff-plugin/index.js b/plugins/git-diff-plugin/index.js",
+            "new file mode 100644",
+            "--- /dev/null",
+            "+++ b/plugins/git-diff-plugin/index.js",
+            "@@ -0,0 +1,3 @@",
+            "+async function refresh() {",
+            "+  status = await api.workspace.gitStatus();",
+            "+}",
+          ].join("\n"),
+        },
+        "README.md": {
+          path: "README.md",
+          staged: false,
+          binary: false,
+          truncated: false,
+          diff: [
+            "diff --git a/README.md b/README.md",
+            "new file mode 100644",
+            "--- /dev/null",
+            "+++ b/README.md",
+            "@@ -0,0 +1,2 @@",
+            "+## First-party Git/Diff plugin",
+            "+Review-install plugins/git-diff-plugin to view status and diffs.",
+          ].join("\n"),
+        },
       });
       const emit = (name: string, payload: unknown) =>
         callbacks.get(listeners.get(name)!)?.({ event: name, payload });
@@ -137,15 +205,28 @@ export async function taskFixture(page: Page) {
             }
             if (command === "plugin:event|unlisten") return null;
             if (command === "plugin:app|version") return "0.1.0";
+            if (command.startsWith("plugin:updater|") || command === "plugin:process|restart") {
+              const calls = read("fixture.appUpdateCalls", []) as string[];
+              calls.push(command);
+              localStorage.setItem("fixture.appUpdateCalls", JSON.stringify(calls));
+            }
             if (command === "plugin:updater|check") {
+              if (localStorage.getItem("fixture.holdAppUpdateCheck"))
+                await new Promise<void>((resolve) =>
+                  Object.assign(window, { fixtureReleaseAppUpdateCheck: resolve }),
+                );
+              if (localStorage.getItem("fixture.failAppUpdateCheck"))
+                throw new Error("Update check is offline");
               const update = read("fixture.appUpdate", null) as {
                 version: string;
                 date?: string;
                 body?: string;
               } | null;
               if (!update) return null;
+              const rid = ++updaterResourceSequence;
+              updaterResources.add(rid);
               return {
-                rid: 1,
+                rid,
                 currentVersion: "0.1.0",
                 version: update.version,
                 date: update.date ?? null,
@@ -153,13 +234,45 @@ export async function taskFixture(page: Page) {
                 rawJson: {},
               };
             }
-            if (command === "plugin:updater|download") return 1;
-            if (command === "plugin:updater|install") return null;
-            if (command === "plugin:updater|download_and_install") {
+            if (command === "plugin:updater|download") {
+              if (!updaterResources.has(args.rid)) throw new Error("Update resource is closed");
+              args.onEvent.onmessage({ event: "Started", data: { contentLength: 2048 } });
+              args.onEvent.onmessage({ event: "Progress", data: { chunkLength: 1024 } });
+              if (localStorage.getItem("fixture.holdAppUpdateDownload"))
+                await new Promise<void>((resolve) =>
+                  Object.assign(window, { fixtureReleaseAppUpdateDownload: resolve }),
+                );
+              if (localStorage.getItem("fixture.failAppUpdateDownload"))
+                throw new Error("Download interrupted");
+              args.onEvent.onmessage({ event: "Progress", data: { chunkLength: 1024 } });
+              args.onEvent.onmessage({ event: "Finished" });
+              const rid = ++updaterResourceSequence;
+              downloadedUpdates.add(rid);
+              localStorage.setItem("fixture.appUpdateDownloaded", "yes");
+              return rid;
+            }
+            if (command === "plugin:updater|install") {
+              if (!updaterResources.has(args.updateRid) || !downloadedUpdates.has(args.bytesRid))
+                throw new Error("No staged update");
+              if (localStorage.getItem("fixture.failAppUpdateInstall"))
+                throw new Error("Installation failed");
+              downloadedUpdates.delete(args.bytesRid);
               localStorage.setItem("fixture.appUpdateInstalled", "yes");
               return null;
             }
+            if (command === "plugin:updater|download_and_install")
+              throw new Error("Background updates must not install before user restart");
+            if (command === "plugin:resources|close") {
+              updaterResources.delete(args.rid);
+              downloadedUpdates.delete(args.rid);
+              const closed = read("fixture.appUpdateClosed", []) as number[];
+              closed.push(args.rid);
+              localStorage.setItem("fixture.appUpdateClosed", JSON.stringify(closed));
+              return null;
+            }
             if (command === "plugin:process|restart") {
+              if (localStorage.getItem("fixture.failAppRelaunch"))
+                throw new Error("Restart failed");
               localStorage.setItem("fixture.appRelaunched", "yes");
               return null;
             }
@@ -889,6 +1002,19 @@ export async function taskFixture(page: Page) {
                 throw new Error("Unknown core Pi command");
               }
               case "plugin":
+                if (request.method === "workspace.gitStatus") return gitStatus;
+                if (request.method === "workspace.gitDiff") {
+                  const found = gitDiffs[request.args.path];
+                  return (
+                    found ?? {
+                      path: request.args.path,
+                      staged: request.args.staged === true,
+                      binary: false,
+                      truncated: false,
+                      diff: "",
+                    }
+                  );
+                }
                 if (!active) throw new Error("No task open");
                 if (request.method === "pi.getState") return { isStreaming: running.has(active) };
                 if (request.method === "pi.getMessages")

@@ -1,4 +1,4 @@
-import type { Dispatch, SetStateAction } from "react";
+import { useState, type Dispatch, type SetStateAction } from "react";
 import { t } from "../../../core/i18n.ts";
 import type { useTasks } from "../../hooks/useTasks.ts";
 import { componentClass } from "../../componentClass.ts";
@@ -6,6 +6,10 @@ import { Icon } from "../../primitives/Icon.tsx";
 import type { Page } from "../types.ts";
 import { TaskList } from "./TaskList.tsx";
 import styles from "./Rail.module.css";
+
+// How many chats a project shows before its history is contracted behind a
+// "show more" control. Keeps one busy project from flooding the whole sidebar.
+const TASK_PREVIEW_LIMIT = 8;
 
 interface ProjectTreeProps {
   tasks: ReturnType<typeof useTasks>;
@@ -31,6 +35,7 @@ export function ProjectTree({
   const {
     catalog,
     projectId,
+    task,
     setTask,
     setProjectId,
     taskStatuses,
@@ -40,6 +45,15 @@ export function ProjectTree({
     toggleProject,
     taskMatches,
   } = tasks;
+  const [expandedHistories, setExpandedHistories] = useState<Set<string>>(new Set());
+  function toggleHistory(id: string) {
+    setExpandedHistories((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
   return (
     <div className={componentClass(styles, "project-tree")}>
       {!catalog.projects.length && <p className="muted">{t("Add a project folder to start.")}</p>}
@@ -52,6 +66,20 @@ export function ProjectTree({
           (item) => item.projectId === project.id && taskStatuses.get(item.id) === "working",
         ).length;
         const collapsed = collapsedProjects.has(project.id);
+        const filtered = taskQuery !== "" || taskFilter !== "all";
+        const historyExpanded = expandedHistories.has(project.id);
+        let visibleTasks = projectTasks;
+        if (!filtered && !historyExpanded && projectTasks.length > TASK_PREVIEW_LIMIT) {
+          visibleTasks = projectTasks.slice(0, TASK_PREVIEW_LIMIT);
+          // Never hide the task that is currently open in this project.
+          if (task && task.projectId === project.id) {
+            const selectedIndex = projectTasks.findIndex((item) => item.id === task.id);
+            if (selectedIndex >= TASK_PREVIEW_LIMIT) {
+              visibleTasks = projectTasks.slice(0, selectedIndex + 1);
+            }
+          }
+        }
+        const hiddenTaskCount = projectTasks.length - visibleTasks.length;
         const initial = Array.from(project.name.trim())[0]?.toUpperCase() ?? "?";
         return (
           <section key={project.id} className={componentClass(styles, "project-group")}>
@@ -104,15 +132,30 @@ export function ProjectTree({
               </button>
             </div>
             {!collapsed && (
-              <TaskList
-                items={projectTasks}
-                tasks={tasks}
-                page={page}
-                setPage={setPage}
-                busy={busy}
-                connected={connected}
-                perform={perform}
-              />
+              <>
+                <TaskList
+                  items={visibleTasks}
+                  tasks={tasks}
+                  page={page}
+                  setPage={setPage}
+                  busy={busy}
+                  connected={connected}
+                  perform={perform}
+                />
+                {!filtered && projectTasks.length > TASK_PREVIEW_LIMIT && (
+                  <button
+                    type="button"
+                    className={componentClass(styles, "task-list-more")}
+                    disabled={busy}
+                    aria-expanded={historyExpanded}
+                    onClick={() => toggleHistory(project.id)}
+                  >
+                    {historyExpanded
+                      ? t("Show less")
+                      : t("Show {count} more", { count: hiddenTaskCount })}
+                  </button>
+                )}
+              </>
             )}
           </section>
         );

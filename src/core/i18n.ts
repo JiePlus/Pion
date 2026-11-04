@@ -110,6 +110,8 @@ const zh = {
   Running: "运行中",
   Attention: "待处理",
   "No tasks match this view.": "当前筛选下没有任务。",
+  "Show {count} more": "展开其余 {count} 个",
+  "Show less": "收起",
   "Running task": "正在执行的任务",
   "Unread completed task": "已完成且未读的任务",
   Projects: "项目",
@@ -550,23 +552,26 @@ const zh = {
   "Plugin rejected: {error}": "插件被拒绝：{error}",
   "Plugin unavailable": "插件不可用",
   "Pion updates": "Pion 更新",
-  "Pion can check for new releases and install them silently in the background.":
-    "Pion 可检查新版本，并在后台静默安装。",
+  "Pion can check for new releases and download them in the background.":
+    "Pion 可检查新版本，并在后台下载更新。",
   "Current version: {version}": "当前版本：{version}",
   "Check for updates": "检查更新",
-  "Download and install": "下载并安装",
+  "Download update": "下载更新",
   "Restart Pion": "重启 Pion",
+  "Install and restart Pion": "安装并重启 Pion",
   "Checking for updates…": "正在检查更新…",
   "Update {version} is available.": "发现新版本 {version}。",
   "Downloading update…": "正在下载更新…",
   "Downloading update… {percent}%": "正在下载更新… {percent}%",
+  "Update downloaded — restart Pion to install.": "更新已下载，重启 Pion 以安装。",
   "Update installed — restart Pion to finish.": "更新已安装，重启 Pion 后生效。",
+  "Installing update and restarting Pion…": "正在安装更新并重启 Pion…",
   "Pion is up to date.": "Pion 已是最新版本。",
   "Update failed: {error}": "更新失败：{error}",
   "Automatically check for updates": "自动检查更新",
-  "Automatically download and install updates in the background": "后台自动下载并安装更新",
-  "Silent updates install in the background and take effect the next time Pion starts. You still choose when to restart.":
-    "静默更新会在后台安装，并在下次启动 Pion 时生效；重启时机仍由你决定。",
+  "Automatically download updates in the background": "后台自动下载更新",
+  "Updates download without interrupting your work. Choose Install and restart Pion when you are ready. Closing Pion before installing discards the download.":
+    "更新会在后台下载，不会打断当前工作。准备好后选择“安装并重启 Pion”；安装前关闭 Pion 会丢弃本次下载。",
   "Checking for updates requires the desktop app.": "检查更新需要桌面应用。",
 } satisfies Record<string, string>;
 export type MessageKey = keyof typeof zh;
