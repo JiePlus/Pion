@@ -10,6 +10,9 @@ export async function taskFixture(page: Page) {
       const callbacks = new Map<number, (event: unknown) => void>();
       const listeners = new Map<string, number>();
       let sequence = 0;
+      let updaterResourceSequence = 0;
+      const updaterResources = new Set<number>();
+      const downloadedUpdates = new Set<number>();
       let authLoginSequence = 0;
       let generation = 0;
       let active = "";
@@ -201,6 +204,78 @@ export async function taskFixture(page: Page) {
               return args.handler;
             }
             if (command === "plugin:event|unlisten") return null;
+            if (command === "plugin:app|version") return "0.1.0";
+            if (command.startsWith("plugin:updater|") || command === "plugin:process|restart") {
+              const calls = read("fixture.appUpdateCalls", []) as string[];
+              calls.push(command);
+              localStorage.setItem("fixture.appUpdateCalls", JSON.stringify(calls));
+            }
+            if (command === "plugin:updater|check") {
+              if (localStorage.getItem("fixture.holdAppUpdateCheck"))
+                await new Promise<void>((resolve) =>
+                  Object.assign(window, { fixtureReleaseAppUpdateCheck: resolve }),
+                );
+              if (localStorage.getItem("fixture.failAppUpdateCheck"))
+                throw new Error("Update check is offline");
+              const update = read("fixture.appUpdate", null) as {
+                version: string;
+                date?: string;
+                body?: string;
+              } | null;
+              if (!update) return null;
+              const rid = ++updaterResourceSequence;
+              updaterResources.add(rid);
+              return {
+                rid,
+                currentVersion: "0.1.0",
+                version: update.version,
+                date: update.date ?? null,
+                body: update.body ?? null,
+                rawJson: {},
+              };
+            }
+            if (command === "plugin:updater|download") {
+              if (!updaterResources.has(args.rid)) throw new Error("Update resource is closed");
+              args.onEvent.onmessage({ event: "Started", data: { contentLength: 2048 } });
+              args.onEvent.onmessage({ event: "Progress", data: { chunkLength: 1024 } });
+              if (localStorage.getItem("fixture.holdAppUpdateDownload"))
+                await new Promise<void>((resolve) =>
+                  Object.assign(window, { fixtureReleaseAppUpdateDownload: resolve }),
+                );
+              if (localStorage.getItem("fixture.failAppUpdateDownload"))
+                throw new Error("Download interrupted");
+              args.onEvent.onmessage({ event: "Progress", data: { chunkLength: 1024 } });
+              args.onEvent.onmessage({ event: "Finished" });
+              const rid = ++updaterResourceSequence;
+              downloadedUpdates.add(rid);
+              localStorage.setItem("fixture.appUpdateDownloaded", "yes");
+              return rid;
+            }
+            if (command === "plugin:updater|install") {
+              if (!updaterResources.has(args.updateRid) || !downloadedUpdates.has(args.bytesRid))
+                throw new Error("No staged update");
+              if (localStorage.getItem("fixture.failAppUpdateInstall"))
+                throw new Error("Installation failed");
+              downloadedUpdates.delete(args.bytesRid);
+              localStorage.setItem("fixture.appUpdateInstalled", "yes");
+              return null;
+            }
+            if (command === "plugin:updater|download_and_install")
+              throw new Error("Background updates must not install before user restart");
+            if (command === "plugin:resources|close") {
+              updaterResources.delete(args.rid);
+              downloadedUpdates.delete(args.rid);
+              const closed = read("fixture.appUpdateClosed", []) as number[];
+              closed.push(args.rid);
+              localStorage.setItem("fixture.appUpdateClosed", JSON.stringify(closed));
+              return null;
+            }
+            if (command === "plugin:process|restart") {
+              if (localStorage.getItem("fixture.failAppRelaunch"))
+                throw new Error("Restart failed");
+              localStorage.setItem("fixture.appRelaunched", "yes");
+              return null;
+            }
             if (command !== "desktop") throw new Error("Unexpected native command");
             const request = args.request;
             if (request.op === "extension_ui.response") {

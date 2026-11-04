@@ -6,6 +6,13 @@ playwright-report/
 test-results/
 .DS_Store
 
+# Local credentials and updater signing keys
+.env
+.env.*
+!.env.example
+*.key
+*.key.pub
+
 # Local planning documents and generated visual checks
 /docs/
 /brand-spec.md

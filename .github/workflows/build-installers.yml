@@ -2,7 +2,8 @@ name: Build installers
 
 # Builds and packages Pion installers, restricted to the main branch:
 # - on pushes to main: build, upload the bundles as workflow artifacts and create/update a
-#   published GitHub Release (tag v<version>) with the installers attached
+#   published GitHub Release (tag v<version>) with the installers and signed updater
+#   artifacts (latest.json) used by in-app updates
 # - on pull requests targeting main and manual runs: build only, upload workflow artifacts
 # - on a version tag (e.g. v0.1.0): build and attach the bundles to a GitHub Release
 on:
@@ -77,17 +78,37 @@ jobs:
       - name: Install frontend dependencies
         run: npm ci
 
+      - name: Validate release signing
+        if: github.event_name == 'push' && (github.ref_type == 'tag' || github.ref == 'refs/heads/main')
+        shell: bash
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+        run: |
+          if [ -z "$TAURI_SIGNING_PRIVATE_KEY" ]; then
+            echo '::error::Configure TAURI_SIGNING_PRIVATE_KEY before publishing updater artifacts.'
+            exit 1
+          fi
+
       - name: Build and package
         uses: tauri-apps/tauri-action@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Required to sign updater artifacts on release builds (main pushes and tags).
+          # Keep signing credentials out of pull-request and manual builds.
+          TAURI_SIGNING_PRIVATE_KEY: ${{ (github.event_name == 'push' && (github.ref_type == 'tag' || github.ref == 'refs/heads/main')) && secrets.TAURI_SIGNING_PRIVATE_KEY || '' }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ (github.event_name == 'push' && (github.ref_type == 'tag' || github.ref == 'refs/heads/main')) && secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD || '' }}
         with:
-          args: ${{ matrix.args }}
+          # Release builds (main pushes and version tags) also enable updater artifacts so
+          # tauri-action uploads the signed bundles and latest.json.
+          args: ${{ matrix.args }}${{ (github.event_name == 'push' && (github.ref_type == 'tag' || github.ref == 'refs/heads/main')) && ' --config src-tauri/tauri.updater.conf.json' || '' }}
           # Publish a release (tagged v<version>) on main pushes and version tags; PR/manual only build.
-          tagName: ${{ (github.ref_type == 'tag' || (github.event_name == 'push' && github.ref == 'refs/heads/main')) && 'v__VERSION__' || '' }}
-          releaseName: ${{ (github.ref_type == 'tag' || (github.event_name == 'push' && github.ref == 'refs/heads/main')) && 'Pion v__VERSION__' || '' }}
-          releaseBody: "Download the installer for your platform from the assets below."
+          tagName: ${{ (github.event_name == 'push' && (github.ref_type == 'tag' || github.ref == 'refs/heads/main')) && 'v__VERSION__' || '' }}
+          releaseName: ${{ (github.event_name == 'push' && (github.ref_type == 'tag' || github.ref == 'refs/heads/main')) && 'Pion v__VERSION__' || '' }}
+          releaseBody: "Download the installer for your platform from the assets below. Pion uses these releases for in-app updates."
           releaseDraft: false
           prerelease: false
+          # Signed updater artifacts and the static latest.json used by the app.
+          uploadUpdaterJson: true
+          uploadUpdaterSignatures: true
           uploadWorkflowArtifacts: true
           workflowArtifactNamePattern: "Pion_[platform]_[arch]_[bundle]_[version]"

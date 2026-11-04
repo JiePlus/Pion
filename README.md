@@ -64,6 +64,22 @@ npm run dev
 
 预览可运行真实插件 Worker 与声明式 UI、权限审核和布局；没有原生 Pi/文件访问，不生成假聊天回复。浏览器与原生应用存储互相独立。
 
+## 应用更新
+
+**设置 → 通用 → Pion 更新** 显示当前版本并可手动检查更新。可分别开启“自动检查更新”和“后台自动下载更新”：开启后 Pion 启动时静默检查，有新版本即在后台下载，不会打断当前任务。下载完成后由用户点击“安装并重启 Pion”完成安装；Windows 安装器会退出当前应用，因此后台检查与下载不会自动调用安装器。下载暂存于当前进程，直接关闭应用会丢弃暂存，下次启动将重新检查并下载。
+
+更新包由 `.github/workflows/build-installers.yml` 在推送到 `main` 或推送 `v*` 版本标签时生成：工作流会按版本号 `v<version>` 创建/更新公开的 GitHub Release，附带各平台安装包、签名后的更新包和 `latest.json`；应用通过 `plugins.updater.endpoints` 中的 GitHub `releases/latest/download/latest.json` 获取更新。Pull Request 与手动运行只构建、不发布。
+
+本仓库已配置更新签名公钥及对应的 Actions 私钥 Secret，更新地址也已指向本仓库 Release。更新功能合并到 `main` 后，发布构建会生成签名更新包；仓库公开后客户端才能匿名读取更新地址。首个带更新能力的版本为 **0.1.1**，旧版安装包需先手动安装一次；以后发布前同步递增 `package.json`、`package-lock.json`、`src-tauri/Cargo.toml`、`src-tauri/Cargo.lock` 和 `src-tauri/tauri.conf.json` 的应用版本号，同版本构建不会触发客户端更新。
+
+迁移到其他仓库或需要替换密钥时，再按以下步骤配置（已有用户必须先通过旧密钥签名的版本接收新公钥，不能直接替换后要求旧安装包信任）：
+
+1. 生成签名密钥（私钥不要提交到仓库）：`npm run tauri signer generate -- -w ~/.tauri/pion.key`
+2. 把生成的公钥内容填入 `src-tauri/tauri.conf.json` 的 `plugins.updater.pubkey`。
+3. 在仓库 Secrets 中添加 `TAURI_SIGNING_PRIVATE_KEY`（私钥文件内容）和 `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`（生成时设置的密码，可为空）。
+
+> 更新地址使用 GitHub 公开 Release 的 `latest.json`，因此仓库与 Release 必须可匿名访问：把仓库设为公开即可（或把 `plugins.updater.endpoints` 指向其他公开静态地址）。签名私钥只放在 GitHub Actions Secrets，公钥本来就可以公开。
+
 ## 界面语言
 
 支持简体中文和英文。首次启动按系统语言选择，不支持的语言回退英文；在 **设置 → 界面语言 / Settings → Language** 手动切换，立即生效并保存在本机。Shell、核心 Pi 对话、权限审核和命令面板均支持切换。插件独立维护翻译，用户消息、模型回复和原始诊断信息保留原文。
@@ -87,6 +103,7 @@ npm run dev
 - 本地文件夹/ZIP 审核安装；内容快照授权、自动加载已启用插件、手动 Reload、Disable、Uninstall。
 - 左侧 **Pi 技能** 使用 Pi 资源解析结果显示用户、项目和 Pi 包内的 Skill 及启用状态。可按用户或项目范围添加、移除本地 Skill 路径；用户范围可启用或禁用 Skill，项目范围可为每个 Skill 选择继承、加载或卸载，并可设置是否在命令菜单中显示 `/skill:name`。左侧 **Pi 包** 支持用户或项目范围的安装、更新和移除。
 - 每插件隔离 Worker、禁止直接 DOM/Tauri/其他插件；写文件与联网仅经宿主且受白名单约束；激活 timeout、heartbeat、payload 限额、崩溃清理。
+- Pion 自身更新：设置页手动检查，可开启启动时自动检查并在后台静默下载，用户确认安装并重启后生效。
 - Rust Pi JSONL：真实 `pi --mode rpc`、串行请求/响应关联、独立事件流、超时/退出处理。
 - 无需修改 Core 的 [Hello 插件](examples/hello-plugin)，以及演示写入/联网/丰富 UI 的 [Plugin API 示例](examples/plugin-api-demo)。
 - 一方 [Git/Diff 插件](plugins/git-diff-plugin)：只读展示当前工作区分支、staged/unstaged/untracked 改动与带行号的 unified diff（参考 VS Code / GitHub Desktop 的文件行与状态徽标），通过插件审核安装后加载，仅申请 `workspace.git` 权限。

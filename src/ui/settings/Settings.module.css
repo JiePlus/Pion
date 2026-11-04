@@ -185,6 +185,39 @@
   font-size: 11px;
 }
 
+.update-status {
+  min-height: 18px;
+  margin: 6px 0 10px;
+  font-size: 12px;
+}
+
+.update-status p {
+  margin: 0 0 6px;
+}
+
+.update-progress {
+  height: 6px;
+  overflow: hidden;
+  border: 1px solid var(--pion-color-line);
+  border-radius: 999px;
+  background: var(--pion-color-surface-muted);
+}
+
+.update-progress span {
+  display: block;
+  height: 100%;
+  background: var(--pion-color-brand);
+  transition: width 0.2s ease;
+}
+
+.update-option {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 10px;
+  font-size: 13px;
+}
+
 @media (max-width: 700px) {
   .appearance-grid {
     grid-template-columns: 1fr;
