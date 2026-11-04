@@ -17,10 +17,12 @@ export const locations = [
 export type Location = (typeof locations)[number];
 export const permissions = [
   "workspace.read",
+  "workspace.write",
   "pi.read",
   "pi.sendMessage",
   "storage",
   "notifications",
+  "network.fetch",
 ] as const;
 export type Permission = (typeof permissions)[number];
 export interface Command {
@@ -34,6 +36,14 @@ export interface Panel {
   titleI18n?: LocalizedText;
   location: Location;
 }
+// Optional allowlists that scope the matching permission. When a permission is
+// requested, its allowlist must be declared; an empty or missing allowlist denies all.
+export interface ManifestAccess {
+  /** Relative workspace path patterns a plugin may write, e.g. "notes/**" or "out/*.md". */
+  workspaceWrite?: string[];
+  /** Hostnames a plugin may fetch, e.g. "api.example.com" or "*.example.com". */
+  network?: string[];
+}
 export interface Manifest {
   id: string;
   name: string;
@@ -43,6 +53,7 @@ export interface Manifest {
   minDesktopVersion: string;
   main: string;
   permissions: Permission[];
+  access?: ManifestAccess;
   contributes: { commands: Command[]; panels: Panel[] };
 }
 export interface Bundle {
@@ -68,13 +79,46 @@ export interface CoreEvents {
   "plugin:unloaded": { id: string };
 }
 export type EventName = keyof CoreEvents | `custom:${string}:${string}`;
+export interface ViewTableColumn {
+  key: string;
+  label: string;
+}
 export type View =
   | { type: "stack"; children: View[] }
   | { type: "text"; text: string; tone?: "muted" | "error" | "heading" }
   | { type: "badge"; text: string }
   | { type: "list"; items: { label: string; text: string }[] }
+  | {
+      type: "table";
+      columns: ViewTableColumn[];
+      rows: Record<string, string>[];
+      caption?: string;
+    }
+  | { type: "code"; text: string; language?: string }
+  | { type: "diff"; text: string }
+  | {
+      type: "input";
+      command: string;
+      label?: string;
+      placeholder: string;
+      submit: string;
+      disabled?: boolean;
+    }
+  | { type: "image"; src: string; alt?: string }
   | { type: "button"; label: string; command: string; args?: Json; disabled?: boolean }
   | { type: "form"; command: string; placeholder: string; submit: string; disabled?: boolean };
+
+export interface NetworkRequestOptions {
+  method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | "HEAD";
+  headers?: Record<string, string>;
+  body?: string;
+}
+export interface NetworkResponse {
+  status: number;
+  ok: boolean;
+  headers: Record<string, string>;
+  body: string;
+}
 export interface PiDesktopPluginContext {
   i18n: { readonly locale: Locale; onDidChange(listener: (locale: Locale) => void): Dispose };
   commands: {
@@ -90,7 +134,14 @@ export interface PiDesktopPluginContext {
     registerPanel(id: string, view: View): Dispose;
     updatePanel(id: string, view: View): void;
   };
-  workspace: { get(): Promise<Workspace>; readFile(path: string): Promise<string> };
+  workspace: {
+    get(): Promise<Workspace>;
+    readFile(path: string): Promise<string>;
+    writeFile(path: string, content: string): Promise<void>;
+  };
+  network: {
+    fetch(url: string, options?: NetworkRequestOptions): Promise<NetworkResponse>;
+  };
   pi: {
     prompt(message: string): Promise<void>;
     abort(): Promise<void>;

@@ -103,3 +103,129 @@
   gap: 10px;
   padding: 8px 10px 10px;
 }
+
+.view-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--pion-color-line);
+  border-radius: var(--pion-size-radius-md);
+}
+
+.view-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.view-table caption {
+  padding: 8px 10px;
+  color: var(--pion-color-muted);
+  font-size: 11px;
+  text-align: left;
+}
+
+.view-table th,
+.view-table td {
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--pion-color-line);
+  overflow-wrap: anywhere;
+  text-align: left;
+  vertical-align: top;
+  white-space: pre-wrap;
+}
+
+.view-table th {
+  background: var(--pion-color-surface-muted);
+  color: var(--pion-color-ink-soft);
+  font-weight: 620;
+}
+
+.view-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.view-code,
+.view-diff {
+  width: 100%;
+  max-height: 420px;
+  margin: 0;
+  padding: 12px 14px;
+  overflow: auto;
+  border: 1px solid var(--pion-color-line);
+  border-radius: var(--pion-size-radius-md);
+  background: var(--pion-color-surface-muted);
+  font-family: var(--pion-font-mono);
+  font-size: 12px;
+  line-height: 1.6;
+  white-space: pre;
+}
+
+.view-diff span {
+  display: block;
+  padding: 0 4px;
+  white-space: pre-wrap;
+}
+
+.view-diff .add {
+  background: var(--pion-color-brand-soft);
+  color: var(--pion-color-brand-strong);
+}
+
+.view-diff .remove {
+  background: var(--pion-color-danger-soft);
+  color: var(--pion-color-danger);
+}
+
+.view-diff .hunk {
+  color: var(--pion-color-blue);
+}
+
+.view-image {
+  margin: 0;
+  max-width: 100%;
+}
+
+.view-image img {
+  max-width: 100%;
+  border: 1px solid var(--pion-color-line);
+  border-radius: var(--pion-size-radius-md);
+}
+
+.view-image figcaption {
+  margin-top: 6px;
+  color: var(--pion-color-muted);
+  font-size: 11px;
+}
+
+.view-input {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.view-input label {
+  color: var(--pion-color-ink-soft);
+  font-size: 11px;
+  font-weight: 620;
+}
+
+.view-input-row {
+  display: flex;
+  gap: 8px;
+}
+
+.view-input-row input {
+  min-width: 0;
+  flex: 1;
+  padding: 8px 10px;
+  border: 1px solid var(--pion-color-line-strong);
+  border-radius: var(--pion-size-radius-sm);
+  background: var(--pion-color-surface);
+  font-size: 13px;
+}
+
+.view-input-row input:focus-visible {
+  border-color: var(--pion-color-brand);
+  outline: none;
+}

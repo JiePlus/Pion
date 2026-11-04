@@ -19,6 +19,67 @@ function validateTranslations(value: unknown): void {
     text(label, 100);
   }
 }
+const pathPattern = /^[a-z0-9._*-]+$/i;
+function validateWritePath(value: unknown): string {
+  if (typeof value !== "string" || !value.length || value.length > 200)
+    throw new Error("Invalid write path pattern");
+  if (value.startsWith("/") || value.includes("\\") || value.includes("\0"))
+    throw new Error("Invalid write path pattern");
+  for (const part of value.split("/")) {
+    if (part === "" || part === "." || part === ".." || !pathPattern.test(part))
+      throw new Error("Invalid write path pattern");
+  }
+  return value;
+}
+function validateHost(value: unknown): string {
+  if (
+    typeof value !== "string" ||
+    !value.length ||
+    value.length > 253 ||
+    value !== value.toLowerCase()
+  )
+    throw new Error("Invalid network host pattern");
+  const host = value.startsWith("*.") ? value.slice(2) : value;
+  if (!/^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*$/.test(host))
+    throw new Error("Invalid network host pattern");
+  return value;
+}
+function validateAccess(value: unknown, permissions: string[]): void {
+  if (value === undefined) {
+    if (permissions.includes("workspace.write"))
+      throw new Error("workspace.write requires an access.workspaceWrite allowlist");
+    if (permissions.includes("network.fetch"))
+      throw new Error("network.fetch requires an access.network allowlist");
+    return;
+  }
+  const access = object(value);
+  for (const key of Object.keys(access))
+    if (key !== "workspaceWrite" && key !== "network") throw new Error("Unknown access key");
+  if (access.workspaceWrite !== undefined) {
+    if (
+      !permissions.includes("workspace.write") ||
+      !Array.isArray(access.workspaceWrite) ||
+      !access.workspaceWrite.length ||
+      access.workspaceWrite.length > 32
+    )
+      throw new Error("Invalid workspace write allowlist");
+    access.workspaceWrite.forEach(validateWritePath);
+  } else if (permissions.includes("workspace.write")) {
+    throw new Error("workspace.write requires an access.workspaceWrite allowlist");
+  }
+  if (access.network !== undefined) {
+    if (
+      !permissions.includes("network.fetch") ||
+      !Array.isArray(access.network) ||
+      !access.network.length ||
+      access.network.length > 32
+    )
+      throw new Error("Invalid network allowlist");
+    access.network.forEach(validateHost);
+  } else if (permissions.includes("network.fetch")) {
+    throw new Error("network.fetch requires an access.network allowlist");
+  }
+}
 export function parseManifest(value: unknown): Manifest {
   const m = object(value);
   const id = text(m.id, 64);
@@ -47,6 +108,7 @@ export function parseManifest(value: unknown): Manifest {
     new Set(m.permissions).size !== m.permissions.length
   )
     throw new Error("Unknown/duplicate permission");
+  validateAccess(m.access, m.permissions as string[]);
   const contributions = object(m.contributes);
   const seen = new Set<string>();
   for (const kind of ["commands", "panels"] as const) {
@@ -94,6 +156,52 @@ export function validateView(value: unknown, manifest: Manifest): View {
             throw new Error("Invalid row");
         });
         break;
+      case "table": {
+        if (!Array.isArray(node.columns) || !node.columns.length || node.columns.length > 32)
+          throw new Error("Invalid table columns");
+        const keys = new Set<string>();
+        node.columns.forEach((column) => {
+          const cell = object(column);
+          const key = text(cell.key, 60);
+          text(cell.label, 100);
+          if (!/^[A-Za-z0-9_-]+$/.test(key) || keys.has(key))
+            throw new Error("Invalid table column key");
+          keys.add(key);
+        });
+        if (!Array.isArray(node.rows) || node.rows.length > 500) throw new Error("Table too large");
+        node.rows.forEach((row) => {
+          const record = object(row);
+          for (const key of Object.keys(record)) {
+            if (!keys.has(key)) throw new Error("Unknown table cell");
+            if (typeof record[key] !== "string" || (record[key] as string).length > 10_000)
+              throw new Error("Invalid table cell");
+          }
+        });
+        if (node.caption !== undefined) text(node.caption, 200);
+        break;
+      }
+      case "code":
+        if (typeof node.text !== "string" || node.text.length > 100_000)
+          throw new Error("Invalid code text");
+        if (node.language !== undefined) {
+          if (typeof node.language !== "string" || !/^[a-z0-9+#.-]{1,40}$/i.test(node.language))
+            throw new Error("Invalid code language");
+        }
+        break;
+      case "diff":
+        if (typeof node.text !== "string" || node.text.length > 100_000)
+          throw new Error("Invalid diff text");
+        break;
+      case "image":
+        if (
+          typeof node.src !== "string" ||
+          node.src.length > 300_000 ||
+          !/^data:image\/(png|jpeg|gif|webp);base64,[A-Za-z0-9+/=]+$/.test(node.src)
+        )
+          throw new Error("Invalid image source");
+        if (node.alt !== undefined) text(node.alt, 200);
+        break;
+      case "input":
       case "button":
       case "form":
         if (!manifest.contributes.commands.some((c) => c.id === node.command))
@@ -101,7 +209,11 @@ export function validateView(value: unknown, manifest: Manifest): View {
         if (node.disabled !== undefined && typeof node.disabled !== "boolean")
           throw new Error("Invalid disabled");
         if (node.type === "button") text(node.label, 100);
-        else {
+        else if (node.type === "input") {
+          text(node.placeholder, 300);
+          text(node.submit, 100);
+          if (node.label !== undefined) text(node.label, 100);
+        } else {
           text(node.placeholder, 300);
           text(node.submit, 100);
         }

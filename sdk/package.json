@@ -1,0 +1,10 @@
+{
+  "name": "@pion/plugin-sdk",
+  "version": "0.2.0",
+  "description": "Type declarations for the Pion Desktop Plugin API",
+  "types": "index.d.ts",
+  "files": [
+    "index.d.ts"
+  ],
+  "private": true
+}

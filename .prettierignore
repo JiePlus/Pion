@@ -6,3 +6,4 @@ src-tauri/Cargo.lock
 package-lock.json
 playwright-report
 test-results
+pr-assets

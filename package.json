@@ -12,6 +12,7 @@
     "test:ui": "playwright test",
     "test:pi": "node scripts/pi-smoke.mjs",
     "test:sessions": "node scripts/pi-session-smoke.mjs",
+    "create-plugin": "node scripts/create-plugin.mjs",
     "format": "prettier --write . && cargo fmt --manifest-path src-tauri/Cargo.toml",
     "check:format": "prettier --check . && node scripts/check-format.mjs && cargo fmt --manifest-path src-tauri/Cargo.toml -- --check"
   },

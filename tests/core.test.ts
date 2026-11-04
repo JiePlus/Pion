@@ -90,3 +90,79 @@ test("manifest translations are optional, bounded and validated on every contrib
   badPanel.contributes.panels[0].titleI18n = { en: "x".repeat(101) };
   assert.throws(() => parseManifest(badPanel));
 });
+
+test("extended permissions require and validate allowlists", () => {
+  assert.throws(() => parseManifest({ ...manifest, permissions: ["workspace.write"] }));
+  const write = parseManifest({
+    ...manifest,
+    permissions: ["workspace.write"],
+    access: { workspaceWrite: ["notes/**", "out/*.md"] },
+  });
+  assert.deepEqual(write.access?.workspaceWrite, ["notes/**", "out/*.md"]);
+  assert.throws(() =>
+    parseManifest({
+      ...manifest,
+      permissions: ["workspace.write"],
+      access: { workspaceWrite: ["../escape"] },
+    }),
+  );
+  assert.throws(() =>
+    parseManifest({
+      ...manifest,
+      permissions: ["network.fetch"],
+      access: { network: ["https://evil.com"] },
+    }),
+  );
+  assert.throws(() =>
+    parseManifest({
+      ...manifest,
+      permissions: ["network.fetch"],
+      access: { network: ["evil.com"], workspaceWrite: ["a/*"] },
+    }),
+  );
+  const network = parseManifest({
+    ...manifest,
+    permissions: ["network.fetch"],
+    access: { network: ["api.example.com", "*.trusted.dev"] },
+  });
+  assert.equal(network.access?.network?.length, 2);
+});
+
+test("extended views validate bounded data and owned commands", () => {
+  assert.equal(
+    validateView(
+      { type: "table", columns: [{ key: "a", label: "A" }], rows: [{ a: "1" }] },
+      manifest,
+    ).type,
+    "table",
+  );
+  assert.throws(() => validateView({ type: "table", columns: [], rows: [] }, manifest));
+  assert.throws(() =>
+    validateView(
+      { type: "table", columns: [{ key: "a", label: "A" }], rows: [{ b: "x" }] },
+      manifest,
+    ),
+  );
+  assert.equal(
+    validateView({ type: "code", text: "const x = 1;", language: "ts" }, manifest).type,
+    "code",
+  );
+  assert.throws(() => validateView({ type: "code", text: "x", language: "bad lang" }, manifest));
+  assert.equal(validateView({ type: "diff", text: "+add\n-remove" }, manifest).type, "diff");
+  assert.equal(
+    validateView({ type: "image", src: "data:image/png;base64,iVBORw0KGgo=" }, manifest).type,
+    "image",
+  );
+  assert.throws(() => validateView({ type: "image", src: "https://evil.com/x.png" }, manifest));
+  assert.throws(() => validateView({ type: "image", src: "data:text/html;base64,abc" }, manifest));
+  assert.equal(
+    validateView(
+      { type: "input", command: "agent-chat.refresh", placeholder: "x", submit: "Go" },
+      manifest,
+    ).type,
+    "input",
+  );
+  assert.throws(() =>
+    validateView({ type: "input", command: "core.quit", placeholder: "x", submit: "Go" }, manifest),
+  );
+});
