@@ -110,6 +110,8 @@ const zh = {
   Running: "运行中",
   Attention: "待处理",
   "No tasks match this view.": "当前筛选下没有任务。",
+  "Show {count} more": "展开其余 {count} 个",
+  "Show less": "收起",
   "Running task": "正在执行的任务",
   "Unread completed task": "已完成且未读的任务",
   Projects: "项目",
