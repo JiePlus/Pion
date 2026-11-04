@@ -549,6 +549,25 @@ const zh = {
   Retry: "重试",
   "Plugin rejected: {error}": "插件被拒绝：{error}",
   "Plugin unavailable": "插件不可用",
+  "Pion updates": "Pion 更新",
+  "Pion can check for new releases and install them silently in the background.":
+    "Pion 可检查新版本，并在后台静默安装。",
+  "Current version: {version}": "当前版本：{version}",
+  "Check for updates": "检查更新",
+  "Download and install": "下载并安装",
+  "Restart Pion": "重启 Pion",
+  "Checking for updates…": "正在检查更新…",
+  "Update {version} is available.": "发现新版本 {version}。",
+  "Downloading update…": "正在下载更新…",
+  "Downloading update… {percent}%": "正在下载更新… {percent}%",
+  "Update installed — restart Pion to finish.": "更新已安装，重启 Pion 后生效。",
+  "Pion is up to date.": "Pion 已是最新版本。",
+  "Update failed: {error}": "更新失败：{error}",
+  "Automatically check for updates": "自动检查更新",
+  "Automatically download and install updates in the background": "后台自动下载并安装更新",
+  "Silent updates install in the background and take effect the next time Pion starts. You still choose when to restart.":
+    "静默更新会在后台安装，并在下次启动 Pion 时生效；重启时机仍由你决定。",
+  "Checking for updates requires the desktop app.": "检查更新需要桌面应用。",
 } satisfies Record<string, string>;
 export type MessageKey = keyof typeof zh;
 export function translate(

@@ -1,6 +1,11 @@
 {
   "identifier": "main",
-  "description": "Only the trusted shell may receive core events. No shell/fs/http plugins.",
+  "description": "Only the trusted shell may receive core events. The shell owns app updates via the updater and process plugins; no shell/fs/http plugins.",
   "windows": ["main"],
-  "permissions": ["core:event:allow-listen", "core:event:allow-unlisten"]
+  "permissions": [
+    "core:event:allow-listen",
+    "core:event:allow-unlisten",
+    "updater:default",
+    "process:default"
+  ]
 }

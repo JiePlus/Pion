@@ -16,6 +16,7 @@ import { Plugins } from "../settings/Plugins.tsx";
 import { Panels } from "../settings/Panels.tsx";
 import { ModelSettings } from "../settings/ModelSettings.tsx";
 import { useShellController } from "../hooks/useShellController.ts";
+import { useAppUpdate } from "../hooks/useAppUpdate.ts";
 import { Rail } from "./Rail/Rail.tsx";
 import { Topbar } from "./Topbar/Topbar.tsx";
 import { ShellDialogs } from "./ShellDialogs.tsx";
@@ -27,6 +28,7 @@ import styles from "./Shell.module.css";
 
 export function Shell({ runtime, boot }: { runtime: Runtime; boot: Boot }) {
   const controller = useShellController(runtime, boot);
+  const appUpdate = useAppUpdate((title, message) => runtime.notice(title, message));
   const [addProviderRequest, setAddProviderRequest] = useState(0);
   const {
     locale,
@@ -306,6 +308,7 @@ export function Shell({ runtime, boot }: { runtime: Runtime; boot: Boot }) {
               versionStatus={versionStatus}
               checkPiUpdate={checkPiUpdate}
               updatePi={updatePi}
+              appUpdate={appUpdate}
               legacySessions={legacySessions}
               legacyLoading={legacyLoading}
               legacySelected={legacySelected}

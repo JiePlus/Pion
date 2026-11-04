@@ -20,6 +20,7 @@ export type IconName =
   | "moon"
   | "sun"
   | "monitor"
+  | "download"
   | "palette";
 
 export function Icon({
@@ -115,6 +116,12 @@ export function Icon({
       <>
         <rect x="2" y="3" width="20" height="15" rx="2" />
         <path d="M8 22h8m-4-4v4" />
+      </>
+    ),
+    download: (
+      <>
+        <path d="M12 3v12m-5-5 5 5 5-5" />
+        <path d="M4 19h16" />
       </>
     ),
     palette: (

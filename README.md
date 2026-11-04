@@ -64,6 +64,20 @@ npm run dev
 
 预览可运行真实插件 Worker 与声明式 UI、权限审核和布局；没有原生 Pi/文件访问，不生成假聊天回复。浏览器与原生应用存储互相独立。
 
+## 应用更新
+
+**设置 → 通用 → Pion 更新** 显示当前版本并可手动检查更新。可分别开启“自动检查更新”和“后台自动下载并安装更新”：开启后 Pion 启动时静默检查，有新版本即在后台下载并安装，不会打断当前任务；安装完成后在设置页提示重启，重启时机仍由用户决定，下次启动即为新版本。
+
+更新包由 `.github/workflows/build-installers.yml` 在推送 `v*` 版本标签时生成。该工作流会创建草稿 Release，附带各平台安装包、签名后的更新包和 `latest.json`；发布该 Release 后，应用通过 `plugins.updater.endpoints` 中的 GitHub `releases/latest/download/latest.json` 获取更新。
+
+发布前需配置签名，否则更新包无法通过校验：
+
+1. 生成签名密钥（私钥不要提交到仓库）：`npm run tauri signer generate -- -w ~/.tauri/pion.key`
+2. 把生成的公钥内容填入 `src-tauri/tauri.conf.json` 的 `plugins.updater.pubkey`。
+3. 在仓库 Secrets 中添加 `TAURI_SIGNING_PRIVATE_KEY`（私钥文件内容）和 `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`（生成时设置的密码，可为空）。
+
+> GitHub 的 `releases/latest/download/...` 只能匿名访问公开 Release。若仓库保持私有，需要把 `plugins.updater.endpoints` 指向一个公开可访问的静态地址（例如公开仓库、对象存储或自有更新服务器），否则应用无法获取 `latest.json`。
+
 ## 界面语言
 
 支持简体中文和英文。首次启动按系统语言选择，不支持的语言回退英文；在 **设置 → 界面语言 / Settings → Language** 手动切换，立即生效并保存在本机。Shell、核心 Pi 对话、权限审核和命令面板均支持切换。插件独立维护翻译，用户消息、模型回复和原始诊断信息保留原文。
@@ -87,6 +101,7 @@ npm run dev
 - 本地文件夹/ZIP 审核安装；内容快照授权、自动加载已启用插件、手动 Reload、Disable、Uninstall。
 - 左侧 **Pi 技能** 使用 Pi 资源解析结果显示用户、项目和 Pi 包内的 Skill 及启用状态。可按用户或项目范围添加、移除本地 Skill 路径；用户范围可启用或禁用 Skill，项目范围可为每个 Skill 选择继承、加载或卸载，并可设置是否在命令菜单中显示 `/skill:name`。左侧 **Pi 包** 支持用户或项目范围的安装、更新和移除。
 - 每插件隔离 Worker、禁止直接 DOM/Tauri/其他插件；写文件与联网仅经宿主且受白名单约束；激活 timeout、heartbeat、payload 限额、崩溃清理。
+- Pion 自身更新：设置页手动检查，可开启启动时自动检查并在后台静默下载安装，重启后生效。
 - Rust Pi JSONL：真实 `pi --mode rpc`、串行请求/响应关联、独立事件流、超时/退出处理。
 - 无需修改 Core 的 [Hello 插件](examples/hello-plugin)，以及演示写入/联网/丰富 UI 的 [Plugin API 示例](examples/plugin-api-demo)。
 

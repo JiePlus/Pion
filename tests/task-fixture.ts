@@ -136,6 +136,33 @@ export async function taskFixture(page: Page) {
               return args.handler;
             }
             if (command === "plugin:event|unlisten") return null;
+            if (command === "plugin:app|version") return "0.1.0";
+            if (command === "plugin:updater|check") {
+              const update = read("fixture.appUpdate", null) as {
+                version: string;
+                date?: string;
+                body?: string;
+              } | null;
+              if (!update) return null;
+              return {
+                rid: 1,
+                currentVersion: "0.1.0",
+                version: update.version,
+                date: update.date ?? null,
+                body: update.body ?? null,
+                rawJson: {},
+              };
+            }
+            if (command === "plugin:updater|download") return 1;
+            if (command === "plugin:updater|install") return null;
+            if (command === "plugin:updater|download_and_install") {
+              localStorage.setItem("fixture.appUpdateInstalled", "yes");
+              return null;
+            }
+            if (command === "plugin:process|restart") {
+              localStorage.setItem("fixture.appRelaunched", "yes");
+              return null;
+            }
             if (command !== "desktop") throw new Error("Unexpected native command");
             const request = args.request;
             if (request.op === "extension_ui.response") {

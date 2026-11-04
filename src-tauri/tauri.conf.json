@@ -35,5 +35,11 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ]
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IERBNTRGNTg1NUY2MDRGMUIKUldRYlQyQmZoZlZVMnIyWXlQM2dJYW96TFBJVmh3UnB0Qi90UkJpZWlmTTI5RUVvMTZpYUVqOTYK",
+      "endpoints": ["https://github.com/JiePlus/Pion/releases/latest/download/latest.json"]
+    }
   }
 }

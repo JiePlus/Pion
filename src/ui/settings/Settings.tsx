@@ -10,6 +10,8 @@ import { t } from "../../core/i18n.ts";
 import type { Runtime } from "../../core/runtime.ts";
 import type { ThemePreference } from "../../core/theme.ts";
 import { PiVersionSection } from "./PiVersionSection.tsx";
+import { PionUpdateSection } from "./PionUpdateSection.tsx";
+import type { AppUpdateController } from "../hooks/useAppUpdate.ts";
 import { Checkbox, Input } from "../primitives/index.ts";
 import { Icon } from "../primitives/Icon.tsx";
 import styles from "./Settings.module.css";
@@ -39,6 +41,7 @@ interface SettingsProps {
   versionStatus: PiSetupStatus | null;
   checkPiUpdate: () => Promise<void>;
   updatePi: () => Promise<void>;
+  appUpdate: AppUpdateController;
   legacySessions: LegacySession[];
   legacyLoading: boolean;
   legacySelected: Set<string>;
@@ -65,6 +68,7 @@ export function Settings({
   versionStatus,
   checkPiUpdate,
   updatePi,
+  appUpdate,
   legacySessions,
   legacyLoading,
   legacySelected,
@@ -199,6 +203,7 @@ export function Settings({
         checkPiUpdate={checkPiUpdate}
         updatePi={updatePi}
       />
+      <PionUpdateSection update={appUpdate} />
       <section className={componentClass(styles, "legacy-sessions")}>
         <h2>{t("Import Pi CLI sessions")}</h2>
         <p className={`settings-note ${utilityStyles.settingsNote}`}>

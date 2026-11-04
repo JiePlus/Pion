@@ -2,7 +2,8 @@ name: Build installers
 
 # Builds platform installers for Pion:
 # - on every pull request / manual run: build only, upload the bundles as workflow artifacts
-# - on a version tag (e.g. v0.1.0): build and attach the bundles to a draft GitHub Release
+# - on a version tag (e.g. v0.1.0): build, attach the bundles to a draft GitHub Release and
+#   produce the signed updater artifacts plus latest.json used by in-app updates
 on:
   push:
     tags:
@@ -75,13 +76,21 @@ jobs:
         uses: tauri-apps/tauri-action@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Required to sign updater artifacts. Pull-request builds skip updater artifacts,
+          # so these can be empty there; tag releases need the values set as repo secrets.
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
-          args: ${{ matrix.args }}
+          # On a tag, enable updater artifacts so tauri-action also uploads latest.json.
+          args: ${{ matrix.args }}${{ github.ref_type == 'tag' && ' --config src-tauri/tauri.updater.conf.json' || '' }}
           # Release creation is only enabled when the workflow runs for a tag.
           tagName: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
           releaseName: ${{ github.ref_type == 'tag' && format('Pion {0}', github.ref_name) || '' }}
-          releaseBody: "Download the installer for your platform from the assets below."
+          releaseBody: "Download the installer for your platform from the assets below. Pion checks these releases for in-app updates."
           releaseDraft: true
           prerelease: false
+          # Uploads the signed updater artifacts and the static latest.json used by the app.
+          uploadUpdaterJson: true
+          uploadUpdaterSignatures: true
           uploadWorkflowArtifacts: true
           workflowArtifactNamePattern: "Pion_[platform]_[arch]_[bundle]_[version]"
