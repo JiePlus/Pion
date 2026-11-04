@@ -6,6 +6,8 @@ import { native } from "../../core/host.ts";
 import { t } from "../../core/i18n.ts";
 import type { Runtime } from "../../core/runtime.ts";
 import { Checkbox } from "../primitives/Checkbox.tsx";
+import { Icon } from "../primitives/Icon.tsx";
+import styles from "./Skills.module.css";
 
 export interface PiSkill {
   name: string;
@@ -52,7 +54,7 @@ export function Skills({
   runtime,
 }: SkillsProps) {
   return (
-    <main className={componentClass(managementStyles, "management")}>
+    <main className={`${componentClass(managementStyles, "management")} ${styles.skillsPage}`}>
       <h1>{t("Pi skills")}</h1>
       <p className={`settings-note ${utilityStyles.settingsNote}`}>
         {t(
@@ -139,59 +141,75 @@ export function Skills({
           </button>
         </article>
       ))}
-      <h3>{t("Detected skills")}</h3>
+      <h3 id="installed-skills-heading">{t("Installed skills")}</h3>
       {!skills.skills.filter((skill) => skillScope === "project" || skill.scope === "user")
         .length && <p className="muted">{t("No Pi skills detected.")}</p>}
-      {skills.skills
-        .filter((skill) => skillScope === "project" || skill.scope === "user")
-        .map((skill) => (
-          <article className={componentClass(managementStyles, "plugin-card")} key={skill.path}>
-            <div>
-              <strong>{skill.name}</strong>{" "}
-              <small>{t(skill.scope === "project" ? "Project" : "User")}</small>
-              <small>
-                {t(
-                  (skillScope === "project" ? skill.enabled : skill.userEnabled)
-                    ? "Enabled"
-                    : "Disabled",
+      <ul className={styles.skillList} aria-labelledby="installed-skills-heading">
+        {skills.skills
+          .filter((skill) => skillScope === "project" || skill.scope === "user")
+          .map((skill) => (
+            <li
+              className={`${styles.skillRow} ${skillScope === "project" ? styles.projectRow : ""}`}
+              key={skill.path}
+            >
+              <span className={styles.skillIcon} aria-hidden="true">
+                <Icon name="bolt" size={24} />
+              </span>
+              <div className={styles.skillDetails}>
+                <div className={styles.skillTitle}>
+                  <strong>{skill.name}</strong>
+                  <span>{t(skill.scope === "project" ? "Project" : "User")}</span>
+                  {skillScope === "project" && (
+                    <span>{t(skill.enabled ? "Enabled" : "Disabled")}</span>
+                  )}
+                </div>
+                <p className={styles.skillPath} title={skill.path}>
+                  <code>{skill.path}</code>
+                </p>
+                {skill.source && (
+                  <p className={styles.skillSource} title={skill.source}>
+                    {skill.source}
+                  </p>
                 )}
-              </small>
-              <p>
-                <code>{skill.path}</code>
-              </p>
-              {skill.source && <p>{skill.source}</p>}
-            </div>
-            {skillScope === "project" ? (
-              <label>
-                {t("Project override")}
-                <select
-                  aria-label={`${t("Project override")} ${skill.name}`}
-                  value={skill.projectOverride ?? "inherit"}
+              </div>
+              {skillScope === "project" ? (
+                <label className={styles.projectOverride}>
+                  {t("Project override")}
+                  <select
+                    aria-label={`${t("Project override")} ${skill.name}`}
+                    value={skill.projectOverride ?? "inherit"}
+                    disabled={skillBusy}
+                    onChange={(event) =>
+                      skillOverride(
+                        skill,
+                        event.target.value as "inherit" | "load" | "unload",
+                      ).catch((error) => runtime.notice("Pi", String(error)))
+                    }
+                  >
+                    <option value="inherit">{t("Inherit")}</option>
+                    <option value="load">{t("Load")}</option>
+                    <option value="unload">{t("Unload")}</option>
+                  </select>
+                </label>
+              ) : (
+                <button
+                  type="button"
+                  className={styles.skillSwitch}
+                  role="switch"
+                  aria-checked={skill.userEnabled}
+                  aria-label={skill.name}
+                  title={`${t(skill.userEnabled ? "Disable" : "Enable")} ${skill.name}`}
                   disabled={skillBusy}
-                  onChange={(event) =>
-                    skillOverride(skill, event.target.value as "inherit" | "load" | "unload").catch(
-                      (error) => runtime.notice("Pi", String(error)),
-                    )
+                  onClick={() =>
+                    skillToggle(skill).catch((error) => runtime.notice("Pi", String(error)))
                   }
                 >
-                  <option value="inherit">{t("Inherit")}</option>
-                  <option value="load">{t("Load")}</option>
-                  <option value="unload">{t("Unload")}</option>
-                </select>
-              </label>
-            ) : (
-              <button
-                disabled={skillBusy}
-                aria-label={`${t(skill.userEnabled ? "Disable" : "Enable")} ${skill.name}`}
-                onClick={() =>
-                  skillToggle(skill).catch((error) => runtime.notice("Pi", String(error)))
-                }
-              >
-                {t(skill.userEnabled ? "Disable" : "Enable")}
-              </button>
-            )}
-          </article>
-        ))}
+                  <span className={styles.switchTrack} aria-hidden="true" />
+                </button>
+              )}
+            </li>
+          ))}
+      </ul>
     </main>
   );
 }
