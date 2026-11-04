@@ -130,6 +130,8 @@ npm run desktop:build
 
 `test:pi` 串行检查 state、commands、models、thinking levels、stats、messages、自动压缩/重试、最后回复、abort 和内置工具预设 Extension；`test:sessions` 用本机 Pi 序列化测试历史，在临时目录验证复制后的 JSONL 可由 `--session` 恢复、两个并行 RPC 进程、A → B → A 恢复以及 tree/entries/Fork/Clone/重命名/HTML 导出，均不发起 provider 请求。自定义压缩与运行中扩展命令由受限 RPC 映射和双浏览器 fixture 测试覆盖；真实 provider 的完整对话仍需要在你的 Pi 配置下验收。
 
-macOS 构建产物位于 `src-tauri/target/release/bundle/macos/Pion.app`；默认仅打包本机 `.app`，没有签名或公证流程。Windows/Linux 需要对应平台构建依赖、bundle target 与浏览器沙箱验证；当前不是跨平台发布包。
+macOS 本地构建产物位于 `src-tauri/target/release/bundle/macos/Pion.app`；`npm run desktop:build` 默认仅打包本机 `.app`，没有签名或公证流程。
+
+`.github/workflows/build-installers.yml` 在 Pull Request、手动触发以及推送 `v*` 标签时自动编译并打包各平台安装包：macOS（universal `.app` 与 `.dmg`）、Linux（`.deb` 与 `.AppImage`）和 Windows（NSIS `-setup.exe` 与 `.msi`）。Pull Request 与手动运行会把产物作为 workflow artifact 上传；推送标签时还会创建草稿 Release 并附加安装包。当前安装包未签名/公证，Windows/Linux 的浏览器沙箱与运行时行为仍需在对应平台人工验收。
 
 插件沙箱采用 opaque-origin iframe + Blob Worker + CSP，适合当前受控 MVP。它不是 OS 容器，不能保证抵御浏览器漏洞或恶意内存耗尽。正式开放不受信任插件分发前需要独立安全评审和多平台原生验证。
