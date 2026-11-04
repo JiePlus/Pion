@@ -1,5 +1,7 @@
 # Pion
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 基于 **Tauri 2 + React + TypeScript** 的插件优先 Pi Desktop Shell。
 
 ```text
@@ -158,3 +160,7 @@ macOS 本地构建产物位于 `src-tauri/target/release/bundle/macos/Pion.app`�
 `.github/workflows/build-installers.yml` 仅在 `main` 分支相关事件（推送到 `main`、面向 `main` 的 Pull Request、推送 `v*` 标签）与手动触发时自动编译并打包各平台安装包：macOS（universal `.app` 与 `.dmg`）、Linux（`.deb` 与 `.AppImage`）和 Windows（NSIS `-setup.exe` 与 `.msi`）。推送到 `main` 与推送 `v*` 标签会按版本号 `v<version>` 创建或更新公开的 GitHub Release 并附加安装包；Pull Request 与手动运行只把产物作为 workflow artifact 上传。当前安装包未签名/公证，Windows/Linux 的浏览器沙箱与运行时行为仍需在对应平台人工验收。
 
 插件沙箱采用 opaque-origin iframe + Blob Worker + CSP，适合当前受控 MVP。它不是 OS 容器，不能保证抵御浏览器漏洞或恶意内存耗尽。正式开放不受信任插件分发前需要独立安全评审和多平台原生验证。
+
+## 许可证
+
+本项目采用 [MIT 许可证](LICENSE) 开源。你可以自由使用、复制、修改、合并、发布、分发、转授权和/或出售本项目的副本，并可将其包含在你的软件中，前提是保留本许可证与版权声明。软件按"原样"提供，不提供任何明示或默示保证。详见 [LICENSE](LICENSE)。
