@@ -1,0 +1,39 @@
+{
+  "id": "git-diff",
+  "name": "Git & Diff",
+  "nameI18n": {
+    "zh-CN": "Git 与差异"
+  },
+  "version": "0.1.0",
+  "apiVersion": "1",
+  "minDesktopVersion": "0.1.0",
+  "main": "index.js",
+  "permissions": ["workspace.git"],
+  "contributes": {
+    "commands": [
+      {
+        "id": "git-diff.refresh",
+        "title": "Refresh Git status",
+        "titleI18n": { "zh-CN": "刷新 Git 状态" }
+      },
+      {
+        "id": "git-diff.open",
+        "title": "Open file diff",
+        "titleI18n": { "zh-CN": "查看文件差异" }
+      },
+      {
+        "id": "git-diff.close",
+        "title": "Close diff",
+        "titleI18n": { "zh-CN": "关闭差异" }
+      }
+    ],
+    "panels": [
+      {
+        "id": "git-diff.panel",
+        "title": "Git status & diff",
+        "titleI18n": { "zh-CN": "Git 状态与差异" },
+        "location": "mainPanel"
+      }
+    ]
+  }
+}

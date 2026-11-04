@@ -9,6 +9,9 @@ import { resolveLocale, translate } from "../src/core/i18n.ts";
 const manifest = JSON.parse(
   readFileSync(new URL("../plugins/agent-chat/plugin.json", import.meta.url), "utf8"),
 );
+const gitManifest = JSON.parse(
+  readFileSync(new URL("../plugins/git-diff-plugin/plugin.json", import.meta.url), "utf8"),
+);
 test("manifest enforces API, ownership, permissions and paths", () => {
   assert.equal(parseManifest(manifest).id, "agent-chat");
   assert.throws(() => parseManifest({ ...manifest, id: "core" }));
@@ -33,6 +36,28 @@ test("UI boundary only renders bounded data and owned commands", () => {
     validateView({ type: "button", label: "Escape", command: "core.quit" }, manifest),
   );
   assert.throws(() => validateView({ type: "text", text: "x".repeat(300000) }, manifest));
+});
+
+test("Git/Diff plugin declares only the workspace.git permission and a valid diff view", () => {
+  assert.equal(parseManifest(gitManifest).id, "git-diff");
+  assert.deepEqual(parseManifest(gitManifest).permissions, ["workspace.git"]);
+  assert.throws(() => parseManifest({ ...gitManifest, permissions: ["workspace.write"] }));
+  const view = { type: "diff", text: "diff --git a/a b/a\n+added" };
+  assert.equal(validateView(view, gitManifest).type, "diff");
+  assert.throws(() => validateView({ type: "diff", text: "x".repeat(200000) }, gitManifest));
+  const rowView = {
+    type: "row",
+    align: "between",
+    children: [{ type: "button", label: "a.ts", variant: "row", command: "git-diff.refresh" }],
+  };
+  assert.equal(validateView(rowView, gitManifest).type, "row");
+  assert.throws(() => validateView({ ...rowView, align: "end" }, gitManifest));
+  assert.throws(() =>
+    validateView(
+      { type: "button", label: "x", variant: "weird", command: "git-diff.refresh" },
+      gitManifest,
+    ),
+  );
 });
 test("extension UI text strips terminal styling without changing content", () => {
   assert.equal(

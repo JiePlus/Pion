@@ -139,6 +139,17 @@ export function validateView(value: unknown, manifest: Manifest): View {
         if (!Array.isArray(node.children)) throw new Error("Invalid children");
         node.children.forEach((child) => visit(child, depth + 1));
         break;
+      case "row":
+        if (!Array.isArray(node.children)) throw new Error("Invalid children");
+        if (
+          node.align !== undefined &&
+          !["start", "center", "between"].includes(node.align as string)
+        )
+          throw new Error("Invalid row align");
+        if (node.gap !== undefined && !["sm", "md"].includes(node.gap as string))
+          throw new Error("Invalid row gap");
+        node.children.forEach((child) => visit(child, depth + 1));
+        break;
       case "text":
       case "badge":
         if (typeof node.text !== "string" || node.text.length > 100_000)
@@ -208,8 +219,22 @@ export function validateView(value: unknown, manifest: Manifest): View {
           throw new Error("UI command must be owned and declared");
         if (node.disabled !== undefined && typeof node.disabled !== "boolean")
           throw new Error("Invalid disabled");
-        if (node.type === "button") text(node.label, 100);
-        else if (node.type === "input") {
+        if (node.type === "button") {
+          text(node.label, 100);
+          if (node.variant !== undefined && !["inline", "row"].includes(node.variant as string))
+            throw new Error("Invalid button variant");
+          if (node.detail !== undefined) text(node.detail, 300);
+          if (node.badge !== undefined) {
+            const badge = object(node.badge);
+            text(badge.text, 4);
+            if (
+              !["neutral", "add", "modify", "delete", "rename", "untracked"].includes(
+                badge.tone as string,
+              )
+            )
+              throw new Error("Invalid badge tone");
+          }
+        } else if (node.type === "input") {
           text(node.placeholder, 300);
           text(node.submit, 100);
           if (node.label !== undefined) text(node.label, 100);

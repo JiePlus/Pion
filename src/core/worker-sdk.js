@@ -85,6 +85,8 @@ const context = Object.freeze({
     get: () => call("workspace.get"),
     readFile: (path) => call("workspace.readFile", { path }),
     writeFile: (path, content) => call("workspace.writeFile", { path, content }),
+    gitStatus: () => call("workspace.gitStatus"),
+    gitDiff: (path, staged = false) => call("workspace.gitDiff", { path, staged }),
   },
   network: {
     fetch: (url, options = {}) => call("network.fetch", { url, options }),
