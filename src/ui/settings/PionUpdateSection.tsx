@@ -4,7 +4,7 @@ import { native } from "../../core/host.ts";
 import { t } from "../../core/i18n.ts";
 import type { AppUpdateController } from "../hooks/useAppUpdate.ts";
 import { Button } from "../primitives/Button.tsx";
-import { Checkbox } from "../primitives/Checkbox.tsx";
+import { Switch } from "../primitives/Switch.tsx";
 import { Icon } from "../primitives/Icon.tsx";
 import styles from "./Settings.module.css";
 
@@ -95,16 +95,18 @@ export function PionUpdateSection({ update }: { update: AppUpdateController }) {
         )}
       </div>
       <label className={componentClass(styles, "update-option")}>
-        <Checkbox
+        <Switch
           checked={state.autoCheck}
-          onChange={(event) => setAutoCheck(event.target.checked)}
+          aria-label={t("Automatically check for updates")}
+          onClick={() => setAutoCheck(!state.autoCheck)}
         />
         {t("Automatically check for updates")}
       </label>
       <label className={componentClass(styles, "update-option")}>
-        <Checkbox
+        <Switch
           checked={state.autoInstall}
-          onChange={(event) => setAutoInstall(event.target.checked)}
+          aria-label={t("Automatically download updates in the background")}
+          onClick={() => setAutoInstall(!state.autoInstall)}
         />
         {t("Automatically download updates in the background")}
       </label>

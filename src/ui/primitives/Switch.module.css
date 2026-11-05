@@ -1,0 +1,65 @@
+/*
+ * Unified switch design language.
+ * One track/thumb treatment for every on/off control in the app:
+ * - off: neutral track + muted thumb
+ * - on:  brand track + canvas thumb
+ * Uses theme tokens so it adapts to light and dark automatically.
+ */
+.switch {
+  --switch-track-width: 38px;
+  --switch-track-height: 22px;
+  --switch-thumb-size: 16px;
+  display: inline-flex;
+  width: var(--switch-track-width);
+  min-width: var(--switch-track-width);
+  height: var(--switch-track-height);
+  align-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: var(--pion-size-radius-pill);
+  background: var(--pion-color-line-strong);
+  cursor: pointer;
+  transition:
+    background 140ms ease,
+    box-shadow 140ms ease;
+}
+
+.switch:hover:not(:disabled) {
+  background: var(--pion-color-muted);
+}
+
+.switch[aria-checked="true"] {
+  background: var(--pion-color-brand-strong);
+}
+
+.switch[aria-checked="true"]:hover:not(:disabled) {
+  background: var(--pion-color-brand);
+}
+
+.switch:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px var(--pion-color-surface),
+    0 0 0 4px var(--pion-color-brand);
+}
+
+.switch:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.thumb {
+  display: block;
+  width: var(--switch-thumb-size);
+  height: var(--switch-thumb-size);
+  border-radius: 50%;
+  background: var(--pion-color-surface);
+  box-shadow: 0 1px 2px rgb(15 23 42 / 24%);
+  transform: translateX(3px);
+  transition: transform 140ms ease;
+}
+
+.switch[aria-checked="true"] .thumb {
+  background: var(--pion-color-surface);
+  transform: translateX(calc(var(--switch-track-width) - var(--switch-thumb-size) - 3px));
+}

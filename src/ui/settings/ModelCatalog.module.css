@@ -250,32 +250,33 @@
   background: transparent;
   color: var(--catalog-muted);
 }
-.switch {
-  display: flex;
-  width: 40px;
-  min-height: 23px;
-  height: 23px;
-  flex: 0 0 40px;
-  align-items: center;
-  padding: 2px;
-  border: 0;
-  border-radius: 20px;
-  background: #dce5f2;
+.expandToggle {
+  display: grid;
+  width: 30px;
+  min-height: 30px;
+  flex: 0 0 30px;
+  place-items: center;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--catalog-muted);
+  cursor: pointer;
+  transition:
+    background 120ms ease,
+    color 120ms ease,
+    border-color 120ms ease;
 }
-.switch span {
-  display: block;
-  width: 19px;
-  height: 19px;
-  border-radius: 50%;
-  background: #fff;
-  box-shadow: 0 1px 3px rgb(15 23 42 / 16%);
-  transition: transform 120ms ease;
+.expandToggle:hover {
+  border-color: var(--catalog-line);
+  background: var(--catalog-inset);
+  color: var(--catalog-text);
 }
-.switch.on {
-  background: #10b981;
+.expandToggle svg {
+  transition: transform 160ms ease;
 }
-.switch.on span {
-  transform: translateX(17px);
+.expandToggle[aria-expanded="true"] svg {
+  transform: rotate(180deg);
 }
 .modelStrip {
   display: flex;

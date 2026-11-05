@@ -73,51 +73,6 @@
   white-space: nowrap;
 }
 
-.skillSwitch {
-  display: grid;
-  width: 44px;
-  min-height: 44px;
-  padding: 0;
-  place-items: center;
-  border: 0;
-  background: transparent;
-}
-
-.skillSwitch:hover:not(:disabled) {
-  background: var(--pion-color-surface-hover);
-}
-
-.switchTrack {
-  position: relative;
-  width: 36px;
-  height: 22px;
-  border: 1px solid var(--pion-color-muted);
-  border-radius: var(--pion-size-radius-pill);
-  background: var(--pion-color-surface-muted);
-}
-
-.switchTrack::after {
-  position: absolute;
-  top: 3px;
-  left: 3px;
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background: var(--pion-color-muted);
-  content: "";
-  transition: transform 120ms ease;
-}
-
-.skillSwitch[aria-checked="true"] .switchTrack {
-  border-color: var(--pion-color-ink);
-  background: var(--pion-color-ink);
-}
-
-.skillSwitch[aria-checked="true"] .switchTrack::after {
-  background: var(--pion-color-canvas);
-  transform: translateX(14px);
-}
-
 .projectOverride {
   min-width: 100px;
   font-size: 12px;

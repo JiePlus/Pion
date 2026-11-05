@@ -492,7 +492,7 @@ export function ModelCatalog({
                   <Icon name="settings" size={17} />
                 </button>
                 <button
-                  className={`${styles.switch} ${credential ? styles.on : ""}`}
+                  className={styles.expandToggle}
                   type="button"
                   aria-expanded={active}
                   aria-label={t(
@@ -504,7 +504,7 @@ export function ModelCatalog({
                     setAuthMode(credential?.type === "oauth" ? "login" : "key");
                   }}
                 >
-                  <span />
+                  <Icon name="chevron-down" size={16} />
                 </button>
               </div>
               {!active && (
@@ -694,7 +694,7 @@ export function ModelCatalog({
                   <Icon name="settings" size={17} />
                 </button>
                 <button
-                  className={`${styles.switch} ${styles.on}`}
+                  className={styles.expandToggle}
                   type="button"
                   aria-expanded={active}
                   aria-label={t(
@@ -703,7 +703,7 @@ export function ModelCatalog({
                   )}
                   onClick={() => setExpanded(active ? "" : provider.name)}
                 >
-                  <span />
+                  <Icon name="chevron-down" size={16} />
                 </button>
               </div>
               <div className={styles.modelStrip}>

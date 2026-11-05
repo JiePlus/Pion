@@ -7,6 +7,7 @@ import { t } from "../../core/i18n.ts";
 import type { Runtime } from "../../core/runtime.ts";
 import { Checkbox } from "../primitives/Checkbox.tsx";
 import { Icon } from "../primitives/Icon.tsx";
+import { Switch } from "../primitives/Switch.tsx";
 import styles from "./Skills.module.css";
 
 export interface PiSkill {
@@ -192,20 +193,15 @@ export function Skills({
                   </select>
                 </label>
               ) : (
-                <button
-                  type="button"
-                  className={styles.skillSwitch}
-                  role="switch"
-                  aria-checked={skill.userEnabled}
+                <Switch
+                  checked={skill.userEnabled}
                   aria-label={skill.name}
                   title={`${t(skill.userEnabled ? "Disable" : "Enable")} ${skill.name}`}
                   disabled={skillBusy}
                   onClick={() =>
                     skillToggle(skill).catch((error) => runtime.notice("Pi", String(error)))
                   }
-                >
-                  <span className={styles.switchTrack} aria-hidden="true" />
-                </button>
+                />
               )}
             </li>
           ))}
