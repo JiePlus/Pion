@@ -1,39 +1,36 @@
 /*
  * Unified switch design language.
- * One track/thumb treatment for every on/off control in the app:
- * - off: neutral track + muted thumb
- * - on:  brand track + canvas thumb
- * Uses theme tokens so it adapts to light and dark automatically.
+ * Matches the original Pi-skills toggle: a 36x22 pill track with a 14px
+ * thumb. Off = muted surface track / muted thumb; On = ink track with a
+ * canvas thumb. Colour and geometry come from theme tokens so light and
+ * dark stay consistent, and hover/focus/disabled behave the same everywhere.
  */
 .switch {
-  --switch-track-width: 38px;
+  --switch-track-width: 36px;
   --switch-track-height: 22px;
-  --switch-thumb-size: 16px;
+  --switch-thumb-size: 14px;
   display: inline-flex;
   width: var(--switch-track-width);
   min-width: var(--switch-track-width);
   height: var(--switch-track-height);
   align-items: center;
   padding: 0;
-  border: 0;
+  border: 1px solid var(--pion-color-muted);
   border-radius: var(--pion-size-radius-pill);
-  background: var(--pion-color-line-strong);
+  background: var(--pion-color-surface-muted);
   cursor: pointer;
   transition:
-    background 140ms ease,
-    box-shadow 140ms ease;
+    background 120ms ease,
+    border-color 120ms ease;
 }
 
 .switch:hover:not(:disabled) {
-  background: var(--pion-color-muted);
+  border-color: var(--pion-color-ink-soft);
 }
 
 .switch[aria-checked="true"] {
-  background: var(--pion-color-brand-strong);
-}
-
-.switch[aria-checked="true"]:hover:not(:disabled) {
-  background: var(--pion-color-brand);
+  border-color: var(--pion-color-ink);
+  background: var(--pion-color-ink);
 }
 
 .switch:focus-visible {
@@ -53,13 +50,12 @@
   width: var(--switch-thumb-size);
   height: var(--switch-thumb-size);
   border-radius: 50%;
-  background: var(--pion-color-surface);
-  box-shadow: 0 1px 2px rgb(15 23 42 / 24%);
+  background: var(--pion-color-muted);
   transform: translateX(3px);
-  transition: transform 140ms ease;
+  transition: transform 120ms ease;
 }
 
 .switch[aria-checked="true"] .thumb {
-  background: var(--pion-color-surface);
-  transform: translateX(calc(var(--switch-track-width) - var(--switch-thumb-size) - 3px));
+  background: var(--pion-color-canvas);
+  transform: translateX(calc(var(--switch-track-width) - var(--switch-thumb-size) - 5px));
 }
