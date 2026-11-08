@@ -70,9 +70,11 @@ npm run dev
 
 **设置 → 通用 → Pion 更新** 显示当前版本并可手动检查更新。可分别开启“自动检查更新”和“后台自动下载更新”：开启后 Pion 启动时静默检查，有新版本即在后台下载，不会打断当前任务。下载完成后由用户点击“安装并重启 Pion”完成安装；Windows 安装器会退出当前应用，因此后台检查与下载不会自动调用安装器。下载暂存于当前进程，直接关闭应用会丢弃暂存，下次启动将重新检查并下载。
 
-更新包由 `.github/workflows/build-installers.yml` 在推送到 `main` 或推送 `v*` 版本标签时生成：工作流会按版本号 `v<version>` 创建/更新公开的 GitHub Release，附带各平台安装包、签名后的更新包和 `latest.json`；应用通过 `plugins.updater.endpoints` 中的 GitHub `releases/latest/download/latest.json` 获取更新。Pull Request 与手动运行只构建、不发布。
+更新包由 `.github/workflows/build-installers.yml` 在合并或推送到 `main` 后自动发布，无需手改版本号。准备步骤读取最新 `main` 和已占用的稳定版本标签，将最高版本的补丁号加一（例如 `0.1.1 → 0.1.2`），同步 npm、Tauri、Cargo 及锁文件的六处应用版本声明，再原子推送版本提交和 `v<version>` 标签。三个平台固定构建同一个版本提交，全部成功后才由一个发布步骤上传草稿、生成包含四个架构入口的 `latest.json` 并公开 Release。应用继续通过 `plugins.updater.endpoints` 中的 GitHub `releases/latest/download/latest.json` 获取更新。Pull Request 与手动运行只构建、不升版、不签名、不发布；标签由工作流管理，不另行触发发布。
 
-本仓库已配置更新签名公钥及对应的 Actions 私钥 Secret，更新地址也已指向本仓库 Release。更新功能合并到 `main` 后，发布构建会生成签名更新包；仓库公开后客户端才能匿名读取更新地址。首个带更新能力的版本为 **0.1.1**，旧版安装包需先手动安装一次；以后发布前同步递增 `package.json`、`package-lock.json`、`src-tauri/Cargo.toml`、`src-tauri/Cargo.lock` 和 `src-tauri/tauri.conf.json` 的应用版本号，同版本构建不会触发客户端更新。
+发布串行执行，不取消进行中的构建。GitHub 只保留最新的待运行任务，因此连续快速合并可能共用一次补丁发布；准备步骤以最新 `main` 为快照，后续合并的代码不会因旧提交覆盖而丢失。预留的版本和源码提交绑定到工作流 run ID，失败时在 Actions 中 **Re-run all jobs** 可恢复同一版本，不会再次升版；共用版本的任务也会用 `pion-release-run-<run-id>` 标签记录映射。已有公开版本只校验、不覆盖；较早任务重跑不会将 Latest 倒退。签名配置缺失会在升版前失败，构建或上传失败会保留预留标签及未公开的草稿供重跑恢复。请勿删除预留标签或强制重写 `main`。
+
+本仓库已配置更新签名公钥及对应的 Actions 私钥 Secret，更新地址也已指向本仓库 Release。首个带更新能力的版本为 **0.1.1**，旧版安装包需先手动安装一次。自动升版使用现有 `GITHUB_TOKEN` 的 `contents: write` 权限，不需要 PAT；若以后给 `main` 增加禁止 Actions 直接推送的保护规则，需要同步调整发布权限或流程，否则准备步骤会明确失败。
 
 迁移到其他仓库或需要替换密钥时，再按以下步骤配置（已有用户必须先通过旧密钥签名的版本接收新公钥，不能直接替换后要求旧安装包信任）：
 
@@ -168,7 +170,7 @@ npm run desktop:build
 
 macOS 本地构建产物位于 `src-tauri/target/release/bundle/macos/Pion.app`；`npm run desktop:build` 默认仅打包本机 `.app`，没有签名或公证流程。
 
-`.github/workflows/build-installers.yml` 仅在 `main` 分支相关事件（推送到 `main`、面向 `main` 的 Pull Request、推送 `v*` 标签）与手动触发时自动编译并打包各平台安装包：macOS（universal `.app` 与 `.dmg`）、Linux（`.deb` 与 `.AppImage`）和 Windows（NSIS `-setup.exe` 与 `.msi`）。推送到 `main` 与推送 `v*` 标签会按版本号 `v<version>` 创建或更新公开的 GitHub Release 并附加安装包；Pull Request 与手动运行只把产物作为 workflow artifact 上传。当前安装包未签名/公证，Windows/Linux 的浏览器沙箱与运行时行为仍需在对应平台人工验收。
+`.github/workflows/build-installers.yml` 在推送到 `main`、面向 `main` 的 Pull Request 与手动触发时编译并打包：macOS（universal `.app` 与 `.dmg`）、Linux（`.deb` 与 `.AppImage`）和 Windows（NSIS `-setup.exe` 与 `.msi`）。`main` 自动升版并在三个平台全部成功后统一发布；PR 与手动运行仅上传 workflow artifacts。`npm run test:release` 用本地临时 Git 远端和模拟 GitHub API 检查升版、并发、重跑、完整更新清单和草稿恢复，不写真实远端。更新包签名不等于操作系统代码签名；当前 macOS 安装包仍未签名/公证，Windows/Linux 的浏览器沙箱与运行时行为仍需在对应平台人工验收。
 
 插件沙箱采用 opaque-origin iframe + Blob Worker + CSP，适合当前受控 MVP。它不是 OS 容器，不能保证抵御浏览器漏洞或恶意内存耗尽。正式开放不受信任插件分发前需要独立安全评审和多平台原生验证。
 

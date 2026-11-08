@@ -1,17 +1,12 @@
 name: Build installers
 
-# Builds and packages Pion installers, restricted to the main branch:
-# - on pushes to main: build, upload the bundles as workflow artifacts and create/update a
-#   published GitHub Release (tag v<version>) with the installers and signed updater
-#   artifacts (latest.json) used by in-app updates
-# - on pull requests targeting main and manual runs: build only, upload workflow artifacts
-# - on a version tag (e.g. v0.1.0): build and attach the bundles to a GitHub Release
+# main: reserve one patch version/commit, build all targets, then publish once.
+# PR/manual: validate and build only; no signing credentials or release permissions.
+# Release tags are created by prepare with GITHUB_TOKEN (no recursive tag workflow).
 on:
   push:
     branches:
       - main
-    tags:
-      - "v*"
   pull_request:
     branches:
       - main
@@ -20,67 +15,45 @@ on:
 permissions:
   contents: read
 
+# Do not cancel an in-flight release. GitHub retains only the newest pending run;
+# prepare snapshots latest main so closely spaced merges can share one release.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && 'release-main' || github.ref }}
+  cancel-in-progress: ${{ github.event_name != 'push' || github.ref != 'refs/heads/main' }}
 
 jobs:
-  build:
-    name: Build (${{ matrix.name }})
-    runs-on: ${{ matrix.platform }}
-    permissions:
-      # Needed to create/update the release on main pushes and version tags.
-      contents: write
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - name: macOS (universal)
-            platform: macos-latest
-            # Universal binary so the same DMG runs on Apple Silicon and Intel.
-            args: --target universal-apple-darwin --bundles app,dmg
-            rust-targets: aarch64-apple-darwin,x86_64-apple-darwin
-          - name: Linux (x86_64)
-            platform: ubuntu-22.04
-            args: --bundles deb,appimage
-            rust-targets: ""
-          - name: Windows (x86_64)
-            platform: windows-latest
-            args: --bundles nsis,msi
-            rust-targets: ""
-
+  validate:
+    name: Validate release automation
+    runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v5
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v5
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
-          cache: npm
+      - run: npm run test:release
 
-      - name: Install Rust stable
-        uses: dtolnay/rust-toolchain@stable
+  prepare:
+    name: Reserve release version
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: validate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      version: ${{ steps.reserve.outputs.version }}
+      tag: ${{ steps.reserve.outputs.tag }}
+      sha: ${{ steps.reserve.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v5
         with:
-          targets: ${{ matrix.rust-targets }}
-
-      - name: Cache Rust build
-        uses: swatinem/rust-cache@v2
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-node@v5
         with:
-          workspaces: "./src-tauri -> target"
-
-      - name: Install Linux system dependencies
-        if: matrix.platform == 'ubuntu-22.04'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf xdg-utils
-
-      - name: Install frontend dependencies
-        run: npm ci
-
-      - name: Validate release signing
-        if: github.event_name == 'push' && (github.ref_type == 'tag' || github.ref == 'refs/heads/main')
-        shell: bash
+          node-version: 22
+      - name: Validate signing configuration before reserving a version
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
         run: |
@@ -88,27 +61,122 @@ jobs:
             echo '::error::Configure TAURI_SIGNING_PRIVATE_KEY before publishing updater artifacts.'
             exit 1
           fi
+      - name: Reserve immutable version and source commit
+        id: reserve
+        run: node scripts/prepare-release.mjs
 
-      - name: Build and package
+  build:
+    name: Build (${{ matrix.name }})
+    needs: [validate, prepare]
+    if: ${{ !cancelled() && needs.validate.result == 'success' && (needs.prepare.result == 'success' || needs.prepare.result == 'skipped') }}
+    runs-on: ${{ matrix.platform }}
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - id: macos
+            name: macOS (universal)
+            platform: macos-latest
+            args: --target universal-apple-darwin --bundles app,dmg
+            rust-targets: aarch64-apple-darwin,x86_64-apple-darwin
+          - id: linux
+            name: Linux (x86_64)
+            platform: ubuntu-22.04
+            args: --bundles deb,appimage
+            rust-targets: ""
+          - id: windows
+            name: Windows (x86_64)
+            platform: windows-latest
+            args: --bundles nsis,msi
+            rust-targets: ""
+    steps:
+      - name: Checkout identical reserved commit on every release platform
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.prepare.outputs.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.rust-targets }}
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: "./src-tauri -> target"
+      - name: Install Linux system dependencies
+        if: matrix.id == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf xdg-utils
+      - run: npm ci
+      - name: Build and package without writing a GitHub Release
+        id: package
         uses: tauri-apps/tauri-action@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Required to sign updater artifacts on release builds (main pushes and tags).
-          # Keep signing credentials out of pull-request and manual builds.
-          TAURI_SIGNING_PRIVATE_KEY: ${{ (github.event_name == 'push' && (github.ref_type == 'tag' || github.ref == 'refs/heads/main')) && secrets.TAURI_SIGNING_PRIVATE_KEY || '' }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ (github.event_name == 'push' && (github.ref_type == 'tag' || github.ref == 'refs/heads/main')) && secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD || '' }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ needs.prepare.result == 'success' && secrets.TAURI_SIGNING_PRIVATE_KEY || '' }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ needs.prepare.result == 'success' && secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD || '' }}
         with:
-          # Release builds (main pushes and version tags) also enable updater artifacts so
-          # tauri-action uploads the signed bundles and latest.json.
-          args: ${{ matrix.args }}${{ (github.event_name == 'push' && (github.ref_type == 'tag' || github.ref == 'refs/heads/main')) && ' --config src-tauri/tauri.updater.conf.json' || '' }}
-          # Publish a release (tagged v<version>) on main pushes and version tags; PR/manual only build.
-          tagName: ${{ (github.event_name == 'push' && (github.ref_type == 'tag' || github.ref == 'refs/heads/main')) && 'v__VERSION__' || '' }}
-          releaseName: ${{ (github.event_name == 'push' && (github.ref_type == 'tag' || github.ref == 'refs/heads/main')) && 'Pion v__VERSION__' || '' }}
-          releaseBody: "Download the installer for your platform from the assets below. Pion uses these releases for in-app updates."
-          releaseDraft: false
-          prerelease: false
-          # Signed updater artifacts and the static latest.json used by the app.
-          uploadUpdaterJson: true
-          uploadUpdaterSignatures: true
-          uploadWorkflowArtifacts: true
+          args: ${{ matrix.args }}${{ needs.prepare.result == 'success' && ' --config src-tauri/tauri.updater.conf.json' || '' }}
+          uploadUpdaterJson: false
+          uploadWorkflowArtifacts: ${{ needs.prepare.result != 'success' }}
           workflowArtifactNamePattern: "Pion_[platform]_[arch]_[bundle]_[version]"
+      - name: Record and verify release build identity
+        if: needs.prepare.result == 'success'
+        shell: bash
+        env:
+          RELEASE_VERSION: ${{ needs.prepare.outputs.version }}
+          RELEASE_SHA: ${{ needs.prepare.outputs.sha }}
+          BUILT_VERSION: ${{ steps.package.outputs.appVersion }}
+          RELEASE_PLATFORM: ${{ matrix.id }}
+        run: |
+          node scripts/publish-release.mjs record --version "$RELEASE_VERSION" --sha "$RELEASE_SHA" \
+            --platform "$RELEASE_PLATFORM" --app-version "$BUILT_VERSION" \
+            --output "src-tauri/target/release-$RELEASE_PLATFORM.json"
+      - name: Upload signed release bundles and build identity
+        if: needs.prepare.result == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: Pion-release-${{ matrix.id }}
+          if-no-files-found: error
+          retention-days: 14
+          path: |
+            src-tauri/target/release-${{ matrix.id }}.json
+            src-tauri/target/**/bundle/**/*.dmg
+            src-tauri/target/**/bundle/**/*.deb
+            src-tauri/target/**/bundle/**/*.AppImage
+            src-tauri/target/**/bundle/**/*.exe
+            src-tauri/target/**/bundle/**/*.msi
+            src-tauri/target/**/bundle/**/*.app.tar.gz
+            src-tauri/target/**/bundle/**/*.sig
+
+  publish:
+    name: Publish complete signed release
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [prepare, build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.prepare.outputs.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: Pion-release-*
+          path: release-artifacts
+      - name: Validate all platforms, upload draft assets, then publish one latest.json
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_VERSION: ${{ needs.prepare.outputs.version }}
+          RELEASE_SHA: ${{ needs.prepare.outputs.sha }}
+        run: |
+          node scripts/publish-release.mjs publish --version "$RELEASE_VERSION" --sha "$RELEASE_SHA" \
+            --artifacts release-artifacts --output release-publish

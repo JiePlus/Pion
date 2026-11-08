@@ -11,6 +11,7 @@
     "desktop:build": "node scripts/sync-csp.mjs && tauri build",
     "tauri": "tauri",
     "test": "node --experimental-strip-types --test-concurrency=1 --test tests/*.test.ts",
+    "test:release": "node --experimental-strip-types --test-concurrency=1 --test tests/prepare-release.test.ts tests/publish-release.test.ts",
     "test:ui": "playwright test",
     "test:pi": "node scripts/pi-smoke.mjs",
     "test:sessions": "node scripts/pi-session-smoke.mjs",
