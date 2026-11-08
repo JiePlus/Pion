@@ -82,6 +82,7 @@ export function Settings({
   const [piScanning, setPiScanning] = useState(native);
   const [piScanError, setPiScanError] = useState("");
   const [piScanRevision, setPiScanRevision] = useState(0);
+  const [piOperation, setPiOperation] = useState<"runtime" | "update">("runtime");
 
   useEffect(() => {
     if (!native) return;
@@ -110,11 +111,11 @@ export function Settings({
   }, [piScanRevision]);
 
   return (
-    <main className={`${componentClass(managementStyles, "management")} settings`}>
+    <main
+      className={`${componentClass(managementStyles, "management")} ${styles.settings} settings`}
+    >
       <header className={componentClass(styles, "page-heading")}>
-        <h1>
-          {t("Settings")} <span>/ Preferences</span>
-        </h1>
+        <h1>{t("Settings")}</h1>
         <p>{t("Manage appearance, language, and the Pi runtime.")}</p>
       </header>
       <section className={componentClass(styles, "settings-card")}>
@@ -135,42 +136,40 @@ export function Settings({
               )}
             </span>
           </label>
-          <div className={componentClass(styles, "theme-setting")}>
-            <label>
-              {t("Theme")}
-              <select
-                aria-label={t("Theme")}
-                value={themePreference}
-                onChange={(event) => setTheme(event.target.value as ThemePreference)}
-              >
-                <option value="dark">{t("Dark")}</option>
-                <option value="system">{t("Follow system")}</option>
-                <option value="light">{t("Light")}</option>
-              </select>
-            </label>
+          <fieldset className={componentClass(styles, "theme-setting")}>
+            <legend>{t("Theme")}</legend>
             <div className={componentClass(styles, "theme-choices")}>
-              {(["dark", "system", "light"] as const).map((value) => (
-                <button
-                  key={value}
-                  type="button"
-                  className={themePreference === value ? componentClass(styles, "selected") : ""}
-                  aria-pressed={themePreference === value}
-                  onClick={() => setTheme(value)}
-                >
+              {(["light", "dark", "system"] as const).map((value) => (
+                <label key={value} className={componentClass(styles, "theme-choice")}>
+                  <input
+                    type="radio"
+                    name="theme"
+                    value={value}
+                    checked={themePreference === value}
+                    onChange={() => setTheme(value)}
+                  />
                   <span
-                    className={componentClass(styles, `theme-preview-${value}`)}
+                    className={`${componentClass(styles, "theme-preview")} ${componentClass(styles, `theme-preview-${value}`)}`}
                     aria-hidden="true"
                   >
+                    <span className={styles.previewSidebar} />
+                    <span className={styles.previewContent}>
+                      <span />
+                      <span />
+                      <span />
+                    </span>
+                  </span>
+                  <span className={styles.themeLabel}>
                     <Icon
                       name={value === "dark" ? "moon" : value === "light" ? "sun" : "monitor"}
                       size={15}
                     />
+                    {t(value === "dark" ? "Dark" : value === "light" ? "Light" : "Follow system")}
                   </span>
-                  {t(value === "dark" ? "Dark" : value === "light" ? "Light" : "Follow system")}
-                </button>
+                </label>
               ))}
             </div>
-          </div>
+          </fieldset>
         </div>
       </section>
       <section className={componentClass(styles, "settings-card")}>
@@ -241,6 +240,7 @@ export function Settings({
         <form
           onSubmit={(event) => {
             event.preventDefault();
+            setPiOperation("runtime");
             action("core.settings.save");
           }}
         >
@@ -258,11 +258,14 @@ export function Settings({
               "Connecting trusts the selected workspace and its Pi extensions. Pi runs with your user permissions. Tested with Pi 0.87.0.",
             )}
           </p>
-          <div className={`button-row ${utilityStyles.buttonRow}`}>
+          <div className={`button-row ${utilityStyles.buttonRow} ${styles.runtimeActions}`}>
             <button
               type="button"
               disabled={busy || setupBusy || !native}
-              onClick={() => refreshSetup().catch((error) => runtime.notice("Pi", String(error)))}
+              onClick={() => {
+                setPiOperation("runtime");
+                void refreshSetup().catch((error) => runtime.notice("Pi", String(error)));
+              }}
             >
               {t("Test connection")}
             </button>
@@ -271,6 +274,7 @@ export function Settings({
             </Button>
             <button
               type="button"
+              className={styles.disconnect}
               disabled={busy || !connected}
               onClick={() => action("core.disconnect")}
             >
@@ -278,21 +282,34 @@ export function Settings({
             </button>
           </div>
         </form>
+        {setupError && piOperation === "runtime" && (
+          <p className="error" role="alert">
+            {setupError}
+          </p>
+        )}
       </section>
-      {setupError && (
-        <p className="error" role="alert">
-          {setupError}
-        </p>
-      )}
-      <PiVersionSection
-        setupStatus={setupStatus}
-        setupBusy={setupBusy}
-        setupProgress={setupProgress}
-        versionStatus={versionStatus}
-        checkPiUpdate={checkPiUpdate}
-        updatePi={updatePi}
-      />
-      <PionUpdateSection update={appUpdate} />
+      <section className={componentClass(styles, "settings-card")}>
+        <h2>
+          <Icon name="download" size={16} />
+          {t("Versions and updates")}
+        </h2>
+        <PionUpdateSection update={appUpdate} />
+        <PiVersionSection
+          setupStatus={setupStatus}
+          setupBusy={setupBusy}
+          setupProgress={setupProgress}
+          versionStatus={versionStatus}
+          setupError={piOperation === "update" ? setupError : ""}
+          checkPiUpdate={() => {
+            setPiOperation("update");
+            return checkPiUpdate();
+          }}
+          updatePi={() => {
+            setPiOperation("update");
+            return updatePi();
+          }}
+        />
+      </section>
       <section className={componentClass(styles, "legacy-sessions")}>
         <h2>{t("Import Pi CLI sessions")}</h2>
         <p className={`settings-note ${utilityStyles.settingsNote}`}>

@@ -3,20 +3,18 @@
   display: flex;
   min-height: 0;
   flex: 1;
+  flex-direction: column;
 }
 
 .chat-scroll {
   min-width: 0;
   flex: 1;
-  padding: 32px max(28px, calc((100% - 960px) / 2));
+  min-height: 0;
+  padding: 28px max(24px, calc((100% - var(--pion-size-reading)) / 2));
   overflow-y: auto;
   overflow-anchor: none;
   scrollbar-width: thin;
   scrollbar-color: var(--pion-color-line-strong) transparent;
-}
-
-:global(:root[data-theme="dark"]) .chat-scroll {
-  padding-inline: 30px;
 }
 
 .chat-messages > h1 {
@@ -54,17 +52,6 @@
 
 .working-label {
   font-weight: 600;
-  background: linear-gradient(
-    100deg,
-    var(--pion-color-ink-soft) 42%,
-    #fff 50%,
-    var(--pion-color-ink-soft) 58%
-  );
-  background-size: 250% 100%;
-  background-position: 100% 0;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  animation: working-shine 2.2s linear infinite;
 }
 
 @keyframes working-spin {
@@ -80,25 +67,27 @@
 }
 
 .scroll-to-latest {
-  position: absolute;
-  bottom: 12px;
-  left: 50%;
-  min-height: 30px;
-  padding: 5px 11px;
-  transform: translateX(-50%);
-  border-radius: 18px;
-  box-shadow: var(--pion-shadow-low);
-  font-size: 11px;
+  align-self: center;
+  flex-shrink: 0;
+  min-height: 32px;
+  margin: 0 0 8px;
+  padding: 5px 14px;
+  border-radius: var(--pion-size-radius-pill);
+  background: var(--pion-color-surface-raised);
+  font-size: 12px;
 }
 
 .message-queue {
-  width: min(790px, calc(100% - 28px));
+  width: min(var(--pion-size-reading), calc(100% - 28px));
   margin: 5px auto;
   flex-shrink: 0;
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 11px;
+  flex-wrap: wrap;
+  max-height: 100px;
+  overflow: auto;
+  font-size: 12px;
 }
 
 .message-queue span {

@@ -107,14 +107,16 @@ export function useCoreCommands({
         return null;
       }),
       runtime.commands.register("core", "core.layout", async (args) => {
-        const { id, location, hidden } = args as {
+        const { id, location, hidden, collapsed } = args as {
           id: string;
           location?: Location;
           hidden?: boolean;
+          collapsed?: boolean;
         };
         updatePanel(id, {
           ...(location ? { location } : {}),
           ...(hidden === undefined ? {} : { hidden }),
+          ...(collapsed === undefined ? {} : { collapsed }),
         });
         return null;
       }),

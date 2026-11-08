@@ -69,6 +69,8 @@ export function Rail({
         <button
           className={`${componentClass(styles, "new-task-button")} ${!task && page === "workspace" ? componentClass(styles, "selected") : ""}`}
           disabled={busy}
+          aria-label={t("New task")}
+          title={t("New task")}
           onClick={() => {
             setTask(null);
             clearExtensionUi();
@@ -198,12 +200,14 @@ export function Rail({
               ? componentClass(styles, "selected")
               : ""
           }
+          aria-label={t("Settings")}
+          title={t("Settings")}
           onClick={() => action("core.navigate", "settings")}
         >
           <span aria-hidden="true">
             <Icon name="settings" size={17} />
-          </span>{" "}
-          {t("Settings")}
+          </span>
+          <span>{t("Settings")}</span>
         </button>
         <div className={componentClass(styles, "runtime-label")}>
           <StatusDot offline={!connected} />

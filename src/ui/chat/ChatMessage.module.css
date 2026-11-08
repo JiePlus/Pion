@@ -156,7 +156,7 @@
   gap: 8px;
   margin-top: 4px;
   color: var(--pion-color-muted);
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .copy-button {
@@ -165,7 +165,7 @@
   border-color: transparent;
   background: transparent;
   color: var(--pion-color-muted);
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .message-actions .copy-button {
@@ -275,7 +275,7 @@
 .tool-call-summary small {
   margin-left: auto;
   color: var(--pion-color-muted);
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .tool-call.failed :global(.dot) {
@@ -296,7 +296,7 @@
 .tool-details h4 {
   margin: 0 0 6px;
   color: var(--pion-color-muted);
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 600;
 }
 

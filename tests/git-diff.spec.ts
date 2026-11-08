@@ -39,6 +39,13 @@ test("Git/Diff plugin shows branch, changed files and a unified diff", async ({
   await startTask(page);
 
   const panel = page.locator('[data-panel="git-diff.panel"]');
+  const toggle = panel.getByRole("button", { name: "Git status & diff", exact: true });
+  await expect(toggle).toHaveAttribute("aria-expanded", "false");
+  await expect(panel.getByRole("button", { name: /runtime\.ts/ })).toBeHidden();
+  await toggle.click();
+  await expect(toggle).toHaveAttribute("aria-expanded", "true");
+  await page.reload();
+  await expect(toggle).toHaveAttribute("aria-expanded", "true");
   await expect(panel).toContainText("main");
   await expect(panel).toContainText("3 changed files");
   await expect(panel.getByRole("button", { name: /runtime\.ts/ })).toBeVisible();
@@ -51,4 +58,8 @@ test("Git/Diff plugin shows branch, changed files and a unified diff", async ({
     path: `artifacts/ui-qa/${testInfo.project.name}-git-diff-after.png`,
     fullPage: true,
   });
+  await toggle.click();
+  await page.reload();
+  await expect(toggle).toHaveAttribute("aria-expanded", "false");
+  await expect(panel.getByRole("button", { name: /runtime\.ts/ })).toBeHidden();
 });

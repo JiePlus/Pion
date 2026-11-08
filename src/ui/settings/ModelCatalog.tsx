@@ -69,8 +69,26 @@ export function ModelCatalog({
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
   const [expanded, setExpanded] = useState("");
-  const [authMode, setAuthMode] = useState<"key" | "environment" | "login">("key");
-  const [key, setKey] = useState("");
+  const [authModes, setAuthModes] = useState<Record<string, "key" | "environment" | "login">>({});
+  const credentialProvider = expanded.replace(/^credential:/, "");
+  const authMode =
+    authModes[expanded] ??
+    (credentials.some(
+      (item) =>
+        item.type === "oauth" &&
+        (item.provider === credentialProvider ||
+          (credentialProvider === "openai" && item.provider === "openai-codex")),
+    )
+      ? "login"
+      : "key");
+  function setAuthMode(value: "key" | "environment" | "login") {
+    setAuthModes((current) => ({ ...current, [expanded]: value }));
+  }
+  const [keyDrafts, setKeyDrafts] = useState<Record<string, string>>({});
+  const key = keyDrafts[expanded] ?? "";
+  function setKey(value: string) {
+    setKeyDrafts((current) => ({ ...current, [expanded]: value }));
+  }
   const [showKey, setShowKey] = useState(false);
   const [providerDraft, setProviderDraft] = useState({
     name: "",
@@ -84,6 +102,7 @@ export function ModelCatalog({
   const [newProviderMode, setNewProviderMode] = useState<"endpoint" | "key">("endpoint");
   const [otherProvider, setOtherProvider] = useState("");
   const [editingModel, setEditingModel] = useState(false);
+  const [modelEditorProvider, setModelEditorProvider] = useState("");
   const [editingExistingModel, setEditingExistingModel] = useState(false);
   const [modelDraft, setModelDraft] = useState(blankModel);
   const [discovery, setDiscovery] = useState<{
@@ -101,7 +120,6 @@ export function ModelCatalog({
   const [localScan, setLocalScan] = useState<LocalScan>({ status: "idle", services: [] });
 
   useEffect(() => {
-    setKey("");
     setShowKey(false);
   }, [expanded]);
 
@@ -173,8 +191,8 @@ export function ModelCatalog({
       setEditingProvider(false);
       setEditingModel(false);
       setDiscovery(null);
-      if (request.action === "provider.save") setExpanded(String(request.provider));
-      if (request.action === "save_key") setExpanded(String(request.provider));
+      if (request.action === "provider.save") setExpanded(`custom:${String(request.provider)}`);
+
       setNotice(success);
     } catch (failure) {
       setError(String(failure));
@@ -246,7 +264,7 @@ export function ModelCatalog({
         });
       }
       await refresh();
-      setExpanded(providerDraft.name);
+      setExpanded(`custom:${providerDraft.name}`);
       setAddOpen(false);
       setEndpointKey("");
       setNotice(t("Provider saved. You can now add models."));
@@ -271,7 +289,7 @@ export function ModelCatalog({
       await refresh();
       setAddOpen(false);
       setEndpointKey("");
-      setExpanded(otherProvider);
+      setExpanded(`credential:${otherProvider}`);
       setNotice(t("API key saved. Reopen tasks to apply changes."));
     } catch (failure) {
       setProbe(String(failure));
@@ -289,7 +307,7 @@ export function ModelCatalog({
     setEditingProvider(!!provider);
     setNewProviderMode("endpoint");
     setEditingModel(false);
-    if (provider) setExpanded(provider.name);
+    if (provider) setExpanded(`custom:${provider.name}`);
     else {
       setEndpointKey("");
       setProbe("");
@@ -308,7 +326,8 @@ export function ModelCatalog({
   }
 
   function openModel(provider: Provider, model?: CustomModel) {
-    setExpanded(provider.name);
+    setExpanded(`custom:${provider.name}`);
+    setModelEditorProvider(provider.name);
     setModelDraft({
       id: model?.id ?? "",
       name: model?.name ?? "",
@@ -324,7 +343,7 @@ export function ModelCatalog({
 
   const custom = config?.providers ?? [];
   const providerCards = [
-    ...builtIns.filter((provider) => !custom.some((item) => item.name === provider.id)),
+    ...builtIns,
     ...credentials
       .filter(
         (item) =>
@@ -382,7 +401,6 @@ export function ModelCatalog({
       <header className={styles.heading}>
         <div className={styles.titleLine}>
           <h1>{t("Model services")}</h1>
-          <span className={styles.english}>/ Models</span>
           {runtimeVersion && <span className={styles.version}>Pi {runtimeVersion}</span>}
         </div>
         <p>
@@ -407,7 +425,7 @@ export function ModelCatalog({
             aria-pressed={filter === "all"}
             onClick={() => setFilter("all")}
           >
-            {t("All")} <span>{providerCards.length + custom.length + (localCount ? 0 : 1)}</span>
+            {t("All")} <span>{providerCards.length + custom.length}</span>
           </button>
           <button
             className={filter === "connected" ? styles.active : ""}
@@ -439,13 +457,16 @@ export function ModelCatalog({
         <p className={styles.notice}>{t("Model configuration requires the desktop app.")}</p>
       )}
       <div className={styles.cards}>
+        {!!visibleBuiltIns.length && (
+          <h2 className={styles.groupHeading}>{t("Built-in providers")}</h2>
+        )}
         {visibleBuiltIns.map((provider) => {
           const credential = credentials.find(
             (item) =>
               item.provider === provider.id ||
               (provider.id === "openai" && item.provider === "openai-codex"),
           );
-          const active = expanded === provider.id;
+          const active = expanded === `credential:${provider.id}`;
           const providerModels = models.filter((model) => model.provider === provider.id);
           return (
             <section
@@ -453,10 +474,11 @@ export function ModelCatalog({
               className={`${styles.card} ${active ? styles.expanded : ""}`}
             >
               <div className={styles.cardHeader}>
-                <span className={`${styles.mark} ${styles[provider.id]}`}>{provider.mark}</span>
+                <span className={styles.mark}>{provider.mark}</span>
                 <div className={styles.cardIdentity}>
                   <div className={styles.cardName}>
                     <strong>{provider.name}</strong>
+                    <span className={styles.kind}>{t("Built-in endpoint")}</span>
                     <span className={credential ? styles.connected : styles.pending}>
                       {credential ? t("Connected") : t("Needs setup")}
                     </span>
@@ -479,32 +501,16 @@ export function ModelCatalog({
                   </p>
                 </div>
                 <button
-                  className={styles.iconAction}
+                  className={styles.switch}
                   type="button"
-                  aria-label={t("Configure {name}", { name: provider.name })}
                   aria-expanded={active}
+                  aria-label={t("Configure {name}", { name: provider.name })}
                   onClick={() => {
-                    setExpanded(active ? "" : provider.id);
-                    setAuthMode(credential?.type === "oauth" ? "login" : "key");
+                    setExpanded(active ? "" : `credential:${provider.id}`);
                     setError("");
                   }}
                 >
-                  <Icon name="settings" size={17} />
-                </button>
-                <button
-                  className={`${styles.switch} ${credential ? styles.on : ""}`}
-                  type="button"
-                  aria-expanded={active}
-                  aria-label={t(
-                    active ? "Collapse {name} configuration" : "Expand {name} configuration",
-                    { name: provider.name },
-                  )}
-                  onClick={() => {
-                    setExpanded(active ? "" : provider.id);
-                    setAuthMode(credential?.type === "oauth" ? "login" : "key");
-                  }}
-                >
-                  <span />
+                  <Icon name="chevron-down" size={16} />
                 </button>
               </div>
               {!active && (
@@ -643,8 +649,9 @@ export function ModelCatalog({
             </section>
           );
         })}
+        {!!visibleCustom.length && <h2 className={styles.groupHeading}>{t("Custom providers")}</h2>}
         {visibleCustom.map((provider) => {
-          const active = expanded === provider.name;
+          const active = expanded === `custom:${provider.name}`;
           const local = /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(?::|\/)/.test(
             provider.baseUrl ?? "",
           );
@@ -654,12 +661,13 @@ export function ModelCatalog({
               key={provider.name}
             >
               <div className={styles.cardHeader}>
-                <span className={`${styles.mark} ${local ? styles.ollama : styles.customMark}`}>
+                <span className={`${styles.mark} ${styles.customMark}`}>
                   {local ? "OL" : "API"}
                 </span>
                 <div className={styles.cardIdentity}>
                   <div className={styles.cardName}>
                     <strong>{provider.name}</strong>
+                    <span className={styles.kind}>{t("Custom endpoint")}</span>
                     <span className={styles.connected}>{t("Configured")}</span>
                     <code>{provider.baseUrl}</code>
                   </div>
@@ -669,48 +677,39 @@ export function ModelCatalog({
                       : t("Custom model endpoint")}
                   </p>
                 </div>
+                <div className={styles.headerActions}>
+                  <button
+                    type="button"
+                    className={styles.secondary}
+                    disabled={busy}
+                    onClick={() => void discover(provider)}
+                  >
+                    ⟳ {t("Fetch model list")}
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.secondary}
+                    disabled={busy}
+                    onClick={() => openModel(provider)}
+                  >
+                    ＋ {t("Add model")}
+                  </button>
+                </div>
                 <button
-                  type="button"
-                  className={styles.secondary}
-                  disabled={busy}
-                  onClick={() => void discover(provider)}
-                >
-                  ⟳ {t("Fetch model list")}
-                </button>
-                <button
-                  type="button"
-                  className={styles.secondary}
-                  disabled={busy}
-                  onClick={() => openModel(provider)}
-                >
-                  ＋ {t("Add model")}
-                </button>
-                <button
-                  className={styles.iconAction}
-                  type="button"
-                  aria-label={t("Edit provider") + ` ${provider.name}`}
-                  onClick={() => openProvider(provider)}
-                >
-                  <Icon name="settings" size={17} />
-                </button>
-                <button
-                  className={`${styles.switch} ${styles.on}`}
+                  className={styles.switch}
                   type="button"
                   aria-expanded={active}
-                  aria-label={t(
-                    active ? "Collapse {name} configuration" : "Expand {name} configuration",
-                    { name: provider.name },
-                  )}
-                  onClick={() => setExpanded(active ? "" : provider.name)}
+                  aria-label={t("Configure {name}", { name: provider.name })}
+                  onClick={() => setExpanded(active ? "" : `custom:${provider.name}`)}
                 >
-                  <span />
+                  <Icon name="chevron-down" size={16} />
                 </button>
               </div>
               <div className={styles.modelStrip}>
                 <span>{t("Configured models:")}</span>
                 {provider.models.map((model) => (
                   <button
-                    className={`${styles.modelChip} ${editingModel && expanded === provider.name && modelDraft.id === model.id ? styles.editing : ""}`}
+                    className={`${styles.modelChip} ${editingModel && expanded === `custom:${provider.name}` && modelEditorProvider === provider.name && modelDraft.id === model.id ? styles.editing : ""}`}
                     key={model.id}
                     type="button"
                     onClick={() => openModel(provider, model)}
@@ -732,7 +731,9 @@ export function ModelCatalog({
                     <strong>{t("Model configuration details")}</strong>
                     <code>
                       {provider.name}
-                      {editingModel && modelDraft.id ? ` / ${modelDraft.id}` : ""}
+                      {editingModel && modelEditorProvider === provider.name && modelDraft.id
+                        ? ` / ${modelDraft.id}`
+                        : ""}
                     </code>
                     <span className={styles.connected}>{t("Configuring")}</span>
                   </div>
@@ -741,7 +742,7 @@ export function ModelCatalog({
                       {t("Advanced Pi fields are preserved when saving.")}
                     </p>
                   )}
-                  {editingProvider && (
+                  {editingProvider && providerDraft.name === provider.name && (
                     <ProviderForm
                       draft={providerDraft}
                       setDraft={setProviderDraft}
@@ -762,7 +763,7 @@ export function ModelCatalog({
                       }
                     />
                   )}
-                  {editingModel && (
+                  {editingModel && modelEditorProvider === provider.name && (
                     <ModelForm
                       draft={modelDraft}
                       setDraft={setModelDraft}
@@ -798,37 +799,40 @@ export function ModelCatalog({
                       }
                     />
                   )}
-                  {!editingProvider && !editingModel && (
-                    <div className={styles.panelActions}>
-                      <button type="button" onClick={() => openProvider(provider)}>
-                        {t("Edit provider")}
-                      </button>
-                      <button type="button" onClick={() => openModel(provider)}>
-                        {t("Add model")}
-                      </button>
-                      <button
-                        type="button"
-                        disabled={busy}
-                        onClick={() => {
-                          if (
-                            window.confirm(
-                              t("Remove provider {name} and its models?", { name: provider.name }),
+                  {!(editingProvider && providerDraft.name === provider.name) &&
+                    !(editingModel && modelEditorProvider === provider.name) && (
+                      <div className={styles.panelActions}>
+                        <button type="button" onClick={() => openProvider(provider)}>
+                          {t("Edit provider")}
+                        </button>
+                        <button type="button" onClick={() => openModel(provider)}>
+                          {t("Add model")}
+                        </button>
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => {
+                            if (
+                              window.confirm(
+                                t("Remove provider {name} and its models?", {
+                                  name: provider.name,
+                                }),
+                              )
                             )
-                          )
-                            void submit(
-                              {
-                                op: "model_config.change",
-                                action: "provider.remove",
-                                provider: provider.name,
-                              },
-                              t("Provider removed."),
-                            );
-                        }}
-                      >
-                        {t("Remove provider")}
-                      </button>
-                    </div>
-                  )}
+                              void submit(
+                                {
+                                  op: "model_config.change",
+                                  action: "provider.remove",
+                                  provider: provider.name,
+                                },
+                                t("Provider removed."),
+                              );
+                          }}
+                        >
+                          {t("Remove provider")}
+                        </button>
+                      </div>
+                    )}
                   {!local && (
                     <form
                       className={styles.customKeyForm}
@@ -917,7 +921,7 @@ export function ModelCatalog({
             )}
             {localScan.status === "done" && localScan.services.length === 0 && (
               <p className={styles.help}>
-                {t("No local model service detected. Add a custom endpoint manually below.")}
+                {t("No local model service detected. Add a custom endpoint from the toolbar.")}
               </p>
             )}
             {!!localScan.services.length && (
@@ -929,7 +933,7 @@ export function ModelCatalog({
                     className={styles.localService}
                     onClick={() => openDetected(service)}
                   >
-                    <span className={`${styles.mark} ${styles.ollama}`}>OL</span>
+                    <span className={styles.mark}>OL</span>
                     <span>
                       <strong>{service.label}</strong>
                       <small>{service.baseUrl.replace(/^https?:\/\//, "")}</small>
@@ -947,16 +951,6 @@ export function ModelCatalog({
               </div>
             )}
           </section>
-        )}
-        {filter === "all" && (
-          <button className={styles.addPrompt} type="button" onClick={() => openProvider()}>
-            <span className={styles.plus}>
-              <Icon name="plus" size={18} />
-            </span>
-            <strong>{t("Add custom endpoint / private gateway")}</strong>
-            <span>{t("Supports OpenAI format, vLLM, LM Studio, and private gateways")}</span>
-            <small>{t("Quick setup")} →</small>
-          </button>
         )}
         {!visibleBuiltIns.length && !visibleCustom.length && (
           <p className={styles.empty}>{t("No matching providers or models.")}</p>

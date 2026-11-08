@@ -10,6 +10,7 @@ interface PiVersionSectionProps {
   setupStatus: PiSetupStatus | null;
   setupBusy: boolean;
   setupProgress: string;
+  setupError?: string;
   versionStatus: PiSetupStatus | null;
   checkPiUpdate: () => Promise<void>;
   updatePi: () => Promise<void>;
@@ -19,13 +20,17 @@ export function PiVersionSection({
   setupStatus,
   setupBusy,
   setupProgress,
+  setupError,
   versionStatus,
   checkPiUpdate,
   updatePi,
 }: PiVersionSectionProps) {
   return (
-    <section className={componentClass(styles, "pi-version-section")}>
-      <h2>{t("Pi version")}</h2>
+    <section
+      className={componentClass(styles, "pi-version-section")}
+      aria-labelledby="pi-runtime-updates"
+    >
+      <h3 id="pi-runtime-updates">{t("Pi runtime")}</h3>
       <p className={`settings-note ${utilityStyles.settingsNote}`}>
         {t("Installed: {installed} · Pion verified: {verified}", {
           installed: setupStatus?.installedVersion ?? "—",
@@ -53,6 +58,11 @@ export function PiVersionSection({
         )}
       </div>
       {setupBusy && <p role="status">{setupProgress}</p>}
+      {setupError && (
+        <p className="error" role="alert">
+          {setupError}
+        </p>
+      )}
       {versionStatus?.latestVersion && (
         <p className={`settings-note ${utilityStyles.settingsNote}`} role="status">
           {t("Official latest: {version}", { version: versionStatus.latestVersion })}

@@ -3,7 +3,7 @@ import type { Location } from "../../core/api.ts";
 import type { PanelView } from "../../core/runtime.ts";
 
 export interface Layout {
-  [id: string]: { hidden?: boolean; location?: Location };
+  [id: string]: { hidden?: boolean; location?: Location; collapsed?: boolean };
 }
 
 function readLayout(): Layout {
@@ -17,7 +17,10 @@ function readLayout(): Layout {
 export function useLayout() {
   const [layout, setLayout] = useState<Layout>(readLayout);
 
-  function updatePanel(id: string, change: { location?: Location; hidden?: boolean }) {
+  function updatePanel(
+    id: string,
+    change: { location?: Location; hidden?: boolean; collapsed?: boolean },
+  ) {
     setLayout((current) => {
       const next = { ...current, [id]: { ...current[id], ...change } };
       localStorage.setItem("pion.layout", JSON.stringify(next));

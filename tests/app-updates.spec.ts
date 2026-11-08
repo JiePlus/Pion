@@ -5,7 +5,7 @@ import { taskFixture } from "./task-fixture";
 async function openUpdateSettings(page: Page) {
   await page.goto("/");
   await page.getByRole("button", { name: "Settings", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Pion updates" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Pion App", exact: true })).toBeVisible();
 }
 
 async function updateCalls(page: Page) {
@@ -38,7 +38,9 @@ test("background updates download without installing or restarting", async ({ pa
   await expect(
     page.getByText("Update downloaded — restart Pion to install.").first(),
   ).toBeVisible();
-  await expect(page.getByRole("button", { name: "Check for updates", exact: true })).toBeDisabled();
+  await expect(
+    page.getByRole("button", { name: "Check Pion updates", exact: true }),
+  ).toBeDisabled();
   expect(await updateCalls(page)).toEqual(["plugin:updater|check", "plugin:updater|download"]);
   expect(await page.evaluate(() => localStorage.getItem("fixture.appUpdateInstalled"))).toBeNull();
   expect(await page.evaluate(() => localStorage.getItem("fixture.appRelaunched"))).toBeNull();
@@ -64,7 +66,7 @@ test("disabling background downloads lets the user download on demand", async ({
   await openUpdateSettings(page);
   await expect(page.getByText("Update 0.2.0 is available.")).toBeVisible();
   expect(await updateCalls(page)).toEqual(["plugin:updater|check"]);
-  await page.getByRole("button", { name: "Download update", exact: true }).click();
+  await page.getByRole("button", { name: "Download Pion update", exact: true }).click();
   await expect(
     page.getByRole("button", { name: "Install and restart Pion", exact: true }),
   ).toBeVisible();
@@ -77,7 +79,7 @@ test("manual checks do not download even when background downloads are enabled",
   await availableUpdate(page, { "pion.updates.autoCheck": "off" });
   await openUpdateSettings(page);
   expect(await updateCalls(page)).toEqual([]);
-  await page.getByRole("button", { name: "Check for updates", exact: true }).click();
+  await page.getByRole("button", { name: "Check Pion updates", exact: true }).click();
   await expect(page.getByText("Update 0.2.0 is available.")).toBeVisible();
   expect(await updateCalls(page)).toEqual(["plugin:updater|check"]);
 });
@@ -89,12 +91,16 @@ test("download progress keeps checking disabled and preserves the staged release
   await openUpdateSettings(page);
   await expect(page.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "50");
   await expect(page.getByText("Downloading update… 50%")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Check for updates", exact: true })).toBeDisabled();
+  await expect(
+    page.getByRole("button", { name: "Check Pion updates", exact: true }),
+  ).toBeDisabled();
   await page.evaluate(() => (window as any).fixtureReleaseAppUpdateDownload());
   await expect(
     page.getByRole("button", { name: "Install and restart Pion", exact: true }),
   ).toBeVisible();
-  await expect(page.getByRole("button", { name: "Check for updates", exact: true })).toBeDisabled();
+  await expect(
+    page.getByRole("button", { name: "Check Pion updates", exact: true }),
+  ).toBeDisabled();
   expect(await updateCalls(page)).toEqual(["plugin:updater|check", "plugin:updater|download"]);
 });
 
@@ -103,7 +109,7 @@ test("download failures can retry without checking again", async ({ page }) => {
   await openUpdateSettings(page);
   await expect(page.getByRole("alert")).toContainText("Download interrupted");
   await page.evaluate(() => localStorage.removeItem("fixture.failAppUpdateDownload"));
-  await page.getByRole("button", { name: "Download update", exact: true }).click();
+  await page.getByRole("button", { name: "Download Pion update", exact: true }).click();
   await expect(
     page.getByRole("button", { name: "Install and restart Pion", exact: true }),
   ).toBeVisible();
@@ -120,7 +126,9 @@ test("installation failures retain the staged bytes and restart action", async (
   await openUpdateSettings(page);
   await page.getByRole("button", { name: "Install and restart Pion", exact: true }).click();
   await expect(page.getByRole("alert")).toContainText("Installation failed");
-  await expect(page.getByRole("button", { name: "Check for updates", exact: true })).toBeDisabled();
+  await expect(
+    page.getByRole("button", { name: "Check Pion updates", exact: true }),
+  ).toBeDisabled();
   expect(await page.evaluate(() => localStorage.getItem("fixture.appRelaunched"))).toBeNull();
   await page.evaluate(() => localStorage.removeItem("fixture.failAppUpdateInstall"));
   await page.getByRole("button", { name: "Install and restart Pion", exact: true }).click();
@@ -163,9 +171,11 @@ test("repeated checks release old manifests and do not retain stale availability
   await openUpdateSettings(page);
   await expect(page.getByText("Update 0.2.0 is available.")).toBeVisible();
   await page.evaluate(() => localStorage.removeItem("fixture.appUpdate"));
-  await page.getByRole("button", { name: "Check for updates", exact: true }).click();
+  await page.getByRole("button", { name: "Check Pion updates", exact: true }).click();
   await expect(page.getByText("Pion is up to date.")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Download update", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Download Pion update", exact: true })).toHaveCount(
+    0,
+  );
   expect(
     await page.evaluate(() => JSON.parse(localStorage.getItem("fixture.appUpdateClosed") ?? "[]")),
   ).toEqual([1]);
@@ -174,12 +184,12 @@ test("repeated checks release old manifests and do not retain stale availability
 test("manual check errors are visible and background check errors stay quiet", async ({ page }) => {
   await availableUpdate(page, { "fixture.failAppUpdateCheck": "yes" });
   await openUpdateSettings(page);
-  await expect(page.getByRole("button", { name: "Check for updates", exact: true })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "Check Pion updates", exact: true })).toBeEnabled();
   await expect(page.getByRole("alert")).toHaveCount(0);
-  await page.getByRole("button", { name: "Check for updates", exact: true }).click();
+  await page.getByRole("button", { name: "Check Pion updates", exact: true }).click();
   await expect(page.getByRole("alert")).toContainText("Update check is offline");
   await page.evaluate(() => localStorage.removeItem("fixture.failAppUpdateCheck"));
-  await page.getByRole("button", { name: "Check for updates", exact: true }).click();
+  await page.getByRole("button", { name: "Check Pion updates", exact: true }).click();
   await expect(page.getByText("Update 0.2.0 is available.")).toBeVisible();
   await expect(page.getByRole("alert")).toHaveCount(0);
   expect(await updateCalls(page)).toEqual([
@@ -217,14 +227,16 @@ test("background download preference survives reload", async ({ page }) => {
   await page.reload();
   await page.getByRole("button", { name: "Settings", exact: true }).click();
   await expect(preference).not.toBeChecked();
-  await expect(page.getByRole("button", { name: "Download update", exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Download Pion update", exact: true }),
+  ).toBeVisible();
 });
 
 test("Chinese settings describe staging and explicit installation", async ({ page }) => {
   await availableUpdate(page, { "pion.locale": "zh-CN" });
   await page.goto("/");
   await page.getByRole("button", { name: "设置", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Pion 更新", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Pion 应用", exact: true })).toBeVisible();
   await expect(page.getByText("更新已下载，重启 Pion 以安装。").first()).toBeVisible();
   await expect(page.getByRole("button", { name: "安装并重启 Pion", exact: true })).toBeVisible();
   await expect(page.getByRole("checkbox", { name: "后台自动下载更新", exact: true })).toBeChecked();

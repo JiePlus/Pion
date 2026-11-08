@@ -1,18 +1,33 @@
 .panel {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  flex-direction: column;
+  flex-shrink: 0;
   margin: 0;
   overflow: hidden;
-  border: 1px solid var(--pion-color-line);
+  border-top: 1px solid var(--pion-color-line);
   background: var(--pion-color-surface);
+}
+
+.panel[data-location="mainPanel"] .content,
+.panel[data-location="bottomPanel"] .content {
+  max-height: 28vh;
+  overflow: auto;
 }
 
 .header {
   display: flex;
+  min-height: 42px;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding: 9px 11px;
+  padding: 4px 16px;
+  font-size: 12px;
+}
+
+.panel[data-collapsed="false"] .header {
   border-bottom: 1px solid var(--pion-color-line);
-  font-size: 11px;
 }
 
 .header > div {
@@ -21,12 +36,45 @@
   gap: 4px;
 }
 
+.toggle {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  border-color: transparent;
+  background: transparent;
+  text-align: left;
+  font-size: 12px;
+}
+
+.toggle span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .header select {
-  max-width: 104px;
-  min-height: 27px;
+  max-width: 128px;
+  min-height: 30px;
   padding: 3px;
   border-color: transparent;
   background: transparent;
   color: var(--pion-color-muted);
-  font-size: 9px;
+  font-size: 12px;
+}
+
+.content:not([hidden]) {
+  animation: panel-reveal 180ms ease-out;
+}
+
+@keyframes panel-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }

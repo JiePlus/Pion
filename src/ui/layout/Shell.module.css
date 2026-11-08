@@ -14,32 +14,7 @@
   grid-template-columns: minmax(0, 1fr);
 }
 
-.app.model-view {
-  --pion-size-rail: 320px;
-  --pion-size-topbar: 60px;
-  --pion-color-canvas: #fcfcfd;
-  --pion-color-surface: #ffffff;
-  --pion-color-line: #e2e8f0;
-}
-
-:global(:root[data-theme="dark"]) .app.model-view {
-  --pion-color-canvas: #0b111c;
-  --pion-color-surface: #0e1521;
-  --pion-color-surface-raised: #111827;
-  --pion-color-line: #29364c;
-}
-
-@media (max-width: 850px) {
-  .app.model-view {
-    --pion-size-rail: 60px;
-  }
-}
-
 .rail-collapsed {
-  --pion-size-rail: 60px;
-}
-
-.app.model-view.rail-collapsed {
   --pion-size-rail: 60px;
 }
 
@@ -64,7 +39,8 @@
 .task-recovery {
   padding: 8px 14px;
   border-bottom: 1px solid var(--pion-color-line);
-  font-size: 11px;
+  font-size: 12px;
+  line-height: 1.6;
 }
 
 .preview-banner {
@@ -120,7 +96,7 @@
   color: var(--pion-color-muted);
   background: var(--pion-color-surface);
   font-family: var(--pion-font-mono);
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .statusbar > span {
@@ -140,5 +116,6 @@
   border-radius: 18px;
   background: var(--pion-color-surface-raised);
   box-shadow: var(--pion-shadow-low);
-  font-size: 11px;
+  font-size: 12px;
+  line-height: 1.6;
 }

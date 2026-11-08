@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { t } from "../../core/i18n.ts";
+import { Icon } from "../primitives/Icon.tsx";
 import { Dialog } from "../primitives/Dialog.tsx";
 import type { DiscoveredModel, LocalScan, Provider } from "./modelTypes.ts";
 import styles from "./ModelCatalogDialogs.module.css";
@@ -62,19 +63,22 @@ export function EndpointDialog({
   return (
     <Dialog titleId="endpoint-dialog-title" onClose={onClose} className={styles.endpointDialog}>
       <div className={styles.dialogHeading}>
-        <span className={styles.headingIcon}>⌘</span>
+        <span className={styles.headingIcon}>
+          <Icon name="sliders" size={24} />
+        </span>
         <div>
           <h2 id="endpoint-dialog-title">{t("Add custom endpoint / provider")}</h2>
           <p>{t("Connect a local engine, private gateway, or compatible API proxy")}</p>
         </div>
         <button className={styles.close} type="button" aria-label={t("Close")} onClick={onClose}>
-          ×
+          <Icon name="plus" size={20} className={styles.closeIcon} />
         </button>
       </div>
       <div className={styles.dialogBody}>
         <div className={styles.modeTabs} role="group" aria-label={t("Connection methods")}>
           <button
             type="button"
+            aria-pressed={mode === "endpoint"}
             className={mode === "endpoint" ? styles.selected : ""}
             onClick={() => setMode("endpoint")}
           >
@@ -82,6 +86,7 @@ export function EndpointDialog({
           </button>
           <button
             type="button"
+            aria-pressed={mode === "key"}
             className={mode === "key" ? styles.selected : ""}
             onClick={() => setMode("key")}
           >
@@ -330,7 +335,9 @@ export function DiscoveryDialog({
   return (
     <Dialog titleId="discovery-dialog-title" onClose={onClose} className={styles.discoveryDialog}>
       <div className={styles.dialogHeading}>
-        <span className={styles.headingIcon}>✣</span>
+        <span className={styles.headingIcon}>
+          <Icon name="search" size={24} />
+        </span>
         <div>
           <h2 id="discovery-dialog-title">{t("Fetch model list")}</h2>
           <p>
@@ -339,7 +346,7 @@ export function DiscoveryDialog({
           </p>
         </div>
         <button className={styles.close} type="button" aria-label={t("Close")} onClick={onClose}>
-          ×
+          <Icon name="plus" size={20} className={styles.closeIcon} />
         </button>
       </div>
       <div className={styles.dialogBody}>

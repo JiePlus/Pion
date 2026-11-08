@@ -36,7 +36,9 @@ test("completed setup stays out of regular settings", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Set up Pi" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Pi setup" })).toHaveCount(0);
   await page.getByRole("button", { name: "Settings", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Pi version" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Pi runtime", level: 3, exact: true }),
+  ).toBeVisible();
   await expect(page.getByRole("heading", { name: "Set up Pi" })).toHaveCount(0);
 });
 
@@ -792,7 +794,7 @@ test("theme follows the system, persists an override and sidebar controls stay l
   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
 
   await page.getByRole("button", { name: "Settings", exact: true }).click();
-  await page.getByRole("combobox", { name: "Theme" }).selectOption("dark");
+  await page.getByRole("radio", { name: "Dark", exact: true }).press("Space");
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   await page.reload();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");

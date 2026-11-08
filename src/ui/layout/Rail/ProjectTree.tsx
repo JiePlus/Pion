@@ -116,7 +116,14 @@ export function ProjectTree({
                   {initial}
                 </span>
                 <span className={componentClass(styles, "project-name")}>{project.name}</span>
-                <small>{projectRunning || projectTasks.length}</small>
+                <small
+                  title={[
+                    t("{count} tasks", { count: projectTasks.length }),
+                    ...(projectRunning ? [t("{count} running", { count: projectRunning })] : []),
+                  ].join(" · ")}
+                >
+                  {projectTasks.length}
+                </small>
               </button>
               <button
                 aria-label={t("New task in {project}", { project: project.name })}

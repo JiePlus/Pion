@@ -1,17 +1,13 @@
 .core-composer {
   position: relative;
-  width: min(960px, calc(100% - 40px));
+  width: min(var(--pion-size-reading), calc(100% - 40px));
   margin: 0 auto 13px;
   flex-shrink: 0;
   overflow: visible;
   border: 1px solid var(--pion-color-line-strong);
-  border-radius: 19px;
+  border-radius: 12px;
   background: var(--pion-color-surface-raised);
   box-shadow: var(--pion-shadow-low);
-}
-
-:global(:root[data-theme="dark"]) .core-composer {
-  width: min(1080px, calc(100% - 40px));
 }
 
 .core-composer:focus-within {
@@ -20,11 +16,11 @@
 
 .core-composer > textarea {
   height: auto;
-  min-height: 90px;
+  min-height: 70px;
   max-height: 180px;
-  padding: 19px 21px 6px;
+  padding: 16px 18px 6px;
   border: 0;
-  border-radius: 18px 18px 0 0;
+  border-radius: 11px 11px 0 0;
   background: transparent;
   resize: none;
   font-size: 14px;
@@ -37,7 +33,7 @@
 .core-composer-footer {
   display: flex;
   min-width: 0;
-  min-height: 60px;
+  min-height: 52px;
   align-items: center;
   justify-content: space-between;
   gap: 7px;
@@ -55,6 +51,7 @@
 }
 
 .composer-options {
+  flex-wrap: wrap;
   overflow: visible;
 }
 
@@ -84,7 +81,7 @@
 }
 
 .stop-button {
-  font-size: 9px;
+  font-size: 12px;
 }
 
 .queue-next-button {
@@ -168,7 +165,7 @@
 .slash-command-menu span {
   overflow: hidden;
   color: var(--pion-color-muted);
-  font-size: 11px;
+  font-size: 12px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -197,7 +194,7 @@
 .attachment-strip figcaption {
   overflow: hidden;
   color: var(--pion-color-muted);
-  font-size: 9px;
+  font-size: 12px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -216,7 +213,7 @@
 .image-warning {
   margin: 6px 13px 0;
   color: var(--pion-color-danger);
-  font-size: 11px;
+  font-size: 12px;
 }
 
 @media (max-width: 850px) {
