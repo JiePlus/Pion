@@ -14,7 +14,7 @@ import {
 } from "../scripts/prepare-release.mjs";
 
 const exec = promisify(execFile);
-const fixture = {
+const fixture: Record<string, string> = {
   "package.json": '{"name":"pion","version":"0.1.1","dependencies":{"dep":"0.1.1"}}\n',
   "package-lock.json":
     '{"name":"pion","version":"0.1.1","lockfileVersion":3,"packages":{"":{"name":"pion","version":"0.1.1","dependencies":{"dep":"0.1.1"}},"node_modules/dep":{"version":"0.1.1","integrity":"unchanged"}}}\n',

@@ -2,14 +2,18 @@ import assert from "node:assert/strict";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import test from "node:test";
+import test, { type TestContext } from "node:test";
 import { collectRelease, publishRelease, recordBuild } from "../scripts/publish-release.mjs";
 
 const version = "0.1.2";
 const sha = "a".repeat(40);
 const repository = "JiePlus/Pion";
 
-async function fixture(t) {
+type Release = { id: number; draft: boolean; upload_url: string };
+type Asset = { name: string; path: string; size: number; id: number; content: string };
+type Write = { method: string; path: string; body?: { make_latest?: string } };
+
+async function fixture(t: TestContext) {
   const root = await mkdtemp(join(tmpdir(), "pion-publish-test-"));
   assert.ok(root.startsWith(join(tmpdir(), "pion-publish-test-")));
   t.after(() => rm(root, { recursive: true, force: true }));
@@ -39,10 +43,19 @@ async function fixture(t) {
 }
 
 function fakeGitHub({ newer = false, tagSha = sha } = {}) {
-  const state = { release: null, assets: [], writes: [], failAfterUploads: -1, uploads: 0 };
+  const state: {
+    release: Release | null;
+    assets: Asset[];
+    writes: Write[];
+    failAfterUploads: number;
+    uploads: number;
+  } = { release: null, assets: [], writes: [], failAfterUploads: -1, uploads: 0 };
   let nextId = 100;
   const client = {
-    async request(path, options = {}) {
+    async request(
+      path: string,
+      options: { method?: string; body?: string; allowMissing?: boolean } = {},
+    ) {
       const method = options.method ?? "GET";
       if (method !== "GET")
         state.writes.push({ method, path, body: options.body && JSON.parse(options.body) });
@@ -50,6 +63,7 @@ function fakeGitHub({ newer = false, tagSha = sha } = {}) {
       if (path === "/git/tags/tag-object") return { object: { type: "commit", sha: tagSha } };
       if (path.startsWith("/releases/tags/")) return state.release;
       if (path === "/releases" && method === "POST") {
+        assert.ok(options.body);
         state.release = {
           id: 1,
           ...JSON.parse(options.body),
@@ -65,12 +79,14 @@ function fakeGitHub({ newer = false, tagSha = sha } = {}) {
       if (path.startsWith("/releases?"))
         return newer ? [{ tag_name: "v0.1.3", draft: false, prerelease: false }] : [];
       if (path === "/releases/1" && method === "PATCH") {
+        assert.ok(state.release);
+        assert.ok(options.body);
         Object.assign(state.release, JSON.parse(options.body));
         return state.release;
       }
       throw new Error(`Unexpected request: ${method} ${path}`);
     },
-    async upload(release, asset) {
+    async upload(_release: Release, asset: Omit<Asset, "id" | "content">) {
       state.writes.push({ method: "UPLOAD", path: asset.name });
       if (state.failAfterUploads === state.uploads++)
         throw new Error("Simulated asset upload failure");
@@ -78,7 +94,7 @@ function fakeGitHub({ newer = false, tagSha = sha } = {}) {
       state.assets.push(value);
       return value;
     },
-    async download(asset) {
+    async download(asset: Asset) {
       return asset.content;
     },
   };
@@ -153,6 +169,7 @@ test("a partial upload stays draft; retry repairs only that draft and publishes 
   const { client, state } = fakeGitHub();
   state.failAfterUploads = 2;
   await assert.rejects(publishRelease({ ...options, client }), /Simulated asset upload failure/);
+  assert.ok(state.release);
   assert.equal(state.release.draft, true);
   assert.equal(state.writes.filter((write) => write.method === "PATCH").length, 0);
   state.failAfterUploads = -1;
@@ -160,8 +177,9 @@ test("a partial upload stays draft; retry repairs only that draft and publishes 
   assert.equal(result.latest, true);
   assert.equal(state.release.draft, false);
   const publish = state.writes.at(-1);
+  assert.ok(publish);
   assert.equal(publish.method, "PATCH");
-  assert.equal(publish.body.make_latest, "true");
+  assert.equal(publish.body?.make_latest, "true");
   assert.equal(new Set(state.assets.map((asset) => asset.name)).size, state.assets.length);
   assert.ok(state.assets.some((asset) => asset.name === "latest.json"));
 });
@@ -195,7 +213,9 @@ test("old run recovery cannot roll the latest updater back behind a newer publis
   const { client, state } = fakeGitHub({ newer: true });
   const result = await publishRelease({ ...options, client });
   assert.equal(result.latest, false);
-  assert.equal(state.writes.at(-1).body.make_latest, "false");
+  const publish = state.writes.at(-1);
+  assert.ok(publish);
+  assert.equal(publish.body?.make_latest, "false");
 });
 
 test("annotated release tag must resolve to the reserved SHA", async (t) => {
