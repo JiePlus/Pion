@@ -60,6 +60,7 @@ function tomlVersion(text, file, version) {
 
 export function updateVersionFiles(contents, version) {
   parts(version);
+  /** @type {Record<string, string>} */
   const result = {};
   for (const file of versionFiles) {
     if (file.endsWith(".json")) {
@@ -128,7 +129,19 @@ function metadata(message) {
   }
 }
 
-/** Reserve using git only. beforePush is a test seam for a concurrent writer. */
+/**
+ * Reserve using git only. beforePush is a test seam for a concurrent writer.
+ * @param {{
+ *   cwd?: string,
+ *   runId?: string,
+ *   remote?: string,
+ *   branch?: string,
+ *   maxAttempts?: number,
+ *   beforePush?: (reservation: {
+ *     attempt: number, version: string, tag: string, sha: string, source: string
+ *   }) => void | Promise<void>
+ * }} [options]
+ */
 export async function prepareRelease({
   cwd = process.cwd(),
   runId,
