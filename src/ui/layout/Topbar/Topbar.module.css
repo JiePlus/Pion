@@ -50,7 +50,7 @@
   border-color: transparent;
   background: transparent;
   color: var(--pion-color-ink-soft);
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .view-mode-control select:hover,
@@ -67,7 +67,7 @@
   border-radius: 6px;
   background: var(--pion-color-surface-raised);
   color: var(--pion-color-muted);
-  font-size: 10px;
+  font-size: 12px;
   white-space: nowrap;
 }
 
@@ -131,7 +131,7 @@
 
 .usage-popover p {
   margin: 12px 0 0;
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .usage-popover dl {
@@ -145,7 +145,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 18px;
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .usage-popover dt {
@@ -164,5 +164,19 @@
 @media (max-width: 1040px) {
   .connection-pill {
     display: none;
+  }
+}
+
+@media (max-width: 700px) {
+  .topbar {
+    gap: 8px;
+    padding-inline: 14px;
+  }
+  .header-actions {
+    flex-shrink: 0;
+  }
+  .add-provider {
+    font-size: 12px;
+    padding-inline: 8px;
   }
 }

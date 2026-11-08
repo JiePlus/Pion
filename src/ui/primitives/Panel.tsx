@@ -7,6 +7,7 @@ import type { PanelView } from "../../core/runtime.ts";
 import { PanelBoundary, ViewRenderer } from "../View.tsx";
 import styles from "./Panel.module.css";
 import { Button } from "./Button.tsx";
+import { Icon } from "./Icon.tsx";
 
 export const locationLabels: Record<Location, MessageKey> = {
   sidebar: "Left sidebar",
@@ -25,21 +26,43 @@ export function Panel({
   location,
   onMove,
   onHide,
+  collapsed = false,
+  onToggle,
   run,
 }: {
   panel: PanelView;
   location: Location;
   onMove: (location: Location) => void;
   onHide: () => void;
+  collapsed?: boolean;
+  onToggle?: () => void;
   run: (id: string, args?: Json) => Promise<Json>;
 }) {
   const conversation = panel.id === "agent-chat.conversation";
   const title = localized(panel.title, panel.titleI18n);
   return (
-    <section className={componentClass(styles, "panel")} data-panel={panel.id}>
+    <section
+      className={componentClass(styles, "panel")}
+      data-panel={panel.id}
+      data-location={location}
+      data-collapsed={!conversation && collapsed}
+    >
       {!conversation && (
         <header className={componentClass(styles, "header")}>
-          <span>{title}</span>
+          {onToggle ? (
+            <button
+              className={componentClass(styles, "toggle")}
+              type="button"
+              aria-expanded={!collapsed}
+              aria-controls={`panel-content-${panel.id}`}
+              onClick={onToggle}
+            >
+              <Icon name={collapsed ? "chevron-right" : "chevron-down"} size={16} />
+              <span>{title}</span>
+            </button>
+          ) : (
+            <span>{title}</span>
+          )}
           <div>
             <select
               aria-label={t("Move {title}", { title })}
@@ -58,9 +81,15 @@ export function Panel({
           </div>
         </header>
       )}
-      <PanelBoundary>
-        <ViewRenderer view={panel.view} run={run} />
-      </PanelBoundary>
+      <div
+        id={`panel-content-${panel.id}`}
+        className={componentClass(styles, "content")}
+        hidden={!conversation && collapsed}
+      >
+        <PanelBoundary>
+          <ViewRenderer view={panel.view} run={run} />
+        </PanelBoundary>
+      </div>
     </section>
   );
 }

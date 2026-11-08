@@ -1,5 +1,6 @@
 :root {
   font-family: var(--pion-font-sans);
+  font-size: 14px;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -47,12 +48,17 @@ button {
   transition:
     background 120ms ease,
     border-color 120ms ease,
-    color 120ms ease;
+    color 120ms ease,
+    transform 100ms ease;
 }
 
 button:hover:not(:disabled) {
   border-color: var(--pion-color-line-strong);
   background: var(--pion-color-surface-hover);
+}
+
+button:active:not(:disabled) {
+  transform: translateY(1px);
 }
 
 button:disabled {
@@ -95,7 +101,20 @@ label {
   display: grid;
   gap: 7px;
   color: var(--pion-color-ink-soft);
-  font-size: 13px;
+  font-size: 14px;
+}
+
+label:where(:has(> input[type="checkbox"]), :has(> input[type="radio"])) {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+input[type="checkbox"],
+input[type="radio"] {
+  min-height: 0;
+  flex: 0 0 auto;
+  accent-color: var(--pion-color-brand);
 }
 
 h1,

@@ -43,7 +43,7 @@
 .primary {
   border-color: var(--pion-color-brand-strong);
   background: var(--pion-color-brand-strong);
-  color: var(--pion-color-surface);
+  color: var(--pion-color-on-brand);
 }
 
 .primary:hover:not(:disabled) {
@@ -59,7 +59,7 @@
 
 .toolbar {
   color: var(--pion-color-ink-soft);
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .icon {
@@ -77,8 +77,8 @@
 }
 
 .sm {
-  min-height: 27px;
-  font-size: 11px;
+  min-height: 30px;
+  font-size: 12px;
 }
 
 .iconContent {

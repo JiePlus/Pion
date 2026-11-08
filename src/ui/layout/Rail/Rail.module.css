@@ -17,7 +17,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  min-height: 60px;
+  min-height: var(--pion-size-topbar);
   margin: 0 -10px 14px;
   padding: 0 16px;
   border-bottom: 1px solid var(--pion-color-line);
@@ -104,30 +104,6 @@
   color: var(--pion-color-muted);
   font-size: 10px;
   font-weight: 400;
-}
-
-:global(:root[data-theme="light"]) .new-task-button kbd {
-  color: rgb(255 255 255 / 70%);
-}
-
-:global(:root[data-theme="light"]) .rail nav .new-task-button {
-  border-color: var(--pion-color-brand-strong);
-  background: var(--pion-color-brand-strong);
-  color: #ffffff;
-}
-
-:global(:root[data-theme="light"]) .rail nav .new-task-button.selected {
-  background: var(--pion-color-brand-strong);
-  color: #ffffff;
-}
-
-:global(:root[data-theme="light"]) .rail nav .new-task-button > span:first-child {
-  color: #ffffff;
-}
-
-:global(:root[data-theme="light"]) .rail nav .new-task-button:hover:not(:disabled) {
-  background: var(--pion-color-brand);
-  color: #ffffff;
 }
 
 .rail nav button > span:first-child,
@@ -498,7 +474,7 @@
 :global(.rail-collapsed) .project-row small,
 :global(.rail-collapsed) .project-row button:last-child,
 :global(.rail-collapsed) .task-list,
-:global(.rail-collapsed) .rail-bottom > button,
+:global(.rail-collapsed) .rail-bottom > button > span:last-child,
 :global(.rail-collapsed) .runtime-label > span:not(:global(.dot)) {
   display: none;
 }
@@ -509,7 +485,8 @@
   margin-bottom: 10px;
 }
 
-:global(.rail-collapsed) .rail nav button {
+:global(.rail-collapsed) .rail nav button,
+:global(.rail-collapsed) .rail-bottom > button {
   justify-content: center;
 }
 
@@ -544,7 +521,7 @@
   :global(.app):not(:global(.rail-collapsed)) .project-row small,
   :global(.app):not(:global(.rail-collapsed)) .project-row button:last-child,
   :global(.app):not(:global(.rail-collapsed)) .task-list,
-  :global(.app):not(:global(.rail-collapsed)) .rail-bottom > button,
+  :global(.app):not(:global(.rail-collapsed)) .rail-bottom > button > span:last-child,
   :global(.app):not(:global(.rail-collapsed)) .runtime-label > span:not(:global(.dot)) {
     display: none;
   }
@@ -555,6 +532,7 @@
   }
 
   .rail nav button,
+  .rail-bottom > button,
   .project-row button:first-child,
   .runtime-label {
     justify-content: center;

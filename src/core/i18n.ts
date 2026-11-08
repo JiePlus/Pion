@@ -2,6 +2,16 @@ import type { Locale, LocalizedText } from "./api.ts";
 
 // English source strings are the fallback; application copy lives here, plugin copy stays in plugins.
 const zh = {
+  "Built-in providers": "内置服务商",
+  "No local model service detected. Add a custom endpoint from the toolbar.":
+    "未发现本地模型服务，可从顶栏添加自定义端点。",
+  "Versions and updates": "版本与更新",
+  "Pion App": "Pion 应用",
+  "Check Pion updates": "检查 Pion 更新",
+  "Download Pion update": "下载 Pion 更新",
+  "Pion update download": "Pion 更新下载",
+  "{count} tasks": "{count} 个任务",
+  "{count} running": "{count} 个运行中",
   "Pi conversation": "Pi 对话",
   Model: "模型",
   "Default model": "默认模型",
@@ -463,7 +473,7 @@ const zh = {
   "Pi version": "版本与兼容性",
   "Installed: {installed} · Pion verified: {verified}":
     "已安装：{installed} · Pion 已验证：{verified}",
-  "Check Pi updates": "检查更新",
+  "Check Pi updates": "检查 Pi 更新",
   "Update Pi to {version}": "将 Pi 更新到 {version}",
   "Official latest: {version}": "官方最新版本：{version}",
   "This release has not been verified with Pion yet.": "此版本尚未通过 Pion 验证。",

@@ -12,10 +12,6 @@
   background: var(--pion-color-canvas);
 }
 
-:global(:root[data-theme="dark"]) :global(.new-task) .slot-main {
-  background-image: radial-gradient(ellipse at 48% 45%, rgb(16 185 129 / 5%), transparent 58%);
-}
-
 .slot-side {
   position: relative;
   width: 250px;
@@ -34,6 +30,17 @@
   overflow: auto;
   resize: vertical;
   border-top: 1px solid var(--pion-color-line);
+}
+
+.slot-bottom:has(> [data-collapsed="true"]):not(:has(> [data-collapsed="false"])) {
+  height: auto;
+  min-height: 0;
+  flex-shrink: 0;
+  resize: none;
+}
+
+.slot-bottom:has(> [data-collapsed="true"]):not(:has(> [data-collapsed="false"])) > :last-child {
+  display: none;
 }
 
 .slot-toolbar {

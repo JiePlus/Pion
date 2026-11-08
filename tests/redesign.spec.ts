@@ -34,7 +34,7 @@ test("redesigned shortcuts and controls perform their actions", async ({ page })
   await expect(page.getByRole("textbox", { name: "Describe your task" })).toBeFocused();
 
   await page.getByRole("button", { name: "Settings", exact: true }).click();
-  await page.getByRole("button", { name: "Dark", exact: true }).click();
+  await page.getByRole("radio", { name: "Dark", exact: true }).press("Space");
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
 
   await page.getByRole("button", { name: "Pi models" }).click();
@@ -47,6 +47,33 @@ test("redesigned shortcuts and controls perform their actions", async ({ page })
   );
 });
 
+for (const theme of ["light", "dark"]) {
+  test(`short new-task viewport keeps sending reachable in ${theme} mode`, async ({ page }) => {
+    await taskFixture(page);
+    await page.addInitScript((value) => localStorage.setItem("pion.theme", value), theme);
+    await page.setViewportSize({ width: 720, height: 500 });
+    await page.goto("/");
+    await page.getByRole("textbox", { name: "Describe your task" }).fill("Inspect the project");
+    const send = page.getByRole("button", { name: "Start task", exact: true });
+    await expect(send).toBeInViewport({ ratio: 1 });
+    const sendBounds = await send.boundingBox();
+    const statusBounds = await page.locator(".statusbar").boundingBox();
+    expect(sendBounds).not.toBeNull();
+    expect(statusBounds).not.toBeNull();
+    expect(sendBounds!.y + sendBounds!.height).toBeLessThanOrEqual(statusBounds!.y);
+    await send.click();
+    await expect(
+      page
+        .getByRole("region", { name: "Pi conversation" })
+        .getByText("Inspect the project", { exact: true }),
+    ).toBeVisible();
+    await page.getByRole("button", { name: "Settings", exact: true }).click();
+    await expect(
+      page.getByRole("heading", { name: "Appearance and display", exact: true }),
+    ).toBeVisible();
+  });
+}
+
 test.describe("Chinese desktop layout", () => {
   test.use({ locale: "zh-CN" });
 
@@ -58,7 +85,7 @@ test.describe("Chinese desktop layout", () => {
     await page.screenshot({ path: "artifacts/ui-qa/chinese-workspace-light.png" });
 
     await page.getByRole("button", { name: "设置", exact: true }).click();
-    await page.getByRole("button", { name: "深色终端" }).click();
+    await page.getByRole("radio", { name: "深色终端", exact: true }).press("Space");
     await page.getByRole("button", { name: "新建任务", exact: true }).click();
     await page.screenshot({ path: "artifacts/ui-qa/chinese-workspace-dark.png" });
   });

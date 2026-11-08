@@ -35,7 +35,7 @@ test("model services keep a manual endpoint path when nothing is detected", asyn
   await expect(localServices).toBeVisible();
   await expect(
     localServices.getByText(
-      "No local model service detected. Add a custom endpoint manually below.",
+      "No local model service detected. Add a custom endpoint from the toolbar.",
     ),
   ).toBeVisible();
 

@@ -5,7 +5,6 @@ import { t } from "../../core/i18n.ts";
 import type { AppUpdateController } from "../hooks/useAppUpdate.ts";
 import { Button } from "../primitives/Button.tsx";
 import { Checkbox } from "../primitives/Checkbox.tsx";
-import { Icon } from "../primitives/Icon.tsx";
 import styles from "./Settings.module.css";
 
 export function PionUpdateSection({ update }: { update: AppUpdateController }) {
@@ -18,11 +17,11 @@ export function PionUpdateSection({ update }: { update: AppUpdateController }) {
       : undefined;
 
   return (
-    <section className={componentClass(styles, "settings-card")}>
-      <h2>
-        <Icon name="download" size={16} />
-        {t("Pion updates")}
-      </h2>
+    <section
+      className={componentClass(styles, "product-updates")}
+      aria-labelledby="pion-app-updates"
+    >
+      <h3 id="pion-app-updates">{t("Pion App")}</h3>
       <p className="muted">
         {t("Pion can check for new releases and download them in the background.")}
       </p>
@@ -36,7 +35,7 @@ export function PionUpdateSection({ update }: { update: AppUpdateController }) {
           disabled={!native || busy || state.phase === "ready"}
           onClick={() => void checkForUpdate(true)}
         >
-          {t("Check for updates")}
+          {t("Check Pion updates")}
         </Button>
         {(state.phase === "available" || (state.phase === "error" && state.updateVersion)) && (
           <Button
@@ -45,7 +44,7 @@ export function PionUpdateSection({ update }: { update: AppUpdateController }) {
             disabled={!native}
             onClick={() => void downloadUpdate()}
           >
-            {t("Download update")}
+            {t("Download Pion update")}
           </Button>
         )}
         {state.phase === "ready" && (
@@ -69,9 +68,10 @@ export function PionUpdateSection({ update }: { update: AppUpdateController }) {
             <div
               className={componentClass(styles, "update-progress")}
               role="progressbar"
+              aria-label={t("Pion update download")}
               aria-valuemin={0}
               aria-valuemax={100}
-              aria-valuenow={percent ?? 0}
+              aria-valuenow={percent}
             >
               <span style={{ width: `${percent ?? 0}%` }} />
             </div>

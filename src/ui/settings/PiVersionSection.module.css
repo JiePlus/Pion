@@ -1,16 +1,22 @@
 .pi-version-section {
-  margin: 28px 0;
-  padding: 24px;
-  border: 1px solid var(--pion-color-line);
-  border-radius: 12px;
-  background: var(--pion-color-surface);
+  min-width: 0;
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid var(--pion-color-line);
 }
 
-.pi-version-section h2 {
-  margin: 0 0 14px;
+.pi-version-section h3 {
+  margin: 0 0 8px;
   font-size: 14px;
 }
 
 .pi-version-section > p {
-  margin-bottom: 16px;
+  margin-bottom: 12px;
+  font-size: 13px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.pi-version-section > [role="status"] {
+  margin-top: 12px;
 }

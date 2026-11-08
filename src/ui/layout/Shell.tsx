@@ -127,6 +127,19 @@ export function Shell({ runtime, boot }: { runtime: Runtime; boot: Boot }) {
         key={view.id}
         panel={view}
         location={layout[view.id]?.location ?? view.location}
+        collapsed={
+          layout[view.id]?.collapsed ??
+          (!layout[view.id] && ["mainPanel", "bottomPanel"].includes(view.location))
+        }
+        onToggle={() =>
+          action("core.layout", {
+            id: view.id,
+            collapsed: !(
+              layout[view.id]?.collapsed ??
+              (!layout[view.id] && ["mainPanel", "bottomPanel"].includes(view.location))
+            ),
+          })
+        }
         onMove={(location) => action("core.layout", { id: view.id, location })}
         onHide={() => action("core.layout", { id: view.id, hidden: true })}
         run={run}
@@ -141,7 +154,7 @@ export function Shell({ runtime, boot }: { runtime: Runtime; boot: Boot }) {
   return (
     <ThemeProvider value={themePreference}>
       <div
-        className={`${componentClass(styles, "app")} ${page === "setup" ? componentClass(styles, "setup-page") : ""} ${page === "models" ? componentClass(styles, "model-view") : ""} ${railCollapsed ? componentClass(styles, "rail-collapsed") : ""}`}
+        className={`${componentClass(styles, "app")} ${page === "setup" ? componentClass(styles, "setup-page") : ""} ${railCollapsed ? componentClass(styles, "rail-collapsed") : ""}`}
         onContextMenu={(event) => {
           if (at("contextMenu").length) {
             event.preventDefault();

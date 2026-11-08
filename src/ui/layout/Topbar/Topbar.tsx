@@ -113,20 +113,12 @@ export function Topbar({
       </div>
       {!(page === "workspace" && task) && (
         <div className={componentClass(styles, "page-actions")}>
-          <span className={componentClass(styles, "connection-pill")}>
-            <StatusDot offline={page === "models" ? !connected : !setupStatus?.modelReady} />
-            {page === "models"
-              ? connected
-                ? t("Pi RPC connected")
-                : t("Pi RPC disconnected")
-              : t(
-                  !setupStatus && native
-                    ? "Checking Pi…"
-                    : setupStatus?.modelReady
-                      ? "Workspace ready"
-                      : "Pi setup required",
-                )}
-          </span>
+          {page !== "workspace" && native && !setupStatus?.modelReady && (
+            <span className={componentClass(styles, "connection-pill")} role="status">
+              <StatusDot offline />
+              {t(!setupStatus ? "Checking Pi…" : "Pi setup required")}
+            </span>
+          )}
           {page === "models" && (
             <button
               type="button"
@@ -153,12 +145,12 @@ export function Topbar({
               <option value="verbose">{t("Verbose")}</option>
             </select>
           </label>
-          <span
-            className={`${componentClass(styles, "connection-pill")} ${connected ? componentClass(styles, "connected") : componentClass(styles, "offline")}`}
-          >
-            <StatusDot />
-            {t(connected ? "Connected" : "Disconnected")}
-          </span>
+          {!connected && (
+            <span className={componentClass(styles, "connection-pill")} role="status">
+              <StatusDot offline />
+              {t("Disconnected")}
+            </span>
+          )}
           <button
             ref={usageButton}
             type="button"
