@@ -1,0 +1,2434 @@
+<title>Pion Liquid Glass</title>
+<meta name="claude:viewport-fit-sides" content="cover" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+  rel="stylesheet"
+  href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&family=Outfit:wght@200;300;500;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
+/>
+<style>
+  /* Layout: desktop agent harness. Full-window, no page scroll.
+     [ glass sidebar: threads by project ] [ conversation sheet + docked composer ] [ resizable side panel: Diff / Session / Usage ]
+     Big numerals live only where a number is the point: empty state, usage, settings overview. */
+  :root {
+    --font-cn: "Noto Sans SC", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    --font-display: "Outfit", "SF Pro Display", -apple-system, "Segoe UI", sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+    --bg: #e6e9f2;
+    --ink: #0b0d1a;
+    --ink-2: rgb(11 13 26 / 66%);
+    --ink-3: rgb(11 13 26 / 42%);
+    --line: rgb(11 13 26 / 9%);
+    --well: rgb(11 13 26 / 4.5%);
+    --sheet: rgb(255 255 255 / 58%);
+    --glass-tint: rgb(255 255 255 / 34%);
+    --glass-tint-strong: rgb(255 255 255 / 70%);
+    --glass-shine: rgb(255 255 255 / 85%);
+    --glass-shadow: 0 6px 6px rgb(20 24 60 / 8%), 0 0 20px rgb(20 24 60 / 6%);
+    --menu-hover: rgb(255 255 255 / 62%);
+
+    --blue: 0 113 227;
+    --purple: 151 71 255;
+    --green: 36 160 80;
+    --orange: 232 120 0;
+    --red: 224 48 72;
+    --orb: 0.5;
+
+    --apple: linear-gradient(100deg, #0894ff 0%, #c959dd 34%, #ff2e54 68%, #ff9004 100%);
+    --spring: cubic-bezier(0.175, 0.885, 0.32, 2.2);
+    --sidebar: 272px;
+    --panel: 420px;
+    --reading: 780px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --bg: #05060b;
+      --ink: #ffffff;
+      --ink-2: rgb(255 255 255 / 68%);
+      --ink-3: rgb(255 255 255 / 42%);
+      --line: rgb(255 255 255 / 9%);
+      --well: rgb(255 255 255 / 5%);
+      --sheet: rgb(14 16 26 / 62%);
+      --glass-tint: rgb(255 255 255 / 6%);
+      --glass-tint-strong: rgb(30 33 46 / 82%);
+      --glass-shine: rgb(255 255 255 / 26%);
+      --glass-shadow: 0 6px 6px rgb(0 0 0 / 20%), 0 0 20px rgb(0 0 0 / 10%);
+      --menu-hover: rgb(255 255 255 / 10%);
+      --blue: 41 151 255;
+      --purple: 191 90 242;
+      --green: 48 209 88;
+      --orange: 255 159 10;
+      --red: 255 69 58;
+      --orb: 0.4;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #05060b;
+    --ink: #ffffff;
+    --ink-2: rgb(255 255 255 / 68%);
+    --ink-3: rgb(255 255 255 / 42%);
+    --line: rgb(255 255 255 / 9%);
+    --well: rgb(255 255 255 / 5%);
+    --sheet: rgb(14 16 26 / 62%);
+    --glass-tint: rgb(255 255 255 / 6%);
+    --glass-tint-strong: rgb(30 33 46 / 82%);
+    --glass-shine: rgb(255 255 255 / 26%);
+    --glass-shadow: 0 6px 6px rgb(0 0 0 / 20%), 0 0 20px rgb(0 0 0 / 10%);
+    --menu-hover: rgb(255 255 255 / 10%);
+    --blue: 41 151 255;
+    --purple: 191 90 242;
+    --green: 48 209 88;
+    --orange: 255 159 10;
+    --red: 255 69 58;
+    --orb: 0.4;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+  html,
+  body {
+    height: 100%;
+  }
+  body {
+    margin: 0;
+    overflow: hidden;
+    color: var(--ink);
+    background: var(--bg);
+    font-family: var(--font-cn);
+    font-size: 13.5px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wallpaper {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background:
+      radial-gradient(
+        40vmax 40vmax at 4% 8%,
+        rgb(var(--blue) / var(--orb)),
+        rgb(var(--blue) / 0) 70%
+      ),
+      radial-gradient(
+        34vmax 34vmax at 98% 4%,
+        rgb(var(--purple) / var(--orb)),
+        rgb(var(--purple) / 0) 70%
+      ),
+      radial-gradient(
+        44vmax 44vmax at 60% 112%,
+        rgb(var(--orange) / calc(var(--orb) * 0.75)),
+        rgb(var(--orange) / 0) 70%
+      ),
+      var(--bg);
+  }
+  button,
+  input,
+  textarea {
+    font: inherit;
+    color: inherit;
+  }
+  button {
+    cursor: pointer;
+  }
+  :focus-visible {
+    outline: 2px solid rgb(var(--blue));
+    outline-offset: 2px;
+  }
+  h1,
+  h2,
+  h3,
+  p {
+    margin: 0;
+  }
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+  svg.i {
+    width: 16px;
+    height: 16px;
+    flex: none;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.6;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  [hidden] {
+    display: none !important;
+  }
+
+  /* ===== Liquid glass (structure per spec) ===== */
+  .liquidGlass-wrapper {
+    position: relative;
+    display: flex;
+    overflow: hidden;
+    padding: 0.6rem;
+    border-radius: 2rem;
+    box-shadow: var(--glass-shadow);
+    transition: all 0.4s var(--spring);
+  }
+  .liquidGlass-effect {
+    position: absolute;
+    z-index: 0;
+    inset: 0;
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
+    filter: url(#glass-distortion);
+  }
+  .liquidGlass-tint {
+    position: absolute;
+    z-index: 1;
+    inset: 0;
+    background: var(--glass-tint);
+  }
+  .liquidGlass-shine {
+    position: absolute;
+    z-index: 2;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    box-shadow:
+      inset 2px 2px 1px 0 var(--glass-shine),
+      inset -1px -1px 1px 1px var(--glass-shine);
+  }
+  .liquidGlass-text {
+    position: relative;
+    z-index: 3;
+    width: 100%;
+    min-width: 0;
+    transition: transform 0.4s var(--spring);
+  }
+  .lg.strong > .liquidGlass-tint {
+    background: var(--glass-tint-strong);
+  }
+  .lg.bounce {
+    cursor: pointer;
+  }
+  .lg.bounce:hover {
+    padding: 0.8rem;
+    border-radius: 2.5rem;
+  }
+  .lg.bounce:hover > .liquidGlass-text {
+    transform: scale(0.95);
+  }
+  .menu-item {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    width: 100%;
+    padding: 0.4rem 0.6rem;
+    border-radius: 0.8rem;
+    border: 0;
+    background: none;
+    color: var(--ink-2);
+    text-align: left;
+    white-space: nowrap;
+    transition: all 0.1s ease-in;
+  }
+  .menu-item:hover,
+  .menu-item.on {
+    color: var(--ink);
+    background-color: var(--menu-hover);
+    box-shadow: inset -2px -2px 2px rgb(0 0 0 / 10%);
+    backdrop-filter: blur(2px);
+  }
+
+  /* ===== Type ===== */
+  .en {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+  .en-s {
+    font-family: var(--font-display);
+    font-weight: 300;
+    font-size: 0.6em;
+    letter-spacing: 0.02em;
+    color: var(--ink-3);
+    margin-left: 0.35em;
+  }
+  .muted {
+    color: var(--ink-2);
+  }
+  .faint {
+    color: var(--ink-3);
+  }
+  .mono {
+    font-family: var(--font-mono);
+    font-size: 12px;
+  }
+  .t-s {
+    font-size: 12px;
+  }
+  .num {
+    font-family: var(--font-display);
+    font-weight: 800;
+    line-height: 0.85;
+    letter-spacing: -0.045em;
+    font-variant-numeric: tabular-nums;
+  }
+  .unit {
+    font-size: 0.36em;
+    font-weight: 300;
+    letter-spacing: 0;
+    margin-left: 0.08em;
+  }
+  .apple {
+    background: var(--apple);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .c-blue {
+    color: rgb(var(--blue));
+  }
+  .c-green {
+    color: rgb(var(--green));
+  }
+  .c-orange {
+    color: rgb(var(--orange));
+  }
+  .c-purple {
+    color: rgb(var(--purple));
+  }
+  .c-red {
+    color: rgb(var(--red));
+  }
+  .f-blue,
+  .f-green,
+  .f-orange,
+  .f-purple {
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .f-blue {
+    background-image: linear-gradient(180deg, rgb(var(--blue)) 30%, rgb(var(--blue) / 22%));
+  }
+  .f-green {
+    background-image: linear-gradient(180deg, rgb(var(--green)) 30%, rgb(var(--green) / 22%));
+  }
+  .f-orange {
+    background-image: linear-gradient(180deg, rgb(var(--orange)) 30%, rgb(var(--orange) / 22%));
+  }
+  .f-purple {
+    background-image: linear-gradient(180deg, rgb(var(--purple)) 30%, rgb(var(--purple) / 22%));
+  }
+  .rule {
+    height: 2px;
+    border-radius: 2px;
+  }
+  .rule.blue {
+    background: linear-gradient(90deg, rgb(var(--blue)), rgb(var(--blue) / 0));
+  }
+  .rule.green {
+    background: linear-gradient(90deg, rgb(var(--green)), rgb(var(--green) / 0));
+  }
+  .rule.orange {
+    background: linear-gradient(90deg, rgb(var(--orange)), rgb(var(--orange) / 0));
+  }
+  .rule.purple {
+    background: linear-gradient(90deg, rgb(var(--purple)), rgb(var(--purple) / 0));
+  }
+
+  /* ===== Small parts ===== */
+  .row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .grow {
+    flex: 1;
+    min-width: 0;
+  }
+  .ellipsis {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: var(--well);
+    font-size: 12px;
+    color: var(--ink-2);
+    white-space: nowrap;
+  }
+  .chip b {
+    font-family: var(--font-mono);
+    font-weight: 500;
+    font-size: 11.5px;
+    color: var(--ink);
+  }
+  button.chip:hover {
+    color: var(--ink);
+    background: var(--menu-hover);
+  }
+  .chip.blue {
+    color: rgb(var(--blue));
+    border-color: rgb(var(--blue) / 32%);
+    background: rgb(var(--blue) / 10%);
+  }
+  .chip.green {
+    color: rgb(var(--green));
+    border-color: rgb(var(--green) / 32%);
+    background: rgb(var(--green) / 10%);
+  }
+  .chip.orange {
+    color: rgb(var(--orange));
+    border-color: rgb(var(--orange) / 32%);
+    background: rgb(var(--orange) / 10%);
+  }
+  .chip.purple {
+    color: rgb(var(--purple));
+    border-color: rgb(var(--purple) / 32%);
+    background: rgb(var(--purple) / 10%);
+  }
+  .ex {
+    font-family: var(--font-mono);
+    font-size: 9.5px;
+    letter-spacing: 0.1em;
+    color: var(--ink-3);
+    border: 1px dashed var(--line);
+    border-radius: 6px;
+    padding: 0 5px;
+  }
+  .dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    flex: none;
+    display: inline-block;
+  }
+  .dot.run {
+    background: rgb(var(--blue));
+    box-shadow: 0 0 0 3px rgb(var(--blue) / 22%);
+    animation: pulse 1.8s ease-in-out infinite;
+  }
+  .dot.done {
+    background: rgb(var(--green));
+  }
+  .dot.attn {
+    background: rgb(var(--orange));
+  }
+  @keyframes pulse {
+    50% {
+      box-shadow: 0 0 0 6px rgb(var(--blue) / 0);
+    }
+  }
+  .ibtn {
+    width: 30px;
+    height: 30px;
+    display: grid;
+    place-items: center;
+    flex: none;
+    border-radius: 9px;
+    border: 0;
+    background: none;
+    color: var(--ink-2);
+  }
+  .ibtn:hover,
+  .ibtn.on {
+    background: var(--menu-hover);
+    color: var(--ink);
+  }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 6px 12px;
+    border-radius: 10px;
+    border: 1px solid var(--line);
+    background: var(--well);
+    font-weight: 500;
+    font-size: 12.5px;
+    white-space: nowrap;
+  }
+  .btn:hover {
+    background: var(--menu-hover);
+  }
+  .btn.primary {
+    color: #fff;
+    border-color: transparent;
+    background: rgb(var(--blue));
+  }
+  kbd {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    padding: 1px 6px;
+    border-radius: 5px;
+    border: 1px solid var(--line);
+    background: var(--well);
+    color: var(--ink-2);
+  }
+  .switch {
+    width: 34px;
+    height: 20px;
+    border-radius: 10px;
+    background: rgb(var(--green));
+    position: relative;
+    flex: none;
+  }
+  .switch::after {
+    content: "";
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #fff;
+  }
+  .switch.off {
+    background: var(--line);
+  }
+  .switch.off::after {
+    right: auto;
+    left: 2px;
+  }
+  .lineart .s {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.4;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  /* ===== Window ===== */
+  .window {
+    height: 100%;
+    display: grid;
+    grid-template-columns: var(--sidebar) minmax(0, 1fr) auto;
+    gap: 8px;
+    padding-block: 8px;
+    padding-left: max(8px, env(safe-area-inset-left, 0px));
+    padding-right: max(8px, env(safe-area-inset-right, 0px));
+  }
+
+  /* Sidebar */
+  .sidebar {
+    border-radius: 18px;
+    padding: 0;
+    min-height: 0;
+  }
+  .sidebar > .liquidGlass-text {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+  }
+  .titlebar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 44px;
+    padding: 0 12px;
+    flex: none;
+  }
+  .lights {
+    display: flex;
+    gap: 8px;
+  }
+  .lights i {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    display: block;
+  }
+  .lights i:nth-child(1) {
+    background: #ff5f57;
+  }
+  .lights i:nth-child(2) {
+    background: #febc2e;
+  }
+  .lights i:nth-child(3) {
+    background: #28c840;
+  }
+  .side-top {
+    display: grid;
+    gap: 2px;
+    padding: 4px 8px 8px;
+    flex: none;
+  }
+  .side-top .menu-item {
+    font-size: 13px;
+  }
+  .side-top .menu-item kbd {
+    margin-left: auto;
+  }
+  .side-scroll {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 4px 8px 8px;
+    scrollbar-width: thin;
+  }
+  .group-head {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 12px 10px 4px;
+  }
+  .group-head .en {
+    flex: 1;
+  }
+  .group-head .ibtn {
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+  }
+  .thread {
+    font-size: 13px;
+    gap: 8px;
+    padding-block: 0.38rem;
+  }
+  .thread .ellipsis {
+    flex: 1;
+  }
+  .thread time {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    color: var(--ink-3);
+    flex: none;
+  }
+  .side-foot {
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    border-top: 1px solid var(--line);
+  }
+  .pi-status {
+    display: grid;
+    line-height: 1.25;
+  }
+
+  /* Main sheet */
+  .sheet {
+    min-width: 0;
+    min-height: 0;
+    border-radius: 18px;
+    overflow: hidden;
+    display: grid;
+    grid-template-rows: 48px minmax(0, 1fr) auto;
+    background: var(--sheet);
+    border: 1px solid var(--line);
+    backdrop-filter: blur(30px) saturate(1.4);
+    -webkit-backdrop-filter: blur(30px) saturate(1.4);
+  }
+  .bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 10px 0 16px;
+    border-bottom: 1px solid var(--line);
+    min-width: 0;
+  }
+  .bar h1 {
+    font-size: 14px;
+    font-weight: 700;
+  }
+  .scroll {
+    overflow-y: auto;
+    min-height: 0;
+  }
+  .reading {
+    max-width: var(--reading);
+    margin: 0 auto;
+    padding: 28px 24px 24px;
+    display: grid;
+    gap: 20px;
+  }
+
+  /* Messages */
+  .msg-user {
+    justify-self: end;
+    max-width: 80%;
+    padding: 10px 14px;
+    border-radius: 18px 18px 6px 18px;
+    background: rgb(var(--blue) / 14%);
+    border: 1px solid rgb(var(--blue) / 26%);
+  }
+  .msg-pi {
+    display: grid;
+    gap: 10px;
+  }
+  .msg-pi p {
+    line-height: 1.75;
+  }
+  .msg-pi ul {
+    margin: 0;
+    padding-left: 1.2em;
+    line-height: 1.8;
+  }
+  .fold {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 7px 10px;
+    border-radius: 10px;
+    border: 1px solid var(--line);
+    background: var(--well);
+    font-size: 12.5px;
+    color: var(--ink-2);
+    min-width: 0;
+  }
+  .fold code {
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    color: var(--ink);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+  }
+  .fold .en {
+    flex: none;
+  }
+  pre.code {
+    margin: 0;
+    overflow-x: auto;
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: var(--well);
+    border: 1px solid var(--line);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    line-height: 1.7;
+  }
+  .tk {
+    color: rgb(var(--purple));
+  }
+  .ts {
+    color: rgb(var(--green));
+  }
+  .tp {
+    color: rgb(var(--blue));
+  }
+  .tc {
+    color: var(--ink-3);
+  }
+  .msg-tools {
+    display: flex;
+    gap: 2px;
+    color: var(--ink-3);
+  }
+  .msg-tools .ibtn {
+    width: 26px;
+    height: 26px;
+  }
+
+  /* Composer */
+  .composer-wrap {
+    padding: 0 24px 18px;
+  }
+  .composer {
+    max-width: var(--reading);
+    margin: 0 auto;
+    border-radius: 22px;
+    padding: 0;
+  }
+  .composer > .liquidGlass-text {
+    display: grid;
+    gap: 6px;
+    padding: 12px 12px 10px 16px;
+  }
+  .queue {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    border-radius: 12px;
+    border: 1px dashed rgb(var(--purple) / 42%);
+    font-size: 12.5px;
+  }
+  .composer textarea {
+    width: 100%;
+    min-height: 44px;
+    max-height: 200px;
+    resize: none;
+    border: 0;
+    background: none;
+    outline: none;
+    font-size: 14.5px;
+    line-height: 1.6;
+    color: var(--ink);
+    padding: 2px 0;
+  }
+  .composer textarea::placeholder {
+    color: var(--ink-3);
+  }
+  .send {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 0;
+    display: grid;
+    place-items: center;
+    flex: none;
+    color: #fff;
+    background: rgb(var(--blue));
+  }
+  .send.stop {
+    background: rgb(var(--red));
+  }
+  .ctx {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--ink-3);
+  }
+  .ctx svg {
+    width: 18px;
+    height: 18px;
+    transform: rotate(-90deg);
+  }
+  .seg {
+    display: inline-flex;
+    padding: 2px;
+    gap: 2px;
+    border-radius: 999px;
+    background: var(--well);
+    border: 1px solid var(--line);
+  }
+  .seg span {
+    padding: 2px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    color: var(--ink-2);
+  }
+  .seg span.on {
+    background: var(--glass-tint-strong);
+    color: var(--ink);
+    box-shadow: inset 1px 1px 0 var(--glass-shine);
+  }
+  .composer-hint {
+    max-width: var(--reading);
+    margin: 8px auto 0;
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    font-size: 11.5px;
+    color: var(--ink-3);
+  }
+
+  /* Empty state (new task) */
+  .empty {
+    min-height: 100%;
+    display: grid;
+    align-content: center;
+    justify-items: center;
+    gap: 26px;
+    padding: 40px 24px;
+  }
+  .empty-title {
+    display: grid;
+    justify-items: center;
+    gap: 10px;
+    text-align: center;
+  }
+  .empty-title h2 {
+    font-weight: 900;
+    font-size: clamp(32px, 3.6vw, 64px);
+    line-height: 1.08;
+    letter-spacing: -0.02em;
+  }
+  .empty .composer {
+    width: 100%;
+  }
+  .starter {
+    width: 100%;
+    max-width: var(--reading);
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+  }
+  .starter .lg {
+    border-radius: 18px;
+    padding: 14px;
+  }
+  .starter .liquidGlass-text {
+    display: grid;
+    gap: 8px;
+  }
+  .starter b {
+    font-size: 13.5px;
+  }
+  .glance {
+    width: 100%;
+    max-width: var(--reading);
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+  }
+  .glance > button {
+    display: grid;
+    gap: 6px;
+    padding: 14px 16px;
+    border-radius: 18px;
+    border: 1px solid var(--line);
+    background: var(--well);
+    text-align: left;
+    transition: all 0.1s ease-in;
+  }
+  .glance > button:hover {
+    background: var(--menu-hover);
+  }
+  .glance > button.on {
+    border-color: rgb(var(--blue) / 55%);
+    box-shadow: 0 0 0 3px rgb(var(--blue) / 14%);
+  }
+  .filter-row {
+    display: flex;
+    gap: 2px;
+    padding: 0 8px 4px;
+    flex: none;
+  }
+  .filter-row .menu-item {
+    width: auto;
+    font-size: 12px;
+    padding: 0.25rem 0.55rem;
+  }
+  .ctx {
+    cursor: pointer;
+    border-radius: 8px;
+    padding: 2px 4px;
+  }
+  .ctx:hover {
+    background: var(--menu-hover);
+    color: var(--ink);
+  }
+  .menu-anchor {
+    position: relative;
+  }
+  .popover {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 6px);
+    z-index: 30;
+    width: 200px;
+    border-radius: 16px;
+    padding: 6px;
+  }
+  .popover > .liquidGlass-text {
+    display: grid;
+    gap: 2px;
+  }
+  .popover .menu-item {
+    font-size: 13px;
+  }
+  .glance .num {
+    font-size: clamp(40px, 3.4vw, 64px);
+  }
+
+  /* Side panel */
+  .panel {
+    width: var(--panel);
+    min-width: 0;
+    min-height: 0;
+    border-radius: 18px;
+    overflow: hidden;
+    display: grid;
+    grid-template-rows: 48px minmax(0, 1fr);
+    background: var(--sheet);
+    border: 1px solid var(--line);
+    backdrop-filter: blur(30px) saturate(1.4);
+    -webkit-backdrop-filter: blur(30px) saturate(1.4);
+  }
+  .tabs {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    padding: 0 8px;
+    border-bottom: 1px solid var(--line);
+  }
+  .tabs .menu-item {
+    width: auto;
+    font-size: 12.5px;
+    padding: 0.3rem 0.6rem;
+  }
+  .pane {
+    overflow-y: auto;
+    min-height: 0;
+    padding: 14px;
+    display: grid;
+    gap: 14px;
+    align-content: start;
+  }
+  .file {
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .file-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    background: var(--well);
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+  }
+  .diff {
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    line-height: 1.75;
+    overflow-x: auto;
+  }
+  .diff div {
+    padding: 0 10px;
+    white-space: pre;
+  }
+  .diff .add {
+    background: rgb(var(--green) / 12%);
+    color: rgb(var(--green));
+  }
+  .diff .del {
+    background: rgb(var(--red) / 10%);
+    color: rgb(var(--red));
+  }
+  .diff .ctxl {
+    color: var(--ink-3);
+  }
+  .stat-card {
+    display: grid;
+    gap: 10px;
+    padding: 16px;
+    border-radius: 16px;
+    border: 1px solid var(--line);
+    background: var(--well);
+  }
+  .kv {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 6px 12px;
+    font-size: 12.5px;
+    margin: 0;
+  }
+  .kv dt {
+    color: var(--ink-2);
+  }
+  .kv dd {
+    margin: 0;
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+  }
+  .actions {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+  }
+  .action {
+    display: grid;
+    justify-items: center;
+    gap: 5px;
+    padding: 10px 4px;
+    border-radius: 12px;
+    border: 1px solid var(--line);
+    background: var(--well);
+    font-size: 12px;
+    color: var(--ink-2);
+  }
+  .action:hover {
+    background: var(--menu-hover);
+    color: var(--ink);
+  }
+  .chart {
+    width: 100%;
+    height: 170px;
+  }
+
+  /* Settings */
+  .settings {
+    display: grid;
+    grid-template-columns: 200px minmax(0, 1fr);
+    min-height: 100%;
+  }
+  .settings-nav {
+    padding: 18px 10px;
+    border-right: 1px solid var(--line);
+    display: grid;
+    gap: 2px;
+    align-content: start;
+  }
+  .settings-nav .menu-item {
+    font-size: 13px;
+  }
+  .settings-body {
+    padding: 24px clamp(20px, 3vw, 48px) 40px;
+    display: grid;
+    gap: 16px;
+    align-content: start;
+    max-width: 1180px;
+  }
+  .bento {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    gap: 14px;
+  }
+  .bento > * {
+    min-width: 0;
+  }
+  .c4 {
+    grid-column: span 4;
+  }
+  .c5 {
+    grid-column: span 5;
+  }
+  .c6 {
+    grid-column: span 6;
+  }
+  .c7 {
+    grid-column: span 7;
+  }
+  .c8 {
+    grid-column: span 8;
+  }
+  .c12 {
+    grid-column: span 12;
+  }
+  .tile {
+    display: grid;
+    gap: 12px;
+    align-content: space-between;
+    padding: 18px;
+    border-radius: 20px;
+    border: 1px solid var(--line);
+    background: var(--well);
+  }
+  .tile .head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .tile .label {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-weight: 700;
+    font-size: 12.5px;
+    color: var(--ink-2);
+  }
+  .tile .n-xl {
+    font-size: clamp(64px, 6vw, 120px);
+  }
+  .theme-pick {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+  }
+  .theme-opt {
+    display: grid;
+    gap: 8px;
+    padding: 10px;
+    border-radius: 16px;
+    border: 1px solid var(--line);
+    background: none;
+    text-align: left;
+    font-size: 12.5px;
+  }
+  .theme-opt.on {
+    border-color: rgb(var(--blue) / 60%);
+    box-shadow: 0 0 0 3px rgb(var(--blue) / 16%);
+  }
+  .swatch {
+    aspect-ratio: 16 / 9;
+    border-radius: 10px;
+    border: 1px solid var(--line);
+    display: grid;
+    grid-template-columns: 26% 1fr;
+    gap: 3px;
+    padding: 4px;
+  }
+  .swatch i {
+    border-radius: 5px;
+    display: block;
+  }
+  .sw-light {
+    background: radial-gradient(70% 90% at 15% 15%, rgb(0 113 227 / 40%), transparent), #e6e9f2;
+  }
+  .sw-light i {
+    background: rgb(255 255 255 / 70%);
+  }
+  .sw-dark {
+    background: radial-gradient(70% 90% at 15% 15%, rgb(41 151 255 / 45%), transparent), #05060b;
+  }
+  .sw-dark i {
+    background: rgb(255 255 255 / 10%);
+  }
+  .sw-sys {
+    background: linear-gradient(90deg, #e6e9f2 50%, #05060b 50%);
+  }
+  .sw-sys i {
+    background: rgb(128 128 140 / 30%);
+  }
+  .list-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 0;
+    border-top: 1px solid var(--line);
+  }
+  .list-row:first-child {
+    border-top: 0;
+  }
+  .glyph {
+    width: 34px;
+    height: 34px;
+    display: grid;
+    place-items: center;
+    flex: none;
+    border-radius: 10px;
+    border: 1px solid currentColor;
+  }
+  .methods {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 10px;
+  }
+  .method {
+    display: grid;
+    gap: 6px;
+    padding: 12px;
+    border-radius: 14px;
+    border: 1px solid var(--line);
+    background: var(--well);
+    font-size: 12px;
+  }
+  .method b {
+    font-size: 13px;
+  }
+
+  /* ===== Responsive ===== */
+  @media (min-width: 1920px) {
+    :root {
+      --sidebar: 300px;
+      --panel: 520px;
+      --reading: 860px;
+    }
+    body {
+      font-size: 14px;
+    }
+  }
+  @media (max-width: 1280px) {
+    .panel {
+      display: none;
+    }
+    .window {
+      grid-template-columns: var(--sidebar) minmax(0, 1fr);
+    }
+  }
+  @media (max-width: 860px) {
+    .window {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .sidebar {
+      display: none;
+    }
+    .window.nav-open .sidebar {
+      display: flex;
+      position: fixed;
+      z-index: 20;
+      inset: 8px auto 8px max(8px, env(safe-area-inset-left, 0px));
+      width: min(300px, 86vw);
+    }
+    .menu-toggle {
+      display: grid !important;
+    }
+    .starter,
+    .glance {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .settings {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .settings-nav {
+      display: flex;
+      overflow-x: auto;
+      border-right: 0;
+      border-bottom: 1px solid var(--line);
+      padding: 8px;
+    }
+    .settings-nav .menu-item {
+      width: auto;
+    }
+    .bento {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .bento > * {
+      grid-column: auto !important;
+    }
+    .composer-hint span:last-child {
+      display: none;
+    }
+    .reading {
+      padding-inline: 16px;
+    }
+    .composer-wrap {
+      padding: 0 12px 12px;
+    }
+    .msg-user {
+      max-width: 92%;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      transition: none !important;
+      animation: none !important;
+    }
+  }
+</style>
+
+<svg style="display: none" aria-hidden="true">
+  <filter id="glass-distortion">
+    <feTurbulence type="fractalNoise" baseFrequency="0.01 0.01" numOctaves="1" seed="5" />
+    <feGaussianBlur stdDeviation="3" result="softMap" />
+    <feDisplacementMap
+      in="SourceGraphic"
+      in2="softMap"
+      scale="150"
+      xChannelSelector="R"
+      yChannelSelector="G"
+    />
+  </filter>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" /></symbol>
+  <symbol id="i-edit" viewBox="0 0 24 24">
+    <path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z" />
+  </symbol>
+  <symbol id="i-folder" viewBox="0 0 24 24">
+    <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+  </symbol>
+  <symbol id="i-search" viewBox="0 0 24 24">
+    <circle cx="11" cy="11" r="7" />
+    <path d="M20 20l-3.5-3.5" />
+  </symbol>
+  <symbol id="i-sliders" viewBox="0 0 24 24">
+    <path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1" />
+    <circle cx="15" cy="6" r="2" />
+    <circle cx="9" cy="12" r="2" />
+    <circle cx="17" cy="18" r="2" />
+  </symbol>
+  <symbol id="i-cube" viewBox="0 0 24 24">
+    <path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z M12 12l8-4.5M12 12v9M12 12L4 7.5" />
+  </symbol>
+  <symbol id="i-apps" viewBox="0 0 24 24">
+    <rect x="4" y="4" width="7" height="7" rx="1.5" />
+    <rect x="13" y="4" width="7" height="7" rx="1.5" />
+    <rect x="4" y="13" width="7" height="7" rx="1.5" />
+    <path d="M16.5 13.5v6M13.5 16.5h6" />
+  </symbol>
+  <symbol id="i-spark" viewBox="0 0 24 24">
+    <path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z" />
+    <path d="M19 17v4M17 19h4" />
+  </symbol>
+  <symbol id="i-up" viewBox="0 0 24 24"><path d="M12 19V5M6 11l6-6 6 6" /></symbol>
+  <symbol id="i-image" viewBox="0 0 24 24">
+    <rect x="3" y="5" width="18" height="14" rx="2" />
+    <circle cx="8.5" cy="10" r="1.5" />
+    <path d="M21 16l-5-5-9 8" />
+  </symbol>
+  <symbol id="i-branch" viewBox="0 0 24 24">
+    <circle cx="6" cy="5" r="2" />
+    <circle cx="6" cy="19" r="2" />
+    <circle cx="18" cy="7" r="2" />
+    <path d="M6 7v10M18 9a6 6 0 0 1-6 6H6" />
+  </symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24">
+    <rect x="8" y="8" width="12" height="12" rx="2" />
+    <path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" />
+  </symbol>
+  <symbol id="i-pen" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z M13 7l4 4" /></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24">
+    <circle cx="12" cy="12" r="9" />
+    <path d="M12 7v5l3 2" />
+  </symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7" /></symbol>
+  <symbol id="i-term" viewBox="0 0 24 24">
+    <rect x="3" y="4" width="18" height="16" rx="2" />
+    <path d="M7 9l3 3-3 3M13 15h4" />
+  </symbol>
+  <symbol id="i-bolt" viewBox="0 0 24 24"><path d="M13 2L4 14h7l-1 8 9-12h-7z" /></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24">
+    <circle cx="12" cy="12" r="4" />
+    <path
+      d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"
+    />
+  </symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24">
+    <path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z" />
+  </symbol>
+  <symbol id="i-monitor" viewBox="0 0 24 24">
+    <rect x="3" y="4" width="18" height="12" rx="2" />
+    <path d="M8 20h8M12 16v4" />
+  </symbol>
+  <symbol id="i-key" viewBox="0 0 24 24">
+    <circle cx="8" cy="15" r="4" />
+    <path d="M11 12l9-9M17 6l3 3" />
+  </symbol>
+  <symbol id="i-bulb" viewBox="0 0 24 24">
+    <path
+      d="M9 18h6M10 21h4M12 3a6 6 0 0 0-4 10.5c.8.8 1 1.5 1 2.5h6c0-1 .2-1.7 1-2.5A6 6 0 0 0 12 3z"
+    />
+  </symbol>
+  <symbol id="i-stop" viewBox="0 0 24 24">
+    <rect x="7" y="7" width="10" height="10" rx="2" />
+  </symbol>
+  <symbol id="i-down" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6" /></symbol>
+  <symbol id="i-right" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6" /></symbol>
+  <symbol id="i-layers" viewBox="0 0 24 24"><path d="M12 3l9 5-9 5-9-5z M3 13l9 5 9-5" /></symbol>
+  <symbol id="i-globe" viewBox="0 0 24 24">
+    <circle cx="12" cy="12" r="9" />
+    <path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18" />
+  </symbol>
+  <symbol id="i-user" viewBox="0 0 24 24">
+    <circle cx="12" cy="8" r="4" />
+    <path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6" />
+  </symbol>
+  <symbol id="i-code" viewBox="0 0 24 24">
+    <path d="M8 7l-5 5 5 5M16 7l5 5-5 5M13.5 4l-3 16" />
+  </symbol>
+  <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M5 21h14" /></symbol>
+  <symbol id="i-kbd" viewBox="0 0 24 24">
+    <rect x="2" y="6" width="20" height="12" rx="2" />
+    <path d="M6 10h1M10 10h1M14 10h1M18 10h1M7 14h10" />
+  </symbol>
+  <symbol id="i-box" viewBox="0 0 24 24">
+    <path d="M3 8l9-5 9 5v8l-9 5-9-5z M3 8l9 5 9-5M12 13v8" />
+  </symbol>
+  <symbol id="i-book" viewBox="0 0 24 24">
+    <path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z M4 19V5M8 7h7" />
+  </symbol>
+  <symbol id="i-panel" viewBox="0 0 24 24">
+    <rect x="3" y="4" width="18" height="16" rx="2" />
+    <path d="M15 4v16" />
+  </symbol>
+  <symbol id="i-sidebar" viewBox="0 0 24 24">
+    <rect x="3" y="4" width="18" height="16" rx="2" />
+    <path d="M9 4v16" />
+  </symbol>
+  <symbol id="i-diff" viewBox="0 0 24 24"><path d="M12 3v8M8 7h8M8 17h8M5 21h14" /></symbol>
+  <symbol id="i-dots" viewBox="0 0 24 24">
+    <circle cx="5" cy="12" r="1" />
+    <circle cx="12" cy="12" r="1" />
+    <circle cx="19" cy="12" r="1" />
+  </symbol>
+  <symbol id="i-queue" viewBox="0 0 24 24">
+    <path d="M4 6h16M4 12h10M4 18h7M17 15v6M14 18h6" />
+  </symbol>
+  <symbol id="i-retry" viewBox="0 0 24 24">
+    <path d="M4 12a8 8 0 0 1 14-5.3L20 9M20 4v5h-5M20 12a8 8 0 0 1-14 5.3L4 15M4 20v-5h5" />
+  </symbol>
+</svg>
+
+<div class="wallpaper" aria-hidden="true"></div>
+
+<div class="window" id="window">
+  <!-- ===================== Sidebar ===================== -->
+  <aside class="sidebar lg">
+    <div class="titlebar">
+      <div class="lights" aria-hidden="true"><i></i><i></i><i></i></div>
+      <span class="grow"></span>
+      <button class="ibtn" title="隐藏侧栏">
+        <svg class="i"><use href="#i-sidebar" /></svg>
+      </button>
+    </div>
+    <div class="side-top">
+      <button class="menu-item" data-go="new">
+        <svg class="i"><use href="#i-edit" /></svg>新建任务<kbd>⌘N</kbd>
+      </button>
+      <button class="menu-item">
+        <svg class="i"><use href="#i-search" /></svg>搜索任务<kbd>⌘K</kbd>
+      </button>
+    </div>
+    <div class="filter-row" role="group" aria-label="筛选任务">
+      <button class="menu-item" data-filter="all">全部</button>
+      <button class="menu-item" data-filter="run"><i class="dot run"></i>运行中</button>
+      <button class="menu-item" data-filter="attn"><i class="dot attn"></i>待处理</button>
+    </div>
+    <div class="side-scroll">
+      <div class="project-group">
+        <div class="group-head">
+          <svg class="i faint"><use href="#i-folder" /></svg><span class="en">Pion</span
+          ><button class="ibtn" data-go="new" title="在 Pion 中新建任务">
+            <svg class="i"><use href="#i-plus" /></svg>
+          </button>
+        </div>
+        <button class="menu-item thread" data-go="task" data-status="run">
+          <span class="ellipsis">重构设置页玻璃卡片</span><i class="dot run"></i>
+        </button>
+        <button class="menu-item thread" data-status="done">
+          <span class="ellipsis">修复流式回复自动跟随</span><i class="dot done"></i>
+        </button>
+        <button class="menu-item thread" data-status="attn">
+          <span class="ellipsis">审查 Tauri 依赖升级</span><i class="dot attn"></i>
+        </button>
+        <button class="menu-item thread" data-status="idle">
+          <span class="ellipsis">图片附件大小限制提示</span><time>昨天</time>
+        </button>
+        <button class="menu-item thread" data-status="idle">
+          <span class="ellipsis">Pi 0.87.1 兼容性验证</span><time>周一</time>
+        </button>
+        <button class="menu-item thread faint more" style="font-size: 12px">展开其余 9 个</button>
+      </div>
+      <div class="project-group">
+        <div class="group-head">
+          <svg class="i faint"><use href="#i-folder" /></svg><span class="en">pi-web</span
+          ><button class="ibtn" data-go="new" title="在 pi-web 中新建任务">
+            <svg class="i"><use href="#i-plus" /></svg>
+          </button>
+        </div>
+        <button class="menu-item thread" data-status="run">
+          <span class="ellipsis">导出 HTML 样式对齐</span><i class="dot run"></i>
+        </button>
+        <button class="menu-item thread" data-status="idle">
+          <span class="ellipsis">补充 session tree 测试</span><time>3 小时</time>
+        </button>
+        <button class="menu-item thread" data-status="idle">
+          <span class="ellipsis">消息复制按钮位置</span><time>周二</time>
+        </button>
+      </div>
+      <div class="project-group">
+        <div class="group-head">
+          <svg class="i faint"><use href="#i-folder" /></svg><span class="en">docs-site</span
+          ><button class="ibtn" data-go="new" title="在 docs-site 中新建任务">
+            <svg class="i"><use href="#i-plus" /></svg>
+          </button>
+        </div>
+        <button class="menu-item thread" data-status="idle">
+          <span class="ellipsis">整理插件 API 文档</span><time>上周</time>
+        </button>
+      </div>
+      <p class="t-s faint filter-empty" hidden style="padding: 12px 10px">当前筛选下没有任务。</p>
+      <button class="menu-item thread faint">
+        <svg class="i"><use href="#i-plus" /></svg>添加项目
+      </button>
+    </div>
+    <div class="side-foot">
+      <span class="dot done"></span>
+      <div class="pi-status grow">
+        <span style="font-weight: 500">Pi 0.87.1</span><span class="t-s faint">工作区就绪</span>
+      </div>
+      <button class="ibtn" data-go="settings" data-tab="general" title="设置">
+        <svg class="i"><use href="#i-sliders" /></svg>
+      </button>
+    </div>
+  </aside>
+
+  <!-- ===================== Screen: 新建任务 ===================== -->
+  <section class="sheet" data-screen="new">
+    <div class="bar">
+      <button class="ibtn menu-toggle" style="display: none" title="显示侧栏">
+        <svg class="i"><use href="#i-sidebar" /></svg>
+      </button>
+      <h1>新建任务</h1>
+      <span class="grow"></span>
+    </div>
+    <div class="scroll">
+      <div class="empty">
+        <div class="empty-title">
+          <span class="en">New task · Local Pi runtime</span>
+          <h2>今天想做<span class="apple">什么？</span></h2>
+          <p class="muted">在当前项目中启动 Pi 任务，调度模型、自动化工具与工程技能。</p>
+        </div>
+        <div class="composer lg strong">
+          <textarea id="new-input" placeholder="提个问题，开发新功能，或修复一个问题…"></textarea>
+          <div class="row" style="flex-wrap: wrap">
+            <button class="chip">
+              <svg class="i"><use href="#i-folder" /></svg><b>Pion</b
+              ><svg class="i"><use href="#i-down" /></svg>
+            </button>
+            <button class="chip">
+              <svg class="i"><use href="#i-cube" /></svg><b>claude-sonnet-5-5</b
+              ><svg class="i"><use href="#i-down" /></svg>
+            </button>
+            <button class="chip purple">
+              <svg class="i"><use href="#i-bulb" /></svg>medium
+            </button>
+            <button class="chip">
+              <svg class="i"><use href="#i-term" /></svg>完整工具
+            </button>
+            <button class="ibtn" title="添加图片">
+              <svg class="i"><use href="#i-image" /></svg>
+            </button>
+            <span class="grow"></span>
+            <button class="send" aria-label="开始任务" data-go="task">
+              <svg class="i"><use href="#i-up" /></svg>
+            </button>
+          </div>
+        </div>
+        <div class="starter">
+          <div class="lg bounce">
+            <svg class="i c-blue" style="width: 20px; height: 20px"><use href="#i-layers" /></svg
+            ><b>探索工程架构</b><span class="en">Map modules</span>
+          </div>
+          <div class="lg bounce">
+            <svg class="i c-orange" style="width: 20px; height: 20px"><use href="#i-box" /></svg
+            ><b>依赖审查与清理</b><span class="en">Audit deps</span>
+          </div>
+          <div class="lg bounce">
+            <svg class="i c-green" style="width: 20px; height: 20px"><use href="#i-check" /></svg
+            ><b>编写单元测试用例</b><span class="en">Write tests</span>
+          </div>
+        </div>
+        <div class="glance" role="group" aria-label="按状态筛选侧栏任务">
+          <button data-filter="run">
+            <span class="en">Running</span><span class="num apple">2</span
+            ><span class="t-s muted">个任务运行中</span>
+          </button>
+          <button data-filter="attn">
+            <span class="en">Attention</span><span class="num f-orange">1</span
+            ><span class="t-s muted">个任务待处理</span>
+          </button>
+          <button data-filter="all">
+            <span class="en">All tasks</span><span class="num f-blue">24</span
+            ><span class="t-s muted">个任务 · 3 个项目</span>
+          </button>
+        </div>
+        <p class="t-s faint">任务使用本机 Pi 配置，可在所选项目中执行工具操作。</p>
+      </div>
+    </div>
+    <div></div>
+  </section>
+
+  <!-- ===================== Screen: 任务 ===================== -->
+  <section class="sheet" data-screen="task" hidden>
+    <div class="bar">
+      <button class="ibtn menu-toggle" style="display: none" title="显示侧栏">
+        <svg class="i"><use href="#i-sidebar" /></svg>
+      </button>
+      <h1 class="ellipsis">重构设置页玻璃卡片</h1>
+      <span class="chip"
+        ><svg class="i"><use href="#i-folder" /></svg>Pion</span
+      >
+      <span class="chip blue"><i class="dot run"></i>执行中</span>
+      <span class="grow"></span>
+      <div class="menu-anchor">
+        <button
+          class="ibtn"
+          id="more-toggle"
+          title="任务操作"
+          aria-haspopup="menu"
+          aria-expanded="false"
+        >
+          <svg class="i"><use href="#i-dots" /></svg>
+        </button>
+        <div class="popover lg strong" id="more-menu" role="menu" hidden>
+          <button class="menu-item" role="menuitem">
+            <svg class="i"><use href="#i-clock" /></svg>会话历史
+          </button>
+          <button class="menu-item" role="menuitem">
+            <svg class="i"><use href="#i-pen" /></svg>重命名
+          </button>
+          <button class="menu-item" role="menuitem">
+            <svg class="i"><use href="#i-copy" /></svg>克隆当前分支
+          </button>
+          <button class="menu-item" role="menuitem">
+            <svg class="i"><use href="#i-layers" /></svg>压缩上下文
+          </button>
+          <button class="menu-item" role="menuitem">
+            <svg class="i"><use href="#i-download" /></svg>导出 HTML
+          </button>
+        </div>
+      </div>
+      <button class="ibtn on" id="panel-toggle" title="显示面板">
+        <svg class="i"><use href="#i-panel" /></svg>
+      </button>
+    </div>
+    <div class="scroll">
+      <div class="reading">
+        <div class="msg-user">
+          把设置页改成 Bento 布局，保留现有的分组和快捷键说明。顶部模型数量用大数字强调。
+        </div>
+        <div class="msg-pi">
+          <div class="fold">
+            <svg class="i c-purple"><use href="#i-bulb" /></svg>思考过程<span class="faint"
+              >· 6 秒</span
+            ><span class="grow"></span><svg class="i"><use href="#i-right" /></svg>
+          </div>
+          <div class="fold">
+            <svg class="i c-green"><use href="#i-check" /></svg><span>read</span
+            ><code>src/ui/settings/Settings.module.css</code><span class="grow"></span
+            ><span class="en">476 lines</span>
+          </div>
+          <div class="fold">
+            <svg class="i c-green"><use href="#i-check" /></svg><span>read</span
+            ><code>src/ui/theme/tokens.css</code><span class="grow"></span
+            ><span class="en">58 lines</span>
+          </div>
+          <p>设置页现在是单列表单。我会改成 12 列网格：</p>
+          <ul>
+            <li>Pi 版本和可用模型数做成两张大数字卡片</li>
+            <li>接入方式与插件各占半宽</li>
+            <li>快捷键放在底部整行，分组和文案保持不变</li>
+          </ul>
+          <p>先在 tokens 里加入玻璃层变量，两套主题共用一份组件样式：</p>
+          <pre class="code"><span class="tc">/* src/ui/theme/tokens.css */</span>
+<span class="tp">:root</span> {
+  <span class="tk">--pion-glass-tint</span>: rgb(255 255 255 / 34%);
+  <span class="tk">--pion-glass-shine</span>: rgb(255 255 255 / 85%);
+}
+<span class="tp">:root[data-theme="dark"]</span> {
+  <span class="tk">--pion-glass-tint</span>: rgb(255 255 255 / 6%);
+}</pre>
+          <div class="fold">
+            <svg class="i c-green"><use href="#i-check" /></svg><span>edit</span
+            ><code>src/ui/theme/tokens.css</code><span class="grow"></span
+            ><span class="mono c-green">+12</span><span class="mono c-red">−2</span>
+          </div>
+          <div class="fold">
+            <svg class="i c-blue"><use href="#i-term" /></svg><span>edit</span
+            ><code>src/ui/settings/Settings.module.css</code><span class="grow"></span
+            ><span class="chip blue" style="padding: 0 8px">执行中…</span>
+          </div>
+          <div class="msg-tools">
+            <button class="ibtn" title="复制">
+              <svg class="i"><use href="#i-copy" /></svg></button
+            ><button class="ibtn" title="从此处分支">
+              <svg class="i"><use href="#i-branch" /></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="composer-wrap">
+      <div class="composer lg strong">
+        <div class="queue">
+          <svg class="i c-purple"><use href="#i-queue" /></svg
+          ><span class="chip purple" style="padding: 0 8px">后续</span
+          ><span class="grow ellipsis">完成后再跑一遍 npm test</span
+          ><button class="ibtn" title="将队列移回输入框" style="width: 24px; height: 24px">
+            <svg class="i"><use href="#i-up" /></svg>
+          </button>
+        </div>
+        <textarea id="task-input" placeholder="立即引导，或把消息加入后续队列…"></textarea>
+        <div class="row" style="flex-wrap: wrap">
+          <button class="chip">
+            <svg class="i"><use href="#i-cube" /></svg><b>claude-sonnet-5-5</b>
+          </button>
+          <button class="chip purple">
+            <svg class="i"><use href="#i-bulb" /></svg>medium
+          </button>
+          <button class="chip">
+            <svg class="i"><use href="#i-term" /></svg>完整工具
+          </button>
+          <button class="ibtn" title="Pi 命令">
+            <svg class="i"><use href="#i-code" /></svg>
+          </button>
+          <button class="ibtn" title="添加图片">
+            <svg class="i"><use href="#i-image" /></svg>
+          </button>
+          <span class="grow"></span>
+          <span
+            class="ctx"
+            role="button"
+            tabindex="0"
+            data-open-pane="usage"
+            title="上下文 42%，点击查看用量"
+            ><svg viewBox="0 0 20 20">
+              <circle cx="10" cy="10" r="8" fill="none" stroke="var(--line)" stroke-width="2.5" />
+              <circle
+                cx="10"
+                cy="10"
+                r="8"
+                fill="none"
+                style="stroke: rgb(var(--blue))"
+                stroke-width="2.5"
+                stroke-linecap="round"
+                stroke-dasharray="21.1 50.3"
+              /></svg
+            >42%</span
+          >
+          <span class="seg"><span class="on">引导</span><span>后续</span></span>
+          <button class="send stop" aria-label="停止任务">
+            <svg class="i"><use href="#i-stop" /></svg>
+          </button>
+        </div>
+      </div>
+      <div class="composer-hint">
+        <span>Enter 发送 · Shift + Enter 换行</span><span>自动压缩：开 · 自动重试：开</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== Screen: 设置 ===================== -->
+  <section class="sheet" data-screen="settings" hidden>
+    <div class="bar">
+      <button class="ibtn menu-toggle" style="display: none" title="显示侧栏">
+        <svg class="i"><use href="#i-sidebar" /></svg>
+      </button>
+      <h1>设置</h1>
+      <span class="grow"></span>
+      <button class="ibtn" data-go="task" title="关闭设置">
+        <svg class="i">
+          <use href="#i-plus" style="transform: rotate(45deg); transform-origin: center" />
+        </svg>
+      </button>
+    </div>
+    <div class="scroll">
+      <div class="settings">
+        <nav class="settings-nav" aria-label="设置分类">
+          <button class="menu-item" data-tab="general">
+            <svg class="i"><use href="#i-sliders" /></svg>通用
+          </button>
+          <button class="menu-item" data-tab="models">
+            <svg class="i"><use href="#i-cube" /></svg>模型服务
+          </button>
+          <button class="menu-item" data-tab="ext">
+            <svg class="i"><use href="#i-apps" /></svg>插件与扩展
+          </button>
+          <button class="menu-item" data-tab="keys">
+            <svg class="i"><use href="#i-kbd" /></svg>快捷键
+          </button>
+        </nav>
+
+        <div class="settings-body" data-tab-body="general">
+          <div>
+            <h2 style="font-size: 22px; font-weight: 900">
+              通用 <span class="en-s">General</span>
+            </h2>
+            <p class="t-s muted" style="margin-top: 4px">
+              管理显示语言、外观主题，以及 Pi 执行环境。
+            </p>
+          </div>
+          <div class="bento">
+            <div class="tile c7">
+              <div class="head">
+                <span class="label"
+                  ><svg class="i c-blue"><use href="#i-term" /></svg>Pi 运行时</span
+                ><span class="chip green"
+                  ><svg class="i"><use href="#i-check" /></svg>已是验证版本</span
+                >
+              </div>
+              <span class="num n-xl f-blue">0.87<span style="font-weight: 200">.1</span></span>
+              <div style="display: grid; gap: 10px">
+                <div class="rule blue"></div>
+                <div class="row" style="justify-content: space-between; flex-wrap: wrap">
+                  <span class="t-s muted">npm 全局安装 · /opt/homebrew/bin/pi</span
+                  ><button class="btn">检查最新版本</button>
+                </div>
+              </div>
+            </div>
+            <div class="tile c5">
+              <div class="head">
+                <span class="label"
+                  ><svg class="i c-orange"><use href="#i-download" /></svg>Pion 应用</span
+                ><span class="chip orange">可更新到 0.1.4</span>
+              </div>
+              <span class="num n-xl f-orange">0.1.3</span>
+              <div style="display: grid; gap: 10px">
+                <div class="rule orange"></div>
+                <div class="row" style="justify-content: space-between; flex-wrap: wrap">
+                  <span class="t-s muted">运行中的任务结束后才能更新</span
+                  ><button class="btn primary">下载更新</button>
+                </div>
+              </div>
+            </div>
+            <div class="tile c8">
+              <div class="head">
+                <span class="label"
+                  ><svg class="i c-purple"><use href="#i-sun" /></svg>视觉主题</span
+                ><span class="t-s faint">选择 Pion 在此设备上的显示方式。</span>
+              </div>
+              <div class="theme-pick">
+                <button class="theme-opt" data-set-theme="system">
+                  <span class="swatch sw-sys"><i></i><i></i></span>跟随系统
+                </button>
+                <button class="theme-opt" data-set-theme="light">
+                  <span class="swatch sw-light"><i></i><i></i></span>明亮工程
+                </button>
+                <button class="theme-opt" data-set-theme="dark">
+                  <span class="swatch sw-dark"><i></i><i></i></span>深色终端
+                </button>
+              </div>
+            </div>
+            <div class="tile c4">
+              <div class="head">
+                <span class="label"
+                  ><svg class="i c-green"><use href="#i-globe" /></svg>显示语言</span
+                >
+              </div>
+              <span
+                class="num n-xl apple"
+                style="font-family: var(--font-cn); font-weight: 900; letter-spacing: -0.02em"
+                >中文</span
+              >
+              <span class="seg" style="justify-self: start"
+                ><span class="on">中文</span><span>English</span></span
+              >
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-body" data-tab-body="models" hidden>
+          <div>
+            <h2 style="font-size: 22px; font-weight: 900">
+              模型服务 <span class="en-s">Model services</span>
+            </h2>
+            <p class="t-s muted" style="margin-top: 4px">
+              选择 Pi 连接模型服务商的方式。更改配置后，请重新打开任务。
+            </p>
+          </div>
+          <div class="bento">
+            <div class="tile c4">
+              <div class="head">
+                <span class="label"
+                  ><svg class="i c-purple"><use href="#i-cube" /></svg>可用模型</span
+                ><span class="ex">示例</span>
+              </div>
+              <span class="num n-xl apple">12</span>
+              <div style="display: grid; gap: 8px">
+                <div class="rule purple"></div>
+                <span class="t-s muted">来自 4 个服务商 · 默认 claude-sonnet-5-5</span>
+              </div>
+            </div>
+            <div class="tile c8">
+              <div class="head">
+                <span class="label"
+                  ><svg class="i c-blue"><use href="#i-bolt" /></svg>本周 tokens 按服务商</span
+                ><span class="ex">示例</span>
+              </div>
+              <div id="chart-providers" class="chart"></div>
+            </div>
+            <div class="tile c12">
+              <div class="head">
+                <span class="label">接入方式</span
+                ><button class="btn">
+                  <svg class="i"><use href="#i-plus" /></svg>添加自定义接口
+                </button>
+              </div>
+              <div class="methods">
+                <div class="method">
+                  <svg class="i c-blue"><use href="#i-key" /></svg><b>API Key</b
+                  ><span class="muted">存于 auth.json，权限 0600，界面不回显。</span
+                  ><span class="c-green">3 个已配置</span>
+                </div>
+                <div class="method">
+                  <svg class="i c-purple"><use href="#i-user" /></svg><b>Pi 登录</b
+                  ><span class="muted">订阅或 OAuth 服务商，浏览器授权。</span
+                  ><span class="c-green">已登录</span>
+                </div>
+                <div class="method">
+                  <svg class="i c-orange"><use href="#i-code" /></svg><b>环境变量</b
+                  ><span class="muted">启动 Pion 前设置，不写入 auth.json。</span
+                  ><span class="faint">未检测到</span>
+                </div>
+                <div class="method">
+                  <svg class="i c-green"><use href="#i-globe" /></svg><b>自定义接口</b
+                  ><span class="muted">兼容 API 写入 models.json，可批量导入。</span
+                  ><span class="c-green">1 个接口</span>
+                </div>
+                <div class="method">
+                  <svg class="i c-blue"><use href="#i-box" /></svg><b>服务商扩展</b
+                  ><span class="muted">特殊认证或协议，通过 Pi 包安装。</span
+                  ><span class="faint">管理 Pi 包</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-body" data-tab-body="ext" hidden>
+          <div>
+            <h2 style="font-size: 22px; font-weight: 900">
+              插件与扩展 <span class="en-s">Plugins · Pi packages · Skills</span>
+            </h2>
+            <p class="t-s muted" style="margin-top: 4px">
+              插件运行在沙箱中；Pi 包以你的用户权限运行，安装前请检查来源。
+            </p>
+          </div>
+          <div class="bento">
+            <div class="tile c4">
+              <span class="label"
+                ><svg class="i c-blue"><use href="#i-apps" /></svg>插件</span
+              ><span class="num n-xl f-blue">2</span>
+              <div class="rule blue"></div>
+            </div>
+            <div class="tile c4">
+              <span class="label"
+                ><svg class="i c-orange"><use href="#i-box" /></svg>Pi 包</span
+              ><span class="num n-xl f-orange">3</span>
+              <div class="rule orange"></div>
+            </div>
+            <div class="tile c4">
+              <span class="label"
+                ><svg class="i c-green"><use href="#i-book" /></svg>技能</span
+              ><span class="num n-xl f-green">8</span>
+              <div class="rule green"></div>
+            </div>
+            <div class="tile c6">
+              <div class="head">
+                <span class="label">插件</span
+                ><button class="btn">
+                  <svg class="i"><use href="#i-plus" /></svg>安装本地插件
+                </button>
+              </div>
+              <div>
+                <div class="list-row">
+                  <span class="glyph c-blue"
+                    ><svg class="i"><use href="#i-term" /></svg
+                  ></span>
+                  <div class="grow">
+                    <b>agent-chat</b>
+                    <div class="t-s muted">读取任务 · 发送消息 · 显示面板</div>
+                  </div>
+                  <span class="switch"></span>
+                </div>
+                <div class="list-row">
+                  <span class="glyph c-orange"
+                    ><svg class="i"><use href="#i-diff" /></svg
+                  ></span>
+                  <div class="grow">
+                    <b>git-diff-plugin</b>
+                    <div class="t-s muted">读取项目文件 · 显示面板</div>
+                  </div>
+                  <span class="switch"></span>
+                </div>
+              </div>
+            </div>
+            <div class="tile c6">
+              <div class="head"><span class="label">Pi 包</span><span class="ex">示例</span></div>
+              <div>
+                <div class="list-row">
+                  <span class="glyph c-orange"
+                    ><svg class="i"><use href="#i-box" /></svg
+                  ></span>
+                  <div class="grow">
+                    <b class="mono">pi-provider-bedrock</b>
+                    <div class="t-s muted">服务商扩展 · 全局</div>
+                  </div>
+                  <span class="chip">0.4.2</span>
+                </div>
+                <div class="list-row">
+                  <span class="glyph c-orange"
+                    ><svg class="i"><use href="#i-box" /></svg
+                  ></span>
+                  <div class="grow">
+                    <b class="mono">pi-review-skills</b>
+                    <div class="t-s muted">技能包 · 全局</div>
+                  </div>
+                  <span class="chip">0.9.0</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-body" data-tab-body="keys" hidden>
+          <div>
+            <h2 style="font-size: 22px; font-weight: 900">
+              快捷键 <span class="en-s">Keyboard shortcuts</span>
+            </h2>
+            <p class="t-s muted" style="margin-top: 4px">查看常用操作的键盘快捷键。</p>
+          </div>
+          <div class="tile">
+            <div class="list-row"><span class="grow">发送消息</span><kbd>Enter</kbd></div>
+            <div class="list-row"><span class="grow">插入换行</span><kbd>Shift + Enter</kbd></div>
+            <div class="list-row"><span class="grow">新建任务</span><kbd>⌘ N</kbd></div>
+            <div class="list-row"><span class="grow">关闭菜单或对话框</span><kbd>Esc</kbd></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div></div>
+  </section>
+
+  <!-- ===================== Side panel (plugin slot) ===================== -->
+  <aside class="panel" id="panel" hidden>
+    <div class="tabs">
+      <button class="menu-item on" data-pane="diff">
+        <svg class="i"><use href="#i-diff" /></svg>改动
+      </button>
+      <button class="menu-item" data-pane="session">
+        <svg class="i"><use href="#i-branch" /></svg>会话
+      </button>
+      <button class="menu-item" data-pane="usage">
+        <svg class="i"><use href="#i-bolt" /></svg>用量
+      </button>
+      <span class="grow"></span>
+      <span class="en">git-diff-plugin</span>
+    </div>
+
+    <div class="pane" data-pane-body="diff">
+      <div class="row">
+        <span class="mono muted">2 个文件</span><span class="grow"></span
+        ><span class="mono c-green">+21</span><span class="mono c-red">−6</span>
+      </div>
+      <div class="file">
+        <div class="file-head">
+          <span class="grow ellipsis">src/ui/theme/tokens.css</span><span class="c-green">+12</span
+          ><span class="c-red">−2</span>
+        </div>
+        <div class="diff">
+          <div class="ctxl">--pion-shadow-low: 0 4px 16px …;</div>
+          <div class="del">- --pion-size-radius-lg: 12px;</div>
+          <div class="add">+ --pion-size-radius-lg: 18px;</div>
+          <div class="add">+ --pion-glass-tint: rgb(255 255 255 / 34%);</div>
+          <div class="add">+ --pion-glass-shine: rgb(255 255 255 / 85%);</div>
+          <div class="ctxl">--pion-size-rail: 264px;</div>
+        </div>
+      </div>
+      <div class="file">
+        <div class="file-head">
+          <span class="grow ellipsis">src/ui/settings/Settings.module.css</span
+          ><span class="c-green">+9</span><span class="c-red">−4</span>
+        </div>
+        <div class="diff">
+          <div class="ctxl">.settings-body {</div>
+          <div class="del">- display: flex;</div>
+          <div class="del">- flex-direction: column;</div>
+          <div class="add">+ display: grid;</div>
+          <div class="add">+ grid-template-columns: repeat(12, 1fr);</div>
+          <div class="add">+ gap: 14px;</div>
+          <div class="ctxl">}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="pane" data-pane-body="session" hidden>
+      <div class="stat-card">
+        <span class="en">Session tree</span>
+        <svg
+          class="lineart"
+          viewBox="0 0 320 170"
+          aria-label="会话分支：主线 5 条消息，第 3 条处分出 1 个分支"
+        >
+          <g style="color: var(--ink-3)"><path class="s" d="M24 14v142" /></g>
+          <g style="color: rgb(var(--purple))">
+            <path class="s" d="M24 14v60c0 18 44 10 44 30v52" style="stroke-width: 2" />
+          </g>
+          <g style="fill: var(--bg); stroke: var(--ink-3)" stroke-width="1.4">
+            <circle cx="24" cy="14" r="5" />
+            <circle cx="24" cy="44" r="5" />
+            <circle cx="24" cy="74" r="5" />
+            <circle cx="24" cy="116" r="5" />
+            <circle cx="24" cy="156" r="5" />
+          </g>
+          <g style="fill: rgb(var(--purple))">
+            <circle cx="68" cy="116" r="5" />
+            <circle cx="68" cy="156" r="6" />
+          </g>
+          <g font-size="11.5" font-family="Noto Sans SC, sans-serif" style="fill: var(--ink-2)">
+            <text x="38" y="18">把设置页改成 Bento 布局…</text>
+            <text x="38" y="48">先看现有 tokens</text>
+            <text x="38" y="78">模型数量用大数字强调</text>
+            <text x="84" y="120" style="fill: var(--ink)">分支：保留单列表单</text>
+            <text x="84" y="160" style="fill: rgb(var(--purple))">当前位置</text>
+          </g>
+        </svg>
+        <p class="t-s faint">点击任一用户消息节点，编辑后从此处分支。</p>
+      </div>
+    </div>
+
+    <div class="pane" data-pane-body="usage" hidden>
+      <div class="stat-card">
+        <div class="row">
+          <span class="en grow">Session usage</span><span class="ex">示例</span>
+        </div>
+        <div class="row" style="align-items: end; justify-content: space-between">
+          <span class="num apple" style="font-size: 76px">184<span class="unit">K</span></span>
+          <span class="num" style="font-size: 30px">$1.27</span>
+        </div>
+        <div class="rule blue"></div>
+        <dl class="kv">
+          <dt>输入</dt>
+          <dd>142,380</dd>
+          <dt>输出</dt>
+          <dd>41,912</dd>
+          <dt>上下文</dt>
+          <dd>84K / 200K</dd>
+        </dl>
+      </div>
+      <div class="stat-card">
+        <span class="en">Tokens per turn</span>
+        <div id="chart-turns" class="chart"></div>
+      </div>
+    </div>
+  </aside>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.6.0/dist/echarts.min.js"></script>
+<script>
+  // Wrap every .lg element in the spec's four-layer liquid glass structure.
+  document.querySelectorAll(".lg").forEach((el) => {
+    const text = document.createElement("div");
+    text.className = "liquidGlass-text";
+    while (el.firstChild) text.appendChild(el.firstChild);
+    el.classList.add("liquidGlass-wrapper");
+    for (const layer of ["effect", "tint", "shine"]) {
+      const d = document.createElement("div");
+      d.className = `liquidGlass-${layer}`;
+      el.appendChild(d);
+    }
+    el.appendChild(text);
+  });
+
+  const root = document.documentElement;
+  const win = document.getElementById("window");
+  const panel = document.getElementById("panel");
+  const params = new URLSearchParams(location.search);
+  const state = {
+    theme: params.get("theme") || "system",
+    screen: params.get("screen") || "task",
+    tab: params.get("tab") || "general",
+    pane: "diff",
+    panelOpen: true,
+    filter: "all",
+  };
+
+  const charts = {};
+  const css = (n) => getComputedStyle(root).getPropertyValue(n).trim();
+  const rgb = (n, a = 1) => `rgb(${css(n)} / ${a})`;
+  function mount(id) {
+    const el = document.getElementById(id);
+    if (!el || !el.offsetWidth || !window.echarts) return null;
+    charts[id]?.dispose();
+    return (charts[id] = echarts.init(el, null, { renderer: "svg" }));
+  }
+  function drawCharts() {
+    if (!window.echarts) return;
+    const ink3 = css("--ink-3"),
+      line = css("--line");
+    const base = {
+      backgroundColor: "transparent",
+      textStyle: { fontFamily: "JetBrains Mono, monospace", color: ink3, fontSize: 10 },
+      tooltip: {
+        trigger: "axis",
+        backgroundColor: css("--glass-tint-strong"),
+        borderColor: line,
+        textStyle: { color: css("--ink"), fontFamily: "Noto Sans SC, sans-serif", fontSize: 12 },
+        extraCssText: "backdrop-filter: blur(12px); border-radius: 10px;",
+      },
+    };
+    const axis = {
+      axisLine: { lineStyle: { color: line } },
+      axisTick: { show: false },
+      axisLabel: { color: ink3 },
+      splitLine: { lineStyle: { color: line } },
+    };
+    const fadeV = (v) =>
+      new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+        { offset: 0, color: rgb(v, 0.95) },
+        { offset: 1, color: rgb(v, 0.15) },
+      ]);
+    const fadeH = (v) =>
+      new echarts.graphic.LinearGradient(0, 0, 1, 0, [
+        { offset: 0, color: rgb(v, 0.15) },
+        { offset: 1, color: rgb(v, 0.95) },
+      ]);
+
+    const turns = mount("chart-turns");
+    turns?.setOption({
+      ...base,
+      grid: { left: 2, right: 6, top: 10, bottom: 2, containLabel: true },
+      xAxis: {
+        type: "category",
+        data: ["1", "2", "3", "4", "5", "6", "7", "8"],
+        ...axis,
+        splitLine: { show: false },
+      },
+      yAxis: {
+        type: "value",
+        ...axis,
+        splitNumber: 3,
+        axisLabel: { color: ink3, formatter: (v) => `${v / 1000}K` },
+      },
+      series: [
+        {
+          name: "输入",
+          type: "bar",
+          stack: "t",
+          barWidth: "46%",
+          data: [8200, 12400, 15800, 21000, 17600, 24300, 19800, 23280],
+          itemStyle: { color: fadeV("--blue") },
+        },
+        {
+          name: "输出",
+          type: "bar",
+          stack: "t",
+          data: [2100, 4200, 3600, 6900, 4800, 7600, 5400, 7312],
+          itemStyle: { color: fadeV("--orange"), borderRadius: [5, 5, 0, 0] },
+        },
+      ],
+    });
+
+    const prov = mount("chart-providers");
+    prov?.setOption({
+      ...base,
+      tooltip: { ...base.tooltip, valueFormatter: (v) => `${v}K tokens` },
+      grid: { left: 2, right: 44, top: 6, bottom: 2, containLabel: true },
+      xAxis: {
+        type: "value",
+        ...axis,
+        axisLabel: { color: ink3, formatter: (v) => `${v}K` },
+        splitNumber: 4,
+      },
+      yAxis: {
+        type: "category",
+        inverse: true,
+        data: ["Anthropic", "OpenAI", "OpenRouter", "LM Studio"],
+        ...axis,
+        axisLabel: { color: css("--ink-2"), fontSize: 11 },
+        splitLine: { show: false },
+      },
+      series: [
+        {
+          name: "本周",
+          type: "bar",
+          barWidth: 14,
+          data: [1240, 412, 318, 96],
+          itemStyle: { color: fadeH("--blue"), borderRadius: [0, 7, 7, 0] },
+          label: { show: true, position: "right", color: css("--ink-2"), formatter: "{c}K" },
+        },
+      ],
+    });
+  }
+
+  function render() {
+    if (state.theme === "system") root.removeAttribute("data-theme");
+    else root.setAttribute("data-theme", state.theme);
+    document
+      .querySelectorAll("[data-set-theme]")
+      .forEach((b) => b.classList.toggle("on", b.dataset.setTheme === state.theme));
+
+    document
+      .querySelectorAll(".sheet")
+      .forEach((s) => (s.hidden = s.dataset.screen !== state.screen));
+    panel.hidden = !(state.screen === "task" && state.panelOpen);
+    document.getElementById("panel-toggle").classList.toggle("on", state.panelOpen);
+    document
+      .querySelectorAll(".side-top [data-go='new']")
+      .forEach((b) => b.classList.toggle("on", state.screen === "new"));
+    document
+      .querySelectorAll(".thread[data-go='task']")
+      .forEach((b) => b.classList.toggle("on", state.screen === "task"));
+
+    document
+      .querySelectorAll(".settings-nav [data-tab]")
+      .forEach((b) => b.classList.toggle("on", b.dataset.tab === state.tab));
+    document
+      .querySelectorAll("[data-tab-body]")
+      .forEach((b) => (b.hidden = b.dataset.tabBody !== state.tab));
+    document
+      .querySelectorAll("[data-pane]")
+      .forEach((b) => b.classList.toggle("on", b.dataset.pane === state.pane));
+    document
+      .querySelectorAll("[data-pane-body]")
+      .forEach((b) => (b.hidden = b.dataset.paneBody !== state.pane));
+
+    // One filter state drives both the sidebar chips and the empty-state counters.
+    document
+      .querySelectorAll("[data-filter]")
+      .forEach((b) => b.classList.toggle("on", b.dataset.filter === state.filter));
+    let visible = 0;
+    document.querySelectorAll(".project-group").forEach((g) => {
+      let shown = 0;
+      g.querySelectorAll(".thread[data-status]").forEach((t) => {
+        t.hidden = state.filter !== "all" && t.dataset.status !== state.filter;
+        if (!t.hidden) shown++;
+      });
+      g.querySelectorAll(".more").forEach((m) => (m.hidden = state.filter !== "all"));
+      g.hidden = shown === 0;
+      visible += shown;
+    });
+    document.querySelector(".filter-empty").hidden = visible > 0;
+    win.classList.remove("nav-open");
+    requestAnimationFrame(drawCharts);
+  }
+
+  document.querySelectorAll("[data-go]").forEach((b) =>
+    b.addEventListener("click", () => {
+      state.screen = b.dataset.go;
+      if (b.dataset.tab) state.tab = b.dataset.tab;
+      render();
+    }),
+  );
+  document.querySelectorAll(".settings-nav [data-tab]").forEach((b) =>
+    b.addEventListener("click", () => {
+      state.tab = b.dataset.tab;
+      render();
+    }),
+  );
+  document.querySelectorAll("[data-pane]").forEach((b) =>
+    b.addEventListener("click", () => {
+      state.pane = b.dataset.pane;
+      render();
+    }),
+  );
+  document.getElementById("panel-toggle").addEventListener("click", () => {
+    state.panelOpen = !state.panelOpen;
+    render();
+  });
+  document.querySelectorAll("[data-filter]").forEach((b) =>
+    b.addEventListener("click", () => {
+      state.filter = b.dataset.filter;
+      render();
+    }),
+  );
+  document.querySelectorAll("[data-open-pane]").forEach((b) => {
+    const open = () => {
+      state.pane = b.dataset.openPane;
+      state.panelOpen = true;
+      render();
+    };
+    b.addEventListener("click", open);
+    b.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        open();
+      }
+    });
+  });
+  const moreToggle = document.getElementById("more-toggle");
+  const moreMenu = document.getElementById("more-menu");
+  moreToggle.addEventListener("click", (e) => {
+    e.stopPropagation();
+    moreMenu.hidden = !moreMenu.hidden;
+    moreToggle.setAttribute("aria-expanded", String(!moreMenu.hidden));
+  });
+  document.addEventListener("click", () => {
+    moreMenu.hidden = true;
+    moreToggle.setAttribute("aria-expanded", "false");
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      moreMenu.hidden = true;
+      moreToggle.setAttribute("aria-expanded", "false");
+    }
+  });
+  document.querySelectorAll("[data-set-theme]").forEach((b) =>
+    b.addEventListener("click", () => {
+      state.theme = b.dataset.setTheme;
+      render();
+    }),
+  );
+  document.querySelectorAll(".menu-toggle").forEach((b) =>
+    b.addEventListener("click", (e) => {
+      e.stopPropagation();
+      win.classList.toggle("nav-open");
+    }),
+  );
+  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", drawCharts);
+  addEventListener("resize", () => Object.values(charts).forEach((c) => c.resize()));
+
+  render();
+</script>

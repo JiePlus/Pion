@@ -21,7 +21,25 @@ body {
   margin: 0;
   overflow: hidden;
   color: var(--pion-color-ink);
-  background: var(--pion-color-canvas);
+  background-color: var(--pion-color-canvas);
+  /* Wallpaper behind every glass layer: three orbs, each one hue fading into itself. */
+  background-image:
+    radial-gradient(
+      40vmax 40vmax at 4% 8%,
+      rgb(var(--pion-rgb-blue) / var(--pion-orb-strength)),
+      rgb(var(--pion-rgb-blue) / 0) 70%
+    ),
+    radial-gradient(
+      34vmax 34vmax at 98% 4%,
+      rgb(var(--pion-rgb-purple) / var(--pion-orb-strength)),
+      rgb(var(--pion-rgb-purple) / 0) 70%
+    ),
+    radial-gradient(
+      44vmax 44vmax at 60% 112%,
+      rgb(var(--pion-rgb-orange) / calc(var(--pion-orb-strength) * 0.75)),
+      rgb(var(--pion-rgb-orange) / 0) 70%
+    );
+  background-attachment: fixed;
 }
 
 button,

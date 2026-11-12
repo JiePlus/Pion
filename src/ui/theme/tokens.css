@@ -1,54 +1,96 @@
+/* Liquid glass system: translucent sheets over a single-hue orb wallpaper.
+   Highlight hues also ship as RGB triplets so each one fades only into its own transparency. */
 :root {
-  --pion-color-canvas: #f7f8f4;
-  --pion-color-surface: #ffffff;
-  --pion-color-surface-raised: #ffffff;
-  --pion-color-surface-muted: #f0f2ec;
-  --pion-color-surface-hover: #e9ede3;
-  --pion-color-surface-selected: #eef2e7;
-  --pion-color-ink: #20231f;
-  --pion-color-ink-soft: #42493c;
-  --pion-color-muted: #626b5b;
-  --pion-color-faint: #6b7464;
-  --pion-color-line: #dce1d5;
-  --pion-color-line-strong: #b9c3af;
-  --pion-color-brand: #53753c;
-  --pion-color-brand-strong: #456331;
-  --pion-color-brand-soft: #eef2e7;
+  --pion-rgb-blue: 0 113 227;
+  --pion-rgb-green: 36 160 80;
+  --pion-rgb-orange: 232 120 0;
+  --pion-rgb-purple: 151 71 255;
+  --pion-rgb-red: 224 48 72;
+  --pion-rgb-ink: 11 13 26;
+  --pion-orb-strength: 0.5;
+
+  --pion-color-canvas: #e6e9f2;
+  --pion-color-sheet: rgb(255 255 255 / 58%);
+  --pion-color-surface: rgb(255 255 255 / 55%);
+  --pion-color-surface-raised: rgb(250 251 255 / 94%);
+  --pion-color-surface-muted: rgb(var(--pion-rgb-ink) / 4.5%);
+  --pion-color-surface-hover: rgb(var(--pion-rgb-ink) / 6%);
+  --pion-color-surface-selected: rgb(var(--pion-rgb-blue) / 11%);
+  --pion-color-ink: #0b0d1a;
+  --pion-color-ink-soft: rgb(var(--pion-rgb-ink) / 80%);
+  --pion-color-muted: rgb(var(--pion-rgb-ink) / 62%);
+  --pion-color-faint: rgb(var(--pion-rgb-ink) / 48%);
+  --pion-color-line: rgb(var(--pion-rgb-ink) / 9%);
+  --pion-color-line-strong: rgb(var(--pion-rgb-ink) / 18%);
+  --pion-color-brand: rgb(var(--pion-rgb-blue));
+  --pion-color-brand-strong: #0062c4;
+  --pion-color-brand-soft: rgb(var(--pion-rgb-blue) / 12%);
   --pion-color-on-brand: #ffffff;
-  --pion-color-unread: #2968b1;
-  --pion-color-leaf: #a3b572;
-  --pion-color-blue: #2968b1;
-  --pion-color-amber: #92600c;
-  --pion-color-amber-soft: #fcf3df;
-  --pion-color-danger: #b63e38;
-  --pion-color-danger-soft: #fcf0ee;
-  --pion-color-overlay: rgb(25 30 21 / 48%);
-  --pion-shadow-card: 0 12px 32px -8px rgb(32 35 31 / 16%);
-  --pion-shadow-low: 0 4px 16px rgb(32 35 31 / 5%);
-  --pion-size-rail: 264px;
-  --pion-size-topbar: 56px;
+  --pion-color-unread: rgb(var(--pion-rgb-green));
+  --pion-color-leaf: rgb(var(--pion-rgb-green));
+  --pion-color-blue: rgb(var(--pion-rgb-blue));
+  --pion-color-purple: rgb(var(--pion-rgb-purple));
+  --pion-color-amber: #b05e00;
+  --pion-color-amber-soft: rgb(var(--pion-rgb-orange) / 12%);
+  --pion-color-danger: #c8102e;
+  --pion-color-danger-soft: rgb(var(--pion-rgb-red) / 10%);
+  --pion-color-overlay: rgb(10 12 24 / 28%);
+  --pion-shadow-card:
+    0 18px 48px -12px rgb(20 24 60 / 24%), 0 0 0 1px rgb(var(--pion-rgb-ink) / 6%);
+  --pion-shadow-low: 0 6px 6px rgb(20 24 60 / 8%), 0 0 20px rgb(20 24 60 / 6%);
+
+  --pion-glass-tint: rgb(255 255 255 / 34%);
+  --pion-glass-tint-strong: rgb(255 255 255 / 70%);
+  --pion-glass-shine: rgb(255 255 255 / 85%);
+  --pion-glass-shadow: 0 6px 6px rgb(20 24 60 / 8%), 0 0 20px rgb(20 24 60 / 6%);
+  --pion-glass-hover: rgb(255 255 255 / 62%);
+  --pion-sheet-blur: blur(30px) saturate(1.4);
+  /* Multi-hue gradient is reserved for headline numerals and titles. */
+  --pion-gradient-apple: linear-gradient(
+    100deg,
+    #0894ff 0%,
+    #c959dd 34%,
+    #ff2e54 68%,
+    #ff9004 100%
+  );
+
+  --pion-size-rail: 272px;
+  --pion-size-topbar: 52px;
   --pion-size-rail-collapsed: 60px;
-  --pion-size-reading: 820px;
-  --pion-size-page: 1040px;
+  --pion-size-reading: 780px;
+  --pion-size-page: 1080px;
+  --pion-size-gutter: 8px;
   --pion-duration-rail: 260ms;
   --pion-ease-rail: cubic-bezier(0.32, 0.72, 0, 1);
-  --pion-size-radius-sm: 5px;
-  --pion-size-radius-md: 8px;
-  --pion-size-radius-lg: 12px;
+  --pion-ease-spring: cubic-bezier(0.175, 0.885, 0.32, 2.2);
+  --pion-size-radius-sm: 8px;
+  --pion-size-radius-md: 12px;
+  --pion-size-radius-lg: 18px;
+  --pion-size-radius-card: 2rem;
   --pion-size-radius-pill: 999px;
   --pion-space-xs: 4px;
   --pion-space-sm: 7px;
   --pion-space-md: 10px;
   --pion-space-lg: 14px;
   --pion-space-xl: 24px;
-  --pion-font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --pion-font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  --pion-color-preview-light-surface: #f7f8f4;
-  --pion-color-preview-light-ink: #20231f;
-  --pion-color-preview-light-line: #dce1d5;
-  --pion-color-preview-dark-surface: #171a16;
-  --pion-color-preview-dark-ink: #eef1eb;
-  --pion-color-preview-dark-line: #394132;
+  --pion-font-sans:
+    -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei",
+    "Segoe UI", sans-serif;
+  --pion-font-display: "Outfit", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --pion-font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --pion-color-preview-light-surface: #e6e9f2;
+  --pion-color-preview-light-ink: #0b0d1a;
+  --pion-color-preview-light-line: rgb(11 13 26 / 12%);
+  --pion-color-preview-dark-surface: #05060b;
+  --pion-color-preview-dark-ink: #ffffff;
+  --pion-color-preview-dark-line: rgb(255 255 255 / 14%);
+}
+
+@media (min-width: 1920px) {
+  :root {
+    --pion-size-rail: 300px;
+    --pion-size-reading: 860px;
+  }
 }
 
 @media (max-width: 850px) {

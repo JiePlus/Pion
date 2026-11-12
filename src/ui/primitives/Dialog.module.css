@@ -7,7 +7,7 @@
   justify-content: center;
   padding: var(--pion-space-xl);
   background: var(--pion-color-overlay);
-  backdrop-filter: blur(3px);
+  backdrop-filter: blur(6px);
 }
 
 .modal {
@@ -16,8 +16,13 @@
   max-height: 85vh;
   padding: var(--pion-space-xl);
   overflow-y: auto;
-  border: 1px solid var(--pion-color-line);
-  border-radius: var(--pion-size-radius-md);
+  border: 0;
+  border-radius: 24px;
   background: var(--pion-color-surface-raised);
-  box-shadow: var(--pion-shadow-card);
+  box-shadow:
+    var(--pion-shadow-card),
+    inset 2px 2px 1px 0 var(--pion-glass-shine),
+    inset -1px -1px 1px 1px var(--pion-glass-shine);
+  backdrop-filter: var(--pion-sheet-blur);
+  -webkit-backdrop-filter: var(--pion-sheet-blur);
 }

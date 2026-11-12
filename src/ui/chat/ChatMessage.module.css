@@ -18,9 +18,9 @@
   max-height: 320px;
   padding: 10px 14px;
   overflow: auto;
-  border: 1px solid var(--pion-color-line);
-  border-radius: 15px 15px 4px 15px;
-  background: var(--pion-color-surface-muted);
+  border: 1px solid rgb(var(--pion-rgb-blue) / 26%);
+  border-radius: 18px 18px 6px 18px;
+  background: rgb(var(--pion-rgb-blue) / 14%);
 }
 
 .message-content,

@@ -6,16 +6,15 @@ test("design copy is shown in Chinese on first launch", async ({ page }) => {
   mkdirSync("artifacts/ui-qa", { recursive: true });
   await page.goto("/");
   await expect(page.locator("html")).toHaveAttribute("lang", "zh-CN");
-  await expect(page.getByRole("button", { name: "模型", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "搜索任务", exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { name: "今天想做什么？" })).toBeVisible();
   await page.screenshot({ path: "artifacts/ui-qa/chinese-new-task.png" });
 
-  await page.getByRole("button", { name: "模型", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "模型服务" })).toBeVisible();
-  await page.screenshot({ path: "artifacts/ui-qa/chinese-models.png" });
-
   await page.getByRole("button", { name: "设置", exact: true }).click();
   await page.screenshot({ path: "artifacts/ui-qa/chinese-settings.png" });
+  await page.getByRole("button", { name: "模型服务", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "模型服务" })).toBeVisible();
+  await page.screenshot({ path: "artifacts/ui-qa/chinese-models.png" });
   await page.getByRole("button", { name: "快捷键", exact: true }).click();
   await expect(page.getByRole("heading", { name: "快捷键" })).toBeVisible();
   await page.getByRole("button", { name: "桌面插件", exact: true }).click();
@@ -37,7 +36,10 @@ test("redesigned shortcuts and controls perform their actions", async ({ page })
   await page.getByRole("radio", { name: "Dark", exact: true }).press("Space");
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
 
-  await page.getByRole("button", { name: "Pi models" }).click();
+  await page
+    .getByRole("navigation", { name: "Settings sections" })
+    .getByRole("button", { name: "Model services", exact: true })
+    .click();
   await page.getByRole("button", { name: "Configure OpenAI" }).click();
   await expect(page.getByLabel("OpenAI API Key")).toBeVisible();
 
@@ -57,10 +59,12 @@ for (const theme of ["light", "dark"]) {
     const send = page.getByRole("button", { name: "Start task", exact: true });
     await expect(send).toBeInViewport({ ratio: 1 });
     const sendBounds = await send.boundingBox();
-    const statusBounds = await page.locator(".statusbar").boundingBox();
+    const sheetBounds = await page.locator(".shell-content").boundingBox();
     expect(sendBounds).not.toBeNull();
-    expect(statusBounds).not.toBeNull();
-    expect(sendBounds!.y + sendBounds!.height).toBeLessThanOrEqual(statusBounds!.y);
+    expect(sheetBounds).not.toBeNull();
+    expect(sendBounds!.y + sendBounds!.height).toBeLessThanOrEqual(
+      sheetBounds!.y + sheetBounds!.height,
+    );
     await send.click();
     await expect(
       page

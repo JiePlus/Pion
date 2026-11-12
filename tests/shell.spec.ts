@@ -460,8 +460,11 @@ test("background task banner only counts tasks in the current project", async ({
 test("Pi packages stay separate from desktop plugins and support both scopes", async ({ page }) => {
   await taskFixture(page);
   await page.goto("/");
-  await page.getByRole("button", { name: "Pi packages", exact: true }).click();
-  await expect(page.getByRole("navigation", { name: "Settings sections" })).toHaveCount(0);
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await page
+    .getByRole("navigation", { name: "Settings sections" })
+    .getByRole("button", { name: "Pi packages", exact: true })
+    .click();
   await page.getByRole("textbox", { name: "Package source" }).fill("npm:example-pi");
   await page.getByRole("button", { name: "Install", exact: true }).click();
   await expect(page.locator(".plugin-card")).toContainText("npm:example-pi");
@@ -497,8 +500,11 @@ test("Pi packages stay separate from desktop plugins and support both scopes", a
 test("Pi skills use native paths and show installed skills", async ({ page }) => {
   await taskFixture(page);
   await page.goto("/");
-  await page.getByRole("button", { name: "Pi skills", exact: true }).click();
-  await expect(page.getByRole("navigation", { name: "Settings sections" })).toHaveCount(0);
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await page
+    .getByRole("navigation", { name: "Settings sections" })
+    .getByRole("button", { name: "Pi skills", exact: true })
+    .click();
   await page
     .getByRole("textbox", { name: "Skill file or directory" })
     .fill("/home/test/skills/review");
@@ -554,7 +560,11 @@ test("Pi package skills show source and can be toggled", async ({ page }) => {
     ),
   );
   await page.reload();
-  await page.getByRole("button", { name: "Pi skills", exact: true }).click();
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await page
+    .getByRole("navigation", { name: "Settings sections" })
+    .getByRole("button", { name: "Pi skills", exact: true })
+    .click();
   await expect(page.getByText("npm:example")).toBeVisible();
   const packageSwitch = page.getByRole("switch", { name: "package-skill", exact: true });
   await expect(packageSwitch).toBeChecked();
@@ -565,7 +575,11 @@ test("Pi package skills show source and can be toggled", async ({ page }) => {
 test("Pi skills support project paths, overrides, and slash commands", async ({ page }) => {
   await taskFixture(page);
   await page.goto("/");
-  await page.getByRole("button", { name: "Pi skills", exact: true }).click();
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await page
+    .getByRole("navigation", { name: "Settings sections" })
+    .getByRole("button", { name: "Pi skills", exact: true })
+    .click();
   await page
     .getByRole("textbox", { name: "Skill file or directory" })
     .fill("/home/test/skills/user-review");
@@ -615,7 +629,11 @@ test("Pi skills support project paths, overrides, and slash commands", async ({ 
 test("model services connect providers and edit custom models", async ({ page }) => {
   await taskFixture(page);
   await page.goto("/");
-  await page.getByRole("button", { name: "Pi models", exact: true }).click();
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await page
+    .getByRole("navigation", { name: "Settings sections" })
+    .getByRole("button", { name: "Model services", exact: true })
+    .click();
   await expect(page.getByRole("heading", { name: "Model services" })).toBeVisible();
   await page.getByRole("button", { name: "Configure OpenAI" }).click();
   await page.getByLabel("OpenAI API Key").fill("sk-test-secret");

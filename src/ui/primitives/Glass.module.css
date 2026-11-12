@@ -1,0 +1,48 @@
+.liquidGlass-wrapper {
+  position: relative;
+  display: flex;
+  overflow: hidden;
+  border-radius: var(--pion-size-radius-card);
+  box-shadow: var(--pion-glass-shadow);
+  transition: all 0.4s var(--pion-ease-spring);
+}
+
+.liquidGlass-effect {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  filter: url(#glass-distortion);
+}
+
+.liquidGlass-tint {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  background: var(--pion-glass-tint);
+}
+
+.strong > .liquidGlass-tint {
+  background: var(--pion-glass-tint-strong);
+}
+
+.liquidGlass-shine {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  box-shadow:
+    inset 2px 2px 1px 0 var(--pion-glass-shine),
+    inset -1px -1px 1px 1px var(--pion-glass-shine);
+}
+
+.liquidGlass-text {
+  position: relative;
+  z-index: 3;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  transition: transform 0.4s var(--pion-ease-spring);
+}

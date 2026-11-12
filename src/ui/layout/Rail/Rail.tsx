@@ -1,6 +1,7 @@
 import { StatusDot } from "../../primitives/StatusDot.tsx";
 import { Button } from "../../primitives/Button.tsx";
 import { Icon } from "../../primitives/Icon.tsx";
+import { Glass } from "../../primitives/Glass.tsx";
 import { componentClass } from "../../componentClass.ts";
 import type { Dispatch, SetStateAction } from "react";
 import type { Json } from "../../../core/api.ts";
@@ -27,6 +28,9 @@ interface RailProps {
   clearExtensionUi: () => void;
   perform: (work: () => Promise<unknown>) => void;
   action: (id: string, args?: Json) => void;
+  statusText: string;
+  statusDetail: string;
+  runtimeVersion?: string;
 }
 
 export function Rail({
@@ -44,11 +48,18 @@ export function Rail({
   clearExtensionUi,
   perform,
   action,
+  statusText,
+  statusDetail,
+  runtimeVersion,
 }: RailProps) {
   const { catalog, task, setTask, taskFilter, setTaskFilter, taskQuery, setTaskQuery, addProject } =
     tasks;
   return (
-    <aside className={componentClass(styles, "rail")}>
+    <Glass
+      as="aside"
+      className={componentClass(styles, "rail")}
+      contentClassName={componentClass(styles, "rail-inner")}
+    >
       <div className={componentClass(styles, "rail-header")}>
         <div className={componentClass(styles, "brand")}>
           <img src={pionMark} alt="" />
@@ -84,57 +95,26 @@ export function Rail({
           <kbd aria-hidden="true">⌘N</kbd>
         </button>
         <button
-          className={page === "models" ? componentClass(styles, "selected") : ""}
-          aria-label={t("Pi models")}
-          title={t("Pi models")}
-          onClick={() => action("core.navigate", "models")}
+          className={
+            taskBrowserOpen || taskQuery || taskFilter !== "all"
+              ? componentClass(styles, "selected")
+              : ""
+          }
+          aria-label={t("Search tasks")}
+          title={t("Search tasks")}
+          aria-expanded={taskBrowserOpen}
+          aria-controls="task-browser-controls"
+          onClick={() => setTaskBrowserOpen((open) => !open)}
         >
           <span aria-hidden="true">
-            <Icon name="cube" size={17} />
+            <Icon name="search" size={17} />
           </span>
-          <span>{t("Pi models")}</span>
-        </button>
-        <button
-          className={page === "packages" ? componentClass(styles, "selected") : ""}
-          aria-label={t("Pi packages")}
-          title={t("Pi packages")}
-          onClick={() => action("core.navigate", "packages")}
-        >
-          <span aria-hidden="true">
-            <Icon name="grid" size={17} />
-          </span>
-          <span>{t("Pi packages")}</span>
-        </button>
-        <button
-          className={page === "skills" ? componentClass(styles, "selected") : ""}
-          aria-label={t("Pi skills")}
-          title={t("Pi skills")}
-          onClick={() => action("core.navigate", "skills")}
-        >
-          <span aria-hidden="true">
-            <Icon name="bolt" size={17} />
-          </span>
-          <span>{t("Pi skills")}</span>
+          <span>{t("Search tasks")}</span>
         </button>
       </nav>
       <div className={componentClass(styles, "project-heading")}>
         <span>{t("Projects")}</span>
         <div className={componentClass(styles, "project-actions")}>
-          <Button
-            variant="icon"
-            className={`icon-button ${
-              taskBrowserOpen || taskQuery || taskFilter !== "all"
-                ? componentClass(styles, "selected")
-                : ""
-            }`}
-            aria-label={t("Search tasks")}
-            title={t("Search tasks")}
-            aria-expanded={taskBrowserOpen}
-            aria-controls="task-browser-controls"
-            onClick={() => setTaskBrowserOpen((open) => !open)}
-          >
-            <Icon name="search" size={16} />
-          </Button>
           <Button
             variant="icon"
             className="icon-button"
@@ -196,7 +176,9 @@ export function Rail({
       <div className={componentClass(styles, "rail-bottom")}>
         <button
           className={
-            page === "settings" || page === "plugins" || page === "panels" || page === "shortcuts"
+            ["settings", "models", "packages", "skills", "plugins", "panels", "shortcuts"].includes(
+              page,
+            )
               ? componentClass(styles, "selected")
               : ""
           }
@@ -209,11 +191,14 @@ export function Rail({
           </span>
           <span>{t("Settings")}</span>
         </button>
-        <div className={componentClass(styles, "runtime-label")}>
+        <div className={componentClass(styles, "runtime-label")} title={statusDetail}>
           <StatusDot offline={!connected} />
-          <span>Pion</span> <span>Pi</span>
+          <span className={componentClass(styles, "runtime-text")}>
+            <strong>{runtimeVersion ? `Pi ${runtimeVersion}` : "Pi"}</strong>
+            <span>{statusText}</span>
+          </span>
         </div>
       </div>
-    </aside>
+    </Glass>
   );
 }

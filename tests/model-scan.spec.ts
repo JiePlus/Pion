@@ -5,7 +5,11 @@ test("model services auto-detect local endpoints and prefill the add dialog", as
   await taskFixture(page);
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto("/");
-  await page.getByRole("button", { name: "Pi models", exact: true }).click();
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await page
+    .getByRole("navigation", { name: "Settings sections" })
+    .getByRole("button", { name: "Model services", exact: true })
+    .click();
 
   const localServices = page.getByRole("region", { name: "Local services" });
   await expect(localServices).toBeVisible();
@@ -29,7 +33,11 @@ test("model services keep a manual endpoint path when nothing is detected", asyn
   await page.addInitScript(() => localStorage.setItem("fixture.localScan", "[]"));
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto("/");
-  await page.getByRole("button", { name: "Pi models", exact: true }).click();
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await page
+    .getByRole("navigation", { name: "Settings sections" })
+    .getByRole("button", { name: "Model services", exact: true })
+    .click();
 
   const localServices = page.getByRole("region", { name: "Local services" });
   await expect(localServices).toBeVisible();

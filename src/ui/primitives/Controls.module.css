@@ -8,11 +8,12 @@
 .queueButton {
   height: 30px;
   min-height: 30px;
-  padding: 4px 8px;
+  padding: 4px 10px;
   border-color: var(--pion-color-line);
-  background: var(--pion-color-surface-raised);
+  border-radius: var(--pion-size-radius-pill);
+  background: var(--pion-color-surface-muted);
   color: var(--pion-color-ink-soft);
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .compactField select:hover,

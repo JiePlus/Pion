@@ -19,8 +19,16 @@
 }
 
 .start-heading h1 {
-  margin-bottom: 10px;
-  font-size: 28px;
+  display: inline-block;
+  margin-bottom: 12px;
+  font-size: clamp(32px, 3.4vw, 60px);
+  font-weight: 900;
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+  background: var(--pion-gradient-apple);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 .start-heading p {
@@ -39,10 +47,21 @@
 
 .suggestions button {
   min-height: 36px;
-  padding: 7px 13px;
-  border-radius: 7px;
-  background: var(--pion-color-surface-raised);
+  padding: 7px 14px;
+  border: 0;
+  border-radius: var(--pion-size-radius-pill);
+  background: var(--pion-glass-tint);
+  box-shadow:
+    var(--pion-glass-shadow),
+    inset 1px 1px 1px 0 var(--pion-glass-shine),
+    inset -1px -1px 1px 0 var(--pion-glass-shine);
   font-size: 13px;
+  transition: all 0.4s var(--pion-ease-spring);
+}
+
+.suggestions button:hover:not(:disabled) {
+  background: var(--pion-glass-hover);
+  transform: scale(1.04);
 }
 
 .suggestions svg {
@@ -57,8 +76,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  padding: 12px 16px;
-  border-top: 1px solid var(--pion-color-line);
+  padding: 10px 12px 12px;
 }
 
 .new-task-options {
@@ -107,8 +125,8 @@
   margin: 0 0 12px;
   padding: 10px 14px;
   border: 1px solid var(--pion-color-line);
-  border-radius: 10px;
-  background: var(--pion-color-surface);
+  border-radius: 16px;
+  background: var(--pion-color-surface-muted);
   color: var(--pion-color-muted);
 }
 
@@ -136,7 +154,7 @@
   min-height: 34px;
   place-items: center;
   padding: 0;
-  border-radius: 8px;
+  border-radius: 50%;
 }
 
 .send-button {
@@ -198,21 +216,30 @@
 .command-form {
   width: 100%;
   overflow: visible;
-  border: 1px solid var(--pion-color-line-strong);
-  border-radius: 12px;
-  background: var(--pion-color-surface);
-  box-shadow: var(--pion-shadow-low);
+  border: 0;
+  border-radius: 24px;
+  background: var(--pion-glass-tint-strong);
+  box-shadow:
+    var(--pion-glass-shadow),
+    inset 2px 2px 1px 0 var(--pion-glass-shine),
+    inset -1px -1px 1px 1px var(--pion-glass-shine);
+  backdrop-filter: blur(12px) saturate(1.3);
+  -webkit-backdrop-filter: blur(12px) saturate(1.3);
 }
 
 .command-form:focus-within {
-  border-color: var(--pion-color-brand);
+  box-shadow:
+    var(--pion-glass-shadow),
+    inset 2px 2px 1px 0 var(--pion-glass-shine),
+    inset -1px -1px 1px 1px var(--pion-glass-shine),
+    0 0 0 3px var(--pion-color-brand-soft);
 }
 
 .command-form textarea {
   min-height: 132px;
   padding: 18px 20px 8px;
   border: 0;
-  border-radius: 11px 11px 0 0;
+  border-radius: 23px 23px 0 0;
   background: transparent;
   font-size: 16px;
   resize: none;
@@ -229,7 +256,7 @@
   }
 
   .start-heading h1 {
-    font-size: 25px;
+    font-size: 28px;
   }
 
   .new-task-options {
