@@ -35,8 +35,12 @@
   font-size: 14px;
 }
 
+.core-composer > textarea,
+.core-composer > textarea:hover:not(:disabled),
 .core-composer > textarea:focus-visible {
+  border: 0;
   outline: none;
+  box-shadow: none;
 }
 
 .core-composer-footer {
@@ -50,8 +54,7 @@
 }
 
 .composer-options,
-.composer-actions,
-.composer-more-settings {
+.composer-actions {
   display: flex;
   min-width: 0;
   align-items: center;
@@ -66,10 +69,6 @@
 .composer-actions {
   flex-shrink: 0;
   justify-content: flex-end;
-}
-
-.composer-tool-preset select {
-  max-width: 125px;
 }
 
 .send-button,
@@ -90,40 +89,6 @@
 
 .stop-button {
   font-size: 12px;
-}
-
-.queue-next-button {
-  padding-inline: 9px;
-  background: var(--pion-color-brand-soft);
-  color: var(--pion-color-brand-strong);
-}
-
-.composer-more {
-  position: absolute;
-  bottom: calc(100% + 8px);
-  left: 0;
-  z-index: 12;
-  display: grid;
-  width: min(470px, 100%);
-  max-height: min(420px, 60vh);
-  gap: 9px;
-  padding: 11px;
-  overflow-y: auto;
-  border: 1px solid var(--pion-color-line);
-  border-radius: 16px;
-  background: var(--pion-color-surface-raised);
-  box-shadow: var(--pion-shadow-card);
-  backdrop-filter: var(--pion-sheet-blur);
-}
-
-.composer-more .composer-options,
-.composer-more-settings {
-  flex-wrap: wrap;
-  overflow: visible;
-}
-
-.composer-more :global(.compact-field) {
-  max-width: 190px;
 }
 
 .custom-compact {
@@ -197,7 +162,7 @@
 .attachment-strip img {
   width: 72px;
   height: 54px;
-  border-radius: 7px;
+  border-radius: 10px;
   object-fit: cover;
 }
 
@@ -226,8 +191,129 @@
   font-size: 12px;
 }
 
-@media (max-width: 850px) {
-  .composer-tool-preset {
-    display: none;
+.stop-button {
+  border: 0;
+  background: rgb(var(--pion-rgb-red));
+  box-shadow: 0 6px 16px -6px rgb(var(--pion-rgb-red) / 60%);
+  color: #fff;
+}
+
+.stop-button:hover:not(:disabled) {
+  border: 0;
+  background: rgb(var(--pion-rgb-red) / 88%);
+}
+
+/* With a draft in the box, stop stays reachable as a quieter companion to send. */
+.secondary-stop {
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  min-height: 28px;
+  background: rgb(var(--pion-rgb-red) / 12%);
+  box-shadow: none;
+  color: var(--pion-color-danger);
+}
+
+.secondary-stop:hover:not(:disabled) {
+  background: rgb(var(--pion-rgb-red) / 20%);
+}
+
+/* Floats above the composer's top edge only while Pi is working; the composer reserves
+   that strip so the switch never covers the queue or "Scroll to latest". */
+.core-composer.running {
+  margin-top: 44px;
+}
+
+.run-float {
+  position: absolute;
+  right: 14px;
+  bottom: calc(100% + 8px);
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px;
+  border-radius: var(--pion-size-radius-pill);
+  background: var(--pion-color-surface-raised);
+  box-shadow:
+    var(--pion-shadow-card),
+    inset 1px 1px 1px 0 var(--pion-glass-shine);
+  backdrop-filter: var(--pion-sheet-blur);
+  -webkit-backdrop-filter: var(--pion-sheet-blur);
+  color: var(--pion-color-muted);
+  font-size: 12px;
+  animation: float-in var(--pion-duration-med) var(--pion-ease-spring-soft) both;
+}
+
+@keyframes float-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+.anchor {
+  position: relative;
+  display: inline-flex;
+}
+
+.add-button {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  min-height: 0;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--pion-color-line);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--pion-color-ink-soft);
+}
+
+.add-button[aria-expanded="true"] svg {
+  transform: rotate(45deg);
+}
+
+.add-button svg {
+  transition: transform var(--pion-duration-med) var(--pion-ease-spring-soft);
+}
+
+.session-row {
+  display: flex;
+  white-space: nowrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--pion-color-ink-soft);
+  font-size: 12.5px;
+}
+
+.session-controls {
+  display: grid;
+  gap: 10px;
+  padding: 12px 10px 10px;
+}
+
+.session-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.small-button {
+  min-height: 26px;
+  padding: 0 10px;
+  border-radius: 8px;
+  font-size: 12px;
+}
+
+.small-button.ghost {
+  border-color: transparent;
+  background: transparent;
+  color: var(--pion-color-muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .run-float {
+    animation: none;
   }
 }

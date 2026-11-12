@@ -1,0 +1,78 @@
+.anchor {
+  position: relative;
+  display: inline-flex;
+  min-width: 0;
+}
+
+/* Flush with the composer glass until hovered or open. */
+.model-pill {
+  display: inline-flex;
+  max-width: 320px;
+  min-height: 30px;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px 0 10px;
+  border: 0;
+  border-radius: var(--pion-size-radius-pill);
+  background: transparent;
+  color: var(--pion-color-ink-soft);
+  font-size: 12.5px;
+}
+
+.model-pill:hover:not(:disabled),
+.model-pill[aria-expanded="true"] {
+  border: 0;
+  background: var(--pion-color-surface-hover);
+  color: var(--pion-color-ink);
+}
+
+.model-pill > svg {
+  flex: none;
+  color: var(--pion-color-faint);
+  transition: transform var(--pion-duration-med) var(--pion-ease-spring-soft);
+}
+
+.model-pill[aria-expanded="true"] > svg {
+  transform: rotate(180deg);
+}
+
+.pill-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pill-tag {
+  flex: none;
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: rgb(var(--pion-rgb-purple) / 12%);
+  color: rgb(var(--pion-rgb-purple));
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.pill-tag.tools {
+  background: rgb(var(--pion-rgb-orange) / 14%);
+  color: var(--pion-color-amber);
+}
+
+.menu {
+  width: 280px;
+}
+
+.provider {
+  flex: none;
+  color: var(--pion-color-faint);
+  font-family: var(--pion-font-mono);
+  font-size: 10.5px;
+}
+
+.menu-note {
+  margin: 0;
+  padding: 6px 10px 8px;
+  color: var(--pion-color-faint);
+  font-size: 11.5px;
+  line-height: 1.5;
+}

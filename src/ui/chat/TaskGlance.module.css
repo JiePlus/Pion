@@ -1,0 +1,74 @@
+.task-glance {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 28px;
+}
+
+.task-glance button {
+  display: grid;
+  min-height: 0;
+  gap: 10px;
+  padding: 14px 16px;
+  border: 1px solid var(--pion-color-line);
+  border-radius: 18px;
+  background: var(--pion-color-surface-muted);
+  text-align: left;
+  transition: all 0.1s ease-in;
+}
+
+.task-glance button:hover:not(:disabled) {
+  border-color: var(--pion-color-line-strong);
+  background: var(--pion-glass-hover);
+}
+
+.task-glance button.selected {
+  border-color: rgb(var(--pion-rgb-blue) / 55%);
+  box-shadow: 0 0 0 3px rgb(var(--pion-rgb-blue) / 14%);
+}
+
+.glance-label {
+  color: var(--pion-color-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.glance-number {
+  font-family: var(--pion-font-display);
+  font-size: clamp(40px, 3.4vw, 64px);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.045em;
+  line-height: 0.85;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Each count fades within its own hue; the total stays neutral ink. */
+.blue {
+  background-image: linear-gradient(
+    180deg,
+    rgb(var(--pion-rgb-blue)) 30%,
+    rgb(var(--pion-rgb-blue) / 22%)
+  );
+}
+
+.ink {
+  background-image: none;
+  color: var(--pion-color-ink);
+}
+
+.orange {
+  background-image: linear-gradient(
+    180deg,
+    rgb(var(--pion-rgb-orange)) 30%,
+    rgb(var(--pion-rgb-orange) / 22%)
+  );
+}
+
+@media (max-height: 680px) {
+  .task-glance {
+    display: none;
+  }
+}

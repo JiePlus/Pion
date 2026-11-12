@@ -1,20 +1,23 @@
 import type { ReactNode } from "react";
 import { componentClass } from "../componentClass.ts";
-import type { PanelView } from "../../core/runtime.ts";
+import type { PanelView, Runtime } from "../../core/runtime.ts";
 import type { Project } from "../../core/host.ts";
 import { t } from "../../core/i18n.ts";
 import { CoreChat, hasChatSnapshot } from "../chat/CoreChat.tsx";
 import { TaskStart } from "../chat/TaskStart.tsx";
+import { TaskGlance } from "../chat/TaskGlance.tsx";
 import type { useShellController } from "../hooks/useShellController.ts";
 import { Slot } from "./Slot/Slot.tsx";
 import styles from "./Shell.module.css";
 
 export function Workspace({
   controller,
+  runtime,
   panel,
   selectedProject,
 }: {
   controller: ReturnType<typeof useShellController>;
+  runtime: Runtime;
   panel: (view: PanelView) => ReactNode;
   selectedProject: Project | undefined;
 }) {
@@ -63,6 +66,15 @@ export function Workspace({
     setDraftThinking,
     draftToolPreset,
     setDraftToolPreset,
+    usageArea,
+    usageButton,
+    usageOpen,
+    usageStats,
+    usageLoading,
+    usageError,
+    showUsage,
+    tasksState,
+    setTaskBrowserOpen,
   } = controller;
   const backgroundTasks = catalog.tasks.filter(
     (item) =>
@@ -131,6 +143,17 @@ export function Workspace({
                     externalDraft={extensionDraft}
                     onExternalDraftApplied={() => setExtensionDraft(null)}
                     viewMode={viewMode}
+                    usage={{
+                      area: usageArea,
+                      button: usageButton,
+                      open: usageOpen,
+                      stats: usageStats,
+                      loading: usageLoading,
+                      error: usageError,
+                      onToggle: () =>
+                        showUsage().catch((error) => runtime.notice("Pi", String(error))),
+                    }}
+                    onManagePackages={() => action("core.navigate", "packages")}
                   />
                 )}
               </div>
@@ -167,6 +190,22 @@ export function Workspace({
               setDraftToolPreset={setDraftToolPreset}
               selectedProject={selectedProject}
               openTask={openTask}
+              footer={
+                !!catalog.tasks.length && (
+                  <TaskGlance
+                    running={
+                      [...taskStatuses.values()].filter((value) => value === "working").length
+                    }
+                    attention={catalog.tasks.filter((item) => item.unread).length}
+                    total={catalog.tasks.length}
+                    filter={tasksState.taskFilter}
+                    onFilter={(value) => {
+                      tasksState.setTaskFilter(value);
+                      setTaskBrowserOpen(true);
+                    }}
+                  />
+                )
+              }
             />
           )}
           {busy && (

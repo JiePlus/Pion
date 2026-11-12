@@ -8,10 +8,70 @@ import { t } from "../../../core/i18n.ts";
 import type { Runtime } from "../../../core/runtime.ts";
 import type { ViewMode } from "../../chat/ChatMessage.tsx";
 import type { Page } from "../types.ts";
+import { MenuItem, Popover } from "../../primitives/Popover.tsx";
+import { useRef, useState } from "react";
 import styles from "./Topbar.module.css";
+
+const viewModes = [
+  ["summary", "Summary"],
+  ["normal", "Normal"],
+  ["verbose", "Verbose"],
+] as const;
+
+// How much of Pi's process the transcript shows; a glass menu, not a native select.
+function ViewModeMenu({
+  value,
+  onChange,
+}: {
+  value: ViewMode;
+  onChange: (value: ViewMode) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const trigger = useRef<HTMLButtonElement>(null);
+  const current = viewModes.find(([mode]) => mode === value)?.[1] ?? "Normal";
+  return (
+    <span className={componentClass(styles, "view-mode-control")}>
+      <button
+        ref={trigger}
+        type="button"
+        className={componentClass(styles, "header-button")}
+        aria-label={t("Conversation detail")}
+        title={t("Conversation detail")}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={() => setOpen((state) => !state)}
+      >
+        {t(current)}
+        <Icon name="chevron-down" size={13} />
+      </button>
+      <Popover
+        open={open}
+        onClose={() => setOpen(false)}
+        anchor={trigger}
+        placement="bottom-end"
+        role="menu"
+        label={t("Conversation detail")}
+      >
+        {viewModes.map(([mode, label]) => (
+          <MenuItem
+            key={mode}
+            label={t(label)}
+            checked={mode === value}
+            onSelect={() => {
+              onChange(mode);
+              setOpen(false);
+              trigger.current?.focus();
+            }}
+          />
+        ))}
+      </Popover>
+    </span>
+  );
+}
 
 export interface SessionStats {
   cost?: number;
+  tokens?: { input?: number; output?: number };
   contextUsage?: { tokens?: number; contextWindow?: number; percent?: number };
 }
 
@@ -25,13 +85,7 @@ interface TopbarProps {
   connected: boolean;
   setupStatus: PiSetupStatus | null;
   headerActions: RefObject<HTMLDivElement | null>;
-  usageButton: RefObject<HTMLButtonElement | null>;
-  usageOpen: boolean;
-  showUsage: () => Promise<void>;
   runtime: Runtime;
-  usageStats: SessionStats | null;
-  usageLoading: boolean;
-  usageError: string;
   taskMenuButton: RefObject<HTMLButtonElement | null>;
   taskMenuOpen: boolean;
   setTaskMenuOpen: Dispatch<SetStateAction<boolean>>;
@@ -57,13 +111,7 @@ export function Topbar({
   connected,
   setupStatus,
   headerActions,
-  usageButton,
-  usageOpen,
-  showUsage,
   runtime,
-  usageStats,
-  usageLoading,
-  usageError,
   taskMenuButton,
   taskMenuOpen,
   setTaskMenuOpen,
@@ -133,61 +181,12 @@ export function Topbar({
       )}
       {page === "workspace" && task && (
         <div className={componentClass(styles, "header-actions")} ref={headerActions}>
-          <label className={componentClass(styles, "view-mode-control")}>
-            <span className="sr-only">{t("Conversation detail")}</span>
-            <select
-              aria-label={t("Conversation detail")}
-              value={viewMode}
-              onChange={(event) => setConversationView(event.target.value as ViewMode)}
-            >
-              <option value="summary">{t("Summary")}</option>
-              <option value="normal">{t("Normal")}</option>
-              <option value="verbose">{t("Verbose")}</option>
-            </select>
-          </label>
+          <ViewModeMenu value={viewMode} onChange={setConversationView} />
           {!connected && (
             <span className={componentClass(styles, "connection-pill")} role="status">
               <StatusDot offline />
               {t("Disconnected")}
             </span>
-          )}
-          <button
-            ref={usageButton}
-            type="button"
-            className={componentClass(styles, "header-button")}
-            aria-expanded={usageOpen}
-            onClick={() => showUsage().catch((error) => runtime.notice("Pi", String(error)))}
-          >
-            {usageStats?.contextUsage?.percent === undefined
-              ? t("Usage")
-              : t("Context {percent}%", { percent: usageStats.contextUsage.percent.toFixed(2) })}
-          </button>
-          {usageOpen && (
-            <section
-              className={`${componentClass(styles, "header-popover")} ${componentClass(styles, "usage-popover")}`}
-              aria-label={t("Usage")}
-            >
-              <strong>{t("Session usage")}</strong>
-              {usageLoading && <p className="muted">{t("Loading…")}</p>}
-              {!!usageError && <p className="error">{usageError}</p>}
-              {usageStats && (
-                <dl>
-                  <div>
-                    <dt>{t("Context")}</dt>
-                    <dd>
-                      {usageStats.contextUsage?.tokens?.toLocaleString() ?? "—"} /{" "}
-                      {usageStats.contextUsage?.contextWindow?.toLocaleString() ?? "—"}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt>{t("Cost")}</dt>
-                    <dd>
-                      {usageStats.cost === undefined ? "—" : `$${usageStats.cost.toFixed(4)}`}
-                    </dd>
-                  </div>
-                </dl>
-              )}
-            </section>
           )}
           <button
             ref={taskMenuButton}

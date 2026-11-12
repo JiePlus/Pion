@@ -38,25 +38,34 @@
 }
 
 .view-mode-control {
-  display: block;
+  position: relative;
+  display: inline-flex;
   min-width: 0;
 }
 
-.view-mode-control select,
+.view-mode-control > button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.view-mode-control > button svg {
+  color: var(--pion-color-faint);
+}
+
 .header-button {
   height: 30px;
   min-height: 30px;
   padding: 4px 8px;
   border-color: transparent;
-  border-radius: 9px;
+  border-radius: 12px;
   background: transparent;
   color: var(--pion-color-ink-soft);
   font-size: 12px;
 }
 
-.view-mode-control select:hover,
 .header-button:hover:not(:disabled) {
-  background: var(--pion-color-surface-hover);
+  background-color: var(--pion-color-surface-hover);
 }
 
 .connection-pill {

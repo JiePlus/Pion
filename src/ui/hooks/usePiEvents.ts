@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import type { RetryState } from "../chat/ChatTranscript.tsx";
 import type { Dispatch, RefObject, SetStateAction } from "react";
 import type { PiEvent } from "../../core/api.ts";
 import { applyAssistantDelta } from "../../core/chat-stream.ts";
@@ -14,9 +15,7 @@ interface PiEventState {
   setStream: Dispatch<SetStateAction<Message | null>>;
   setTools: Dispatch<SetStateAction<Map<string, Tool>>>;
   setMessages: Dispatch<SetStateAction<Message[]>>;
-  setRetry: Dispatch<
-    SetStateAction<{ attempt: number; maxAttempts: number; delayMs: number } | null>
-  >;
+  setRetry: Dispatch<SetStateAction<RetryState | null>>;
   setQueue: Dispatch<SetStateAction<{ steering: string[]; followUp: string[] }>>;
   setCompaction: Dispatch<
     SetStateAction<{
@@ -101,12 +100,14 @@ export function usePiEvents({
       if (event.type === "auto_retry_end" && event.success) setError("");
       if (event.type === "auto_retry_end") setRetry(null);
       if (event.type === "auto_retry_start") {
+        // The failure that triggered the retry lives on the retry card, not as a second error line.
         setRetry({
           attempt: Number(event.attempt ?? 0),
           maxAttempts: Number(event.maxAttempts ?? 0),
           delayMs: Number(event.delayMs ?? 0),
+          error: String(event.errorMessage ?? ""),
+          startedAt: Date.now(),
         });
-        setError(t("Pi is retrying: {error}", { error: String(event.errorMessage ?? "") }));
       }
       if (event.type === "extension_error")
         setError(String(event.error ?? t("Pi extension failed")));

@@ -230,15 +230,15 @@ export function useShellController(runtime: Runtime, boot: Boot) {
   const extensionDialog = useRef<HTMLFormElement>(null);
   const headerActions = useRef<HTMLDivElement>(null);
   const usageButton = useRef<HTMLButtonElement>(null);
+  const usageArea = useRef<HTMLDivElement>(null);
   const taskMenuButton = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     if (!taskMenuOpen && !usageOpen) return;
     const close = (event: PointerEvent) => {
-      if (!headerActions.current?.contains(event.target as Node)) {
-        setTaskMenuOpen(false);
-        setUsageOpen(false);
-      }
+      const target = event.target as Node;
+      if (!headerActions.current?.contains(target)) setTaskMenuOpen(false);
+      if (!usageArea.current?.contains(target)) setUsageOpen(false);
     };
     document.addEventListener("pointerdown", close);
     return () => document.removeEventListener("pointerdown", close);
@@ -708,6 +708,7 @@ export function useShellController(runtime: Runtime, boot: Boot) {
     extensionDialog,
     headerActions,
     usageButton,
+    usageArea,
     taskMenuButton,
     refreshSetup,
     savePiPath,

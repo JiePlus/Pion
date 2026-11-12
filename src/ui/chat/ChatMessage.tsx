@@ -1,4 +1,5 @@
 import { componentClass } from "../componentClass.ts";
+import { Icon } from "../primitives/Icon.tsx";
 import { useMemo } from "react";
 import type { ComponentProps } from "react";
 import ReactMarkdown from "react-markdown";
@@ -113,8 +114,11 @@ export function ChatMessage({
       : (message.content ?? []);
   const text = messageText(message);
   const modelName = message.role === "assistant" ? modelDisplayName(message, models) : "";
+  // A deliberate stop reports itself as "stopped"; its "Request was aborted" text is noise.
   const error =
-    message.errorMessage || (message.stopReason === "error" ? t("Pi response failed.") : "");
+    message.stopReason === "aborted"
+      ? ""
+      : message.errorMessage || (message.stopReason === "error" ? t("Pi response failed.") : "");
   if (!content.length && !error && !message.stopReason) return null;
   return (
     <article
@@ -144,17 +148,22 @@ export function ChatMessage({
           return null;
         })}
         {!!error && (
-          <p className="error" role="alert">
-            {error}
-          </p>
+          <div className={`error ${componentClass(styles, "message-error")}`} role="alert">
+            <Icon name="alert" size={15} />
+            <span>{error}</span>
+          </div>
         )}
         {message.stopReason === "length" && (
           <p className={componentClass(styles, "message-notice")}>
+            <Icon name="alert" size={13} />
             {t("Response reached the output limit.")}
           </p>
         )}
         {message.stopReason === "aborted" && (
-          <p className={componentClass(styles, "message-notice")}>{t("Response stopped.")}</p>
+          <p className={componentClass(styles, "message-notice")}>
+            <Icon name="stop" size={11} />
+            {t("Response stopped.")}
+          </p>
         )}
       </div>
       {!!text && !streaming && (

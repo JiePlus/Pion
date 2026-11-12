@@ -296,13 +296,7 @@ export function Shell({ runtime, boot }: { runtime: Runtime; boot: Boot }) {
               connected={connected}
               setupStatus={setupStatus}
               headerActions={headerActions}
-              usageButton={usageButton}
-              usageOpen={usageOpen}
-              showUsage={showUsage}
               runtime={runtime}
-              usageStats={usageStats}
-              usageLoading={usageLoading}
-              usageError={usageError}
               taskMenuButton={taskMenuButton}
               taskMenuOpen={taskMenuOpen}
               setTaskMenuOpen={setTaskMenuOpen}
@@ -326,7 +320,12 @@ export function Shell({ runtime, boot }: { runtime: Runtime; boot: Boot }) {
             </div>
           )}
           {page === "workspace" && (
-            <Workspace controller={controller} panel={panel} selectedProject={selectedProject} />
+            <Workspace
+              controller={controller}
+              runtime={runtime}
+              panel={panel}
+              selectedProject={selectedProject}
+            />
           )}
           {settingsPage && (
             <div className={componentClass(styles, "settings-layout")}>
