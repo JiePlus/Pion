@@ -1,16 +1,36 @@
 import { expect, test } from "@playwright/test";
 import { taskFixture } from "./task-fixture";
 
+// Composer actions now live in three places: the ＋ add menu, the run switch above the
+// composer, and the context ring's popover. These helpers reach each one by name.
 async function menuButton(page: import("@playwright/test").Page, name: string) {
-  const button = page.getByRole("button", { name, exact: true });
-  if (!(await button.isVisible())) await page.getByRole("button", { name: "More options" }).click();
-  await button.click();
+  if (
+    name === "Attach images" &&
+    (await page.getByRole("button", { name: "Add", exact: true }).count())
+  ) {
+    await page.getByRole("button", { name: "Add", exact: true }).click();
+    await page.getByRole("menuitem", { name, exact: true }).click();
+  } else if (name === "Queue next") {
+    await page
+      .getByRole("radiogroup", { name: "Message while running" })
+      .getByRole("radio", { name: "Follow-up" })
+      .click();
+    await page.getByRole("button", { name, exact: true }).click();
+  } else if (name === "Custom compaction") {
+    await openSession(page);
+    await page.getByRole("button", { name: "Compact with instructions…", exact: true }).click();
+  } else await page.getByRole("button", { name, exact: true }).click();
 }
 
-async function menuSelect(page: import("@playwright/test").Page, name: string, value: string) {
-  const select = page.getByRole("combobox", { name });
-  if (!(await select.isVisible())) await page.getByRole("button", { name: "More options" }).click();
-  await select.selectOption(value);
+async function openSession(page: import("@playwright/test").Page) {
+  if (!(await page.getByRole("region", { name: "Usage" }).isVisible()))
+    await page.locator(".usage-ring").click();
+}
+
+async function sessionSwitch(page: import("@playwright/test").Page, name: string, on: boolean) {
+  await openSession(page);
+  const control = page.getByRole("switch", { name, exact: true });
+  if ((await control.getAttribute("aria-checked")) !== String(on)) await control.click();
 }
 
 async function start(page: import("@playwright/test").Page, title = "Pi features") {
@@ -89,7 +109,8 @@ test("extension confirm, select, input and editor dialogs correlate responses an
     method: "confirm",
     title: "Timed prompt",
     message: "Wait",
-    timeout: 30,
+    // Long enough to be painted at least once; the timer starts at commit, before paint.
+    timeout: 300,
   });
   await expect(page.getByRole("heading", { name: "Timed prompt" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Timed prompt" })).toHaveCount(0);
@@ -364,8 +385,11 @@ test("queue controls, fork, clone and rename keep task navigation mapped", async
   await expect(page.getByRole("textbox", { name: /Ask Pi/ })).toHaveValue("Queued work");
   await page.getByRole("button", { name: "Stop agent" }).click();
 
-  await menuSelect(page, "Steering mode", "all");
-  await menuSelect(page, "Follow-up mode", "all");
+  await openSession(page);
+  await page
+    .getByRole("radiogroup", { name: "Queue mode" })
+    .getByRole("radio", { name: "All at once" })
+    .click();
   await expect
     .poll(() => page.evaluate(() => localStorage.getItem("fixture.steeringMode")))
     .toBe("all");
@@ -436,16 +460,31 @@ test("tool presets use the core allowlist and reflect Pi extension status", asyn
   await taskFixture(page);
   await page.goto("/");
   await start(page, "Tool presets");
-  await page.getByRole("button", { name: "More options" }).click();
-  const preset = page.getByRole("combobox", { name: "Tool preset" });
-  await expect(preset).toHaveValue("full");
-  await preset.selectOption("chat");
+  const presetMenu = async () => {
+    if (!(await page.getByRole("menu", { name: "Model" }).isVisible()))
+      await page.getByRole("button", { name: "Model", exact: true }).click();
+    await page.getByRole("menuitem", { name: "Tool preset" }).click();
+  };
+  await presetMenu();
+  await expect(page.getByRole("menuitemradio", { name: "Full tools" })).toHaveAttribute(
+    "aria-checked",
+    "true",
+  );
+  await page.getByRole("menuitemradio", { name: "Chat only" }).click();
   await expect
     .poll(() => page.evaluate(() => localStorage.getItem("fixture.toolPreset")))
     .toBe("chat");
-  await expect(preset).toHaveValue("chat");
-  await preset.selectOption("read-only");
-  await expect(preset).toHaveValue("read-only");
+  await presetMenu();
+  await expect(page.getByRole("menuitemradio", { name: "Chat only" })).toHaveAttribute(
+    "aria-checked",
+    "true",
+  );
+  await page.getByRole("menuitemradio", { name: "Read-only" }).click();
+  await presetMenu();
+  await expect(page.getByRole("menuitemradio", { name: "Read-only" })).toHaveAttribute(
+    "aria-checked",
+    "true",
+  );
 });
 
 test("safe RPC settings and legacy Pi sessions remain task-scoped", async ({ page }) => {
@@ -459,13 +498,13 @@ test("safe RPC settings and legacy Pi sessions remain task-scoped", async ({ pag
     page.locator(".task-list").getByRole("button", { name: "Imported CLI task" }),
   ).toBeVisible();
   await page.locator(".task-list").getByRole("button", { name: "Imported CLI task" }).click();
-  await menuSelect(page, "Automatic compaction", "off");
-  await menuSelect(page, "Automatic retry", "on");
+  await sessionSwitch(page, "Automatic compaction", false);
+  await sessionSwitch(page, "Automatic retry", true);
   await menuButton(page, "Custom compaction");
   await page
     .getByRole("textbox", { name: "Compaction instructions" })
     .fill("Focus on code changes");
-  await page.getByRole("button", { name: "Compact with instructions" }).click();
+  await page.getByRole("button", { name: "Compact with instructions", exact: true }).click();
   await expect
     .poll(() => page.evaluate(() => localStorage.getItem("fixture.compactRequest")))
     .toContain('"customInstructions":"Focus on code changes"');
