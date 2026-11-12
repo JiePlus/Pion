@@ -1,4 +1,5 @@
 import utilityStyles from "../primitives/Utilities.module.css";
+import { Select } from "../primitives/Select.tsx";
 import { Button } from "../primitives/Button.tsx";
 import managementStyles from "./Management.module.css";
 import { componentClass } from "../componentClass.ts";
@@ -15,7 +16,11 @@ import { PionUpdateSection } from "./PionUpdateSection.tsx";
 import type { AppUpdateController } from "../hooks/useAppUpdate.ts";
 import { Checkbox, Input } from "../primitives/index.ts";
 import { Icon } from "../primitives/Icon.tsx";
+import { StatGrid, StatTile } from "../primitives/StatTile.tsx";
 import styles from "./Settings.module.css";
+import { PageHero } from "./PageKit.tsx";
+import { Segmented } from "../primitives/Segmented.tsx";
+import { readRunMode, saveRunMode } from "../../core/runMode.ts";
 
 export interface LegacySession {
   id: string;
@@ -110,15 +115,53 @@ export function Settings({
     // offer choices; they cannot overwrite a path edited while scanning.
   }, [piScanRevision]);
 
+  const [runMode, setRunMode] = useState(readRunMode);
   return (
     <main
       className={`${componentClass(managementStyles, "management")} ${styles.settings} settings`}
     >
-      <header className={componentClass(styles, "page-heading")}>
-        <h1>{t("Settings")}</h1>
-        <p>{t("Manage appearance, language, and the Pi runtime.")}</p>
-      </header>
-      <section className={componentClass(styles, "settings-card")}>
+      <PageHero
+        eyebrow="General"
+        title={t("Settings")}
+        description={t("Manage appearance, language, and the Pi runtime.")}
+      />
+      <StatGrid>
+        <StatTile
+          label={t("Pi runtime")}
+          tone="blue"
+          icon={<Icon name="terminal" size={15} />}
+          value={setupStatus?.installedVersion ?? "—"}
+          caption={
+            setupStatus?.installedVersion
+              ? t("Installed: {installed} · Pion verified: {verified}", {
+                  installed: setupStatus.installedVersion,
+                  verified: setupStatus.verifiedVersion,
+                })
+              : t("Pi setup required")
+          }
+        />
+        <StatTile
+          label={t("Pion App")}
+          tone="orange"
+          icon={<Icon name="download" size={15} />}
+          value={appUpdate.state.currentVersion || "—"}
+          caption={appUpdate.state.updateVersion ? `→ ${appUpdate.state.updateVersion}` : undefined}
+        />
+        <StatTile
+          label={t("Pi models")}
+          tone="purple"
+          icon={<Icon name="cube" size={15} />}
+          value={setupStatus?.models?.length ?? 0}
+          caption={
+            setupStatus?.selectedModel
+              ? `${setupStatus.selectedModel.provider}/${setupStatus.selectedModel.id}`
+              : undefined
+          }
+        />
+      </StatGrid>
+      <section
+        className={`${componentClass(styles, "settings-card")} ${componentClass(managementStyles, "span-12")}`}
+      >
         <h2>
           <Icon name="palette" size={16} />
           {t("Appearance and display")}
@@ -126,10 +169,15 @@ export function Settings({
         <div className={componentClass(styles, "appearance-grid")}>
           <label className={componentClass(styles, "language-setting")}>
             {t("Language")}
-            <select value={locale} onChange={(event) => action("core.locale", event.target.value)}>
-              <option value="zh-CN">简体中文 (zh-CN)</option>
-              <option value="en">English (en-US)</option>
-            </select>
+            <Select
+              label={t("Language")}
+              value={locale}
+              onChange={(value) => action("core.locale", value)}
+              options={[
+                { value: "zh-CN", label: "简体中文 (zh-CN)" },
+                { value: "en", label: "English (en-US)" },
+              ]}
+            />
             <span className={`settings-note ${utilityStyles.settingsNote}`}>
               {t(
                 "Choose the display language. Changes apply immediately and are saved on this device.",
@@ -172,7 +220,39 @@ export function Settings({
           </fieldset>
         </div>
       </section>
-      <section className={componentClass(styles, "settings-card")}>
+      <section
+        className={`${componentClass(styles, "settings-card")} ${componentClass(managementStyles, "span-12")}`}
+      >
+        <h2>
+          <Icon name="terminal" size={16} />
+          {t("Task defaults")}
+        </h2>
+        <div className={componentClass(styles, "setting-row")}>
+          <div>
+            <strong>{t("Message while running")}</strong>
+            <span>
+              {t(
+                "Default for messages sent while Pi is working. You can switch it above the composer during a run.",
+              )}
+            </span>
+          </div>
+          <Segmented
+            label={t("Message while running")}
+            value={runMode}
+            onChange={(mode) => {
+              saveRunMode(mode);
+              setRunMode(mode);
+            }}
+            options={[
+              { value: "steer", label: t("Steer") },
+              { value: "follow_up", label: t("Follow-up") },
+            ]}
+          />
+        </div>
+      </section>
+      <section
+        className={`${componentClass(styles, "settings-card")} ${componentClass(managementStyles, "span-7")}`}
+      >
         <h2>
           <Icon name="terminal" size={16} />
           {t("Pi runtime")}
@@ -288,7 +368,9 @@ export function Settings({
           </p>
         )}
       </section>
-      <section className={componentClass(styles, "settings-card")}>
+      <section
+        className={`${componentClass(styles, "settings-card")} ${componentClass(managementStyles, "span-5")}`}
+      >
         <h2>
           <Icon name="download" size={16} />
           {t("Versions and updates")}

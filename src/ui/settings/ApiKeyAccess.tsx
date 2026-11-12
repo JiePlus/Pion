@@ -1,4 +1,5 @@
 import utilityStyles from "../primitives/Utilities.module.css";
+import { Select } from "../primitives/Select.tsx";
 import { Button } from "../primitives/Button.tsx";
 import { componentClass } from "../componentClass.ts";
 import { useEffect, useRef, useState } from "react";
@@ -135,17 +136,13 @@ export function ApiKeyAccess({
       {customProviders.length > 0 && (
         <label className={componentClass(styles, "model-custom-auth-picker")}>
           {t("Custom provider")}
-          <select
+          <Select
+            label={t("Custom provider")}
             value={customProviders.includes(provider) ? provider : ""}
-            onChange={(event) => setProvider(event.target.value)}
-          >
-            <option value="">{t("Choose a custom provider")}</option>
-            {customProviders.map((name) => (
-              <option key={name} value={name}>
-                {name}
-              </option>
-            ))}
-          </select>
+            onChange={setProvider}
+            placeholder={t("Choose a custom provider")}
+            options={customProviders.map((name) => ({ value: name, label: name }))}
+          />
         </label>
       )}
       <form

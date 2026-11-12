@@ -16,12 +16,8 @@
   animation: pi-setup-enter 440ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
-.pi-setup-title-block > img {
-  width: 54px;
-  height: 54px;
+.pi-setup-title-block > :first-child {
   margin-bottom: 28px;
-  border: 1px solid var(--pion-color-line);
-  border-radius: 14px;
 }
 
 .pi-setup-kicker,
@@ -149,7 +145,7 @@
 .pi-setup-error {
   padding: 12px 15px;
   border: 1px solid var(--pion-color-danger);
-  border-radius: 8px;
+  border-radius: 10px;
   background: var(--pion-color-danger-soft);
   color: var(--pion-color-danger);
   font-size: 12px;
@@ -318,7 +314,7 @@
     gap: 24px;
   }
 
-  .pi-setup-title-block > img {
+  .pi-setup-title-block > :first-child {
     margin-bottom: 16px;
   }
 

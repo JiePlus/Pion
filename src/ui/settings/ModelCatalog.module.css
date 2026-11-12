@@ -14,7 +14,43 @@
   container-type: inline-size;
 }
 .heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 24px;
   margin-bottom: 24px;
+  padding: 4px 4px 0;
+}
+.eyebrow {
+  color: var(--pion-color-faint);
+  font-family: var(--pion-font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.heroStat {
+  display: grid;
+  flex-shrink: 0;
+  justify-items: end;
+  gap: 8px;
+}
+/* The model count is the page's figure: one hue fading into its own transparency. */
+.heroNumber {
+  background: linear-gradient(
+    180deg,
+    rgb(var(--pion-rgb-purple)) 30%,
+    rgb(var(--pion-rgb-purple) / 20%)
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  font-family: var(--pion-font-display);
+  font-size: clamp(72px, 7vw, 140px);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.05em;
+  line-height: 0.82;
 }
 .titleLine {
   display: flex;
@@ -24,9 +60,9 @@
 }
 .titleLine h1 {
   margin: 0;
-  font-size: 26px;
-  font-weight: 650;
-  letter-spacing: -0.03em;
+  font-size: clamp(28px, 2.6vw, 44px);
+  font-weight: 900;
+  letter-spacing: -0.02em;
 }
 .version {
   color: var(--catalog-muted);
@@ -99,23 +135,33 @@
   display: grid;
 }
 .groupHeading {
-  margin: 24px 0 0;
-  padding: 0 0 10px;
-  border-bottom: 1px solid var(--catalog-line);
-  color: var(--catalog-muted);
-  font-size: 12px;
-  font-weight: 600;
+  margin: 28px 0 10px;
+  padding: 0 4px;
+  color: var(--catalog-text);
+  font-size: 16px;
+  font-weight: 900;
 }
 .groupHeading:first-child {
   margin-top: 0;
 }
+/* Each provider is its own glass card instead of a ruled list row. */
 .card {
   min-width: 0;
-  padding: 18px 0;
-  border-bottom: 1px solid var(--catalog-line);
+  margin-bottom: 10px;
+  padding: 16px 18px;
+  border-radius: 20px;
+  background: var(--pion-color-surface);
+  box-shadow:
+    var(--pion-glass-shadow),
+    inset 1px 1px 1px 0 var(--pion-glass-shine),
+    inset -1px -1px 1px 0 var(--pion-glass-shine);
 }
 .card.expanded {
-  background: var(--pion-color-surface-selected);
+  box-shadow:
+    var(--pion-glass-shadow),
+    inset 1px 1px 1px 0 var(--pion-glass-shine),
+    inset -1px -1px 1px 0 var(--pion-glass-shine),
+    0 0 0 2px rgb(var(--pion-rgb-blue) / 45%);
 }
 .cardHeader {
   display: flex;
@@ -130,7 +176,7 @@
   flex: 0 0 36px;
   place-items: center;
   border: 1px solid var(--catalog-line);
-  border-radius: 6px;
+  border-radius: 10px;
   background: var(--catalog-panel);
   color: var(--catalog-muted);
   font-family: var(--pion-font-mono);
@@ -299,7 +345,7 @@
   flex: 1 1 230px;
   align-items: center;
   border: 1px solid var(--catalog-line);
-  border-radius: 5px;
+  border-radius: 10px;
   background: var(--catalog-panel);
 }
 .keyInput:focus-within {
@@ -339,9 +385,9 @@
 .primary {
   min-height: 35px;
   padding: 6px 14px;
-  border-color: var(--pion-color-brand-strong);
-  background: var(--pion-color-brand-strong);
-  color: var(--pion-color-surface);
+  border-color: var(--pion-color-brand);
+  background: var(--pion-color-brand);
+  color: var(--pion-color-on-brand);
   font-size: 12px;
   white-space: nowrap;
 }
@@ -434,7 +480,7 @@
   min-width: 0;
   height: 36px;
   border-color: var(--catalog-line);
-  border-radius: 5px;
+  border-radius: 10px;
   background: var(--catalog-panel);
   color: var(--catalog-text);
   font-size: 13px;
@@ -480,7 +526,7 @@
 .notice {
   padding: 10px 12px;
   border: 1px solid var(--catalog-line);
-  border-radius: 5px;
+  border-radius: 10px;
   background: var(--pion-color-brand-soft);
   color: var(--catalog-green);
   font-size: 12px;
@@ -519,8 +565,13 @@
   display: grid;
   gap: 12px;
   margin-top: 24px;
-  padding-top: 16px;
-  border-top: 1px solid var(--catalog-line);
+  padding: 18px;
+  border-radius: 20px;
+  background: var(--pion-color-surface);
+  box-shadow:
+    var(--pion-glass-shadow),
+    inset 1px 1px 1px 0 var(--pion-glass-shine),
+    inset -1px -1px 1px 0 var(--pion-glass-shine);
 }
 .localScanHead {
   display: flex;

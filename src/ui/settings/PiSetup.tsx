@@ -7,7 +7,7 @@ import type { PiSetupStatus } from "../../core/host.ts";
 import { t } from "../../core/i18n.ts";
 import { ModelPicker } from "../layout/Topbar/ModelPicker.tsx";
 import { ModelSettings } from "../settings/ModelSettings.tsx";
-import pionMark from "../../../src-tauri/icon.svg";
+import { BrandMark } from "../primitives/BrandMark.tsx";
 import styles from "./PiSetup.module.css";
 
 interface PiSetupProps {
@@ -52,7 +52,7 @@ export function PiSetup({
       <div className={componentClass(styles, "pi-setup-layout")}>
         <aside className={componentClass(styles, "pi-setup-intro")}>
           <div className={componentClass(styles, "pi-setup-title-block")}>
-            <img src={pionMark} alt="" />
+            <BrandMark size={54} />
             <span className={componentClass(styles, "pi-setup-kicker")}>
               Pion / {t("Pi setup")}
             </span>

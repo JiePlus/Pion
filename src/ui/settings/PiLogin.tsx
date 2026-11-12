@@ -1,4 +1,5 @@
 import utilityStyles from "../primitives/Utilities.module.css";
+import { Select } from "../primitives/Select.tsx";
 import { Button } from "../primitives/Button.tsx";
 import { componentClass } from "../componentClass.ts";
 import { useEffect, useRef, useState } from "react";
@@ -201,17 +202,13 @@ export function PiLogin({ onChanged }: { onChanged?: () => void }) {
       <div className={componentClass(styles, "model-login-controls")}>
         <label>
           {t("Provider")}
-          <select
+          <Select
+            label={t("Provider")}
             value={provider}
-            onChange={(event) => setProvider(event.target.value)}
+            onChange={setProvider}
             disabled={status === "starting" || status === "waiting"}
-          >
-            {providers.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.name}
-              </option>
-            ))}
-          </select>
+            options={providers.map((item) => ({ value: item.id, label: item.name }))}
+          />
         </label>
         <Button
           variant="primary"
@@ -297,14 +294,16 @@ export function PiLogin({ onChanged }: { onChanged?: () => void }) {
           <label>
             {prompt.message ?? t("Login response")}
             {prompt.kind === "select" ? (
-              <select value={answer} onChange={(event) => setAnswer(event.target.value)} required>
-                <option value="">{t("Choose an option")}</option>
-                {prompt.options?.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.label}
-                  </option>
-                ))}
-              </select>
+              <Select
+                label={prompt.message ?? t("Login response")}
+                value={answer}
+                onChange={setAnswer}
+                placeholder={t("Choose an option")}
+                options={(prompt.options ?? []).map((item) => ({
+                  value: item.id,
+                  label: item.label,
+                }))}
+              />
             ) : (
               <input
                 value={answer}
@@ -315,7 +314,12 @@ export function PiLogin({ onChanged }: { onChanged?: () => void }) {
               />
             )}
           </label>
-          <Button variant="primary" className="primary" type="submit">
+          <Button
+            variant="primary"
+            className="primary"
+            type="submit"
+            disabled={prompt.kind === "select" && !answer}
+          >
             {t("Continue login")}
           </Button>
         </form>
