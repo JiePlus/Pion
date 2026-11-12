@@ -74,14 +74,34 @@ for (const theme of ["light", "dark"]) {
     await page.locator(".core-chat").waitFor();
     await page.waitForTimeout(600);
     await page.screenshot({ path: `design/liquid-glass/screens/task-${theme}.png` });
+    await page.locator(".usage-ring").click();
+    await page.getByText("1,200 / 12,000").waitFor();
+    await page.screenshot({ path: `design/liquid-glass/screens/usage-${theme}.png` });
+    await page.keyboard.press("Escape");
     await page.getByRole("button", { name: "设置", exact: true }).click();
     await page.waitForTimeout(400);
     await page.screenshot({ path: `design/liquid-glass/screens/settings-${theme}.png` });
+    await page.locator("main.settings").evaluate((el) => el.scrollTo(0, 900));
+    await page.screenshot({ path: `design/liquid-glass/screens/settings2-${theme}.png` });
     await page
       .getByRole("navigation", { name: "设置分类" })
       .getByRole("button", { name: "模型服务" })
       .click();
     await page.waitForTimeout(400);
     await page.screenshot({ path: `design/liquid-glass/screens/models-${theme}.png` });
+    const sections = [
+      ["扩展包", "packages"],
+      ["技能", "skills"],
+      ["桌面插件", "plugins"],
+      ["快捷键", "shortcuts"],
+    ];
+    for (const [name, file] of sections) {
+      await page
+        .getByRole("navigation", { name: "设置分类" })
+        .getByRole("button", { name, exact: true })
+        .click();
+      await page.waitForTimeout(300);
+      await page.screenshot({ path: `design/liquid-glass/screens/${file}-${theme}.png` });
+    }
   });
 }

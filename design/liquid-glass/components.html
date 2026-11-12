@@ -1,0 +1,2896 @@
+<title>Pion Components</title>
+<meta name="claude:viewport-fit-sides" content="cover" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+  rel="stylesheet"
+  href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&family=Outfit:wght@300;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
+/>
+<style>
+  /* Layout: a component spec sheet — each primitive in its own glass card, live and keyboard-operable.
+     Look: liquid glass. Density and flow: Claude / Codex desktop (compact rows, quiet chrome, motion only on state change). */
+  :root {
+    --font-sans:
+      -apple-system, BlinkMacSystemFont, "PingFang SC", "Noto Sans SC", "Microsoft YaHei",
+      sans-serif;
+    --font-display: "Outfit", -apple-system, "Segoe UI", sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+    --rgb-blue: 0 113 227;
+    --rgb-green: 36 160 80;
+    --rgb-orange: 232 120 0;
+    --rgb-purple: 151 71 255;
+    --rgb-red: 224 48 72;
+    --rgb-ink: 11 13 26;
+    --orb: 0.5;
+    --canvas: #e6e9f2;
+    --sheet: rgb(255 255 255 / 58%);
+    --surface: rgb(255 255 255 / 55%);
+    --raised: rgb(250 251 255 / 94%);
+    --well: rgb(var(--rgb-ink) / 4.5%);
+    --hover: rgb(var(--rgb-ink) / 6%);
+    --selected: rgb(var(--rgb-blue) / 11%);
+    --ink: #0b0d1a;
+    --ink-2: rgb(var(--rgb-ink) / 66%);
+    --ink-3: rgb(var(--rgb-ink) / 46%);
+    --line: rgb(var(--rgb-ink) / 9%);
+    --line-2: rgb(var(--rgb-ink) / 18%);
+    --brand: rgb(var(--rgb-blue));
+    --brand-soft: rgb(var(--rgb-blue) / 12%);
+    --danger: #c8102e;
+    --glass-tint: rgb(255 255 255 / 34%);
+    --glass-strong: rgb(255 255 255 / 70%);
+    --shine: rgb(255 255 255 / 85%);
+    --glass-hover: rgb(255 255 255 / 62%);
+    --shadow-glass: 0 6px 6px rgb(20 24 60 / 8%), 0 0 20px rgb(20 24 60 / 6%);
+    --shadow-pop: 0 18px 48px -12px rgb(20 24 60 / 28%), 0 0 0 1px rgb(var(--rgb-ink) / 6%);
+    --overlay: rgb(10 12 24 / 28%);
+    --apple: linear-gradient(100deg, #0894ff 0%, #c959dd 34%, #ff2e54 68%, #ff9004 100%);
+
+    /* Motion: springs only for things the user summons; fades for things the system reports. */
+    --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+    --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --t-fast: 120ms;
+    --t-med: 220ms;
+    --t-slow: 340ms;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --rgb-blue: 41 151 255;
+      --rgb-green: 48 209 88;
+      --rgb-orange: 255 159 10;
+      --rgb-purple: 191 90 242;
+      --rgb-red: 255 69 58;
+      --rgb-ink: 255 255 255;
+      --orb: 0.4;
+      --canvas: #05060b;
+      --sheet: rgb(14 16 26 / 62%);
+      --surface: rgb(255 255 255 / 5%);
+      --raised: rgb(28 31 44 / 94%);
+      --well: rgb(255 255 255 / 5%);
+      --hover: rgb(255 255 255 / 9%);
+      --selected: rgb(var(--rgb-blue) / 16%);
+      --ink: #fff;
+      --ink-2: rgb(255 255 255 / 68%);
+      --ink-3: rgb(255 255 255 / 44%);
+      --line: rgb(255 255 255 / 9%);
+      --line-2: rgb(255 255 255 / 18%);
+      --brand-soft: rgb(var(--rgb-blue) / 16%);
+      --danger: #ff7a70;
+      --glass-tint: rgb(255 255 255 / 6%);
+      --glass-strong: rgb(30 33 46 / 82%);
+      --shine: rgb(255 255 255 / 26%);
+      --glass-hover: rgb(255 255 255 / 10%);
+      --shadow-glass: 0 6px 6px rgb(0 0 0 / 20%), 0 0 20px rgb(0 0 0 / 10%);
+      --shadow-pop: 0 18px 48px -12px rgb(0 0 0 / 60%), 0 0 0 1px rgb(255 255 255 / 8%);
+      --overlay: rgb(0 0 0 / 50%);
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --rgb-blue: 41 151 255;
+    --rgb-green: 48 209 88;
+    --rgb-orange: 255 159 10;
+    --rgb-purple: 191 90 242;
+    --rgb-red: 255 69 58;
+    --rgb-ink: 255 255 255;
+    --orb: 0.4;
+    --canvas: #05060b;
+    --sheet: rgb(14 16 26 / 62%);
+    --surface: rgb(255 255 255 / 5%);
+    --raised: rgb(28 31 44 / 94%);
+    --well: rgb(255 255 255 / 5%);
+    --hover: rgb(255 255 255 / 9%);
+    --selected: rgb(var(--rgb-blue) / 16%);
+    --ink: #fff;
+    --ink-2: rgb(255 255 255 / 68%);
+    --ink-3: rgb(255 255 255 / 44%);
+    --line: rgb(255 255 255 / 9%);
+    --line-2: rgb(255 255 255 / 18%);
+    --brand-soft: rgb(var(--rgb-blue) / 16%);
+    --danger: #ff7a70;
+    --glass-tint: rgb(255 255 255 / 6%);
+    --glass-strong: rgb(30 33 46 / 82%);
+    --shine: rgb(255 255 255 / 26%);
+    --glass-hover: rgb(255 255 255 / 10%);
+    --shadow-glass: 0 6px 6px rgb(0 0 0 / 20%), 0 0 20px rgb(0 0 0 / 10%);
+    --shadow-pop: 0 18px 48px -12px rgb(0 0 0 / 60%), 0 0 0 1px rgb(255 255 255 / 8%);
+    --overlay: rgb(0 0 0 / 50%);
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    margin: 0;
+    color: var(--ink);
+    background-color: var(--canvas);
+    background-image:
+      radial-gradient(
+        40vmax 40vmax at 4% 8%,
+        rgb(var(--rgb-blue) / var(--orb)),
+        rgb(var(--rgb-blue) / 0) 70%
+      ),
+      radial-gradient(
+        34vmax 34vmax at 98% 4%,
+        rgb(var(--rgb-purple) / var(--orb)),
+        rgb(var(--rgb-purple) / 0) 70%
+      ),
+      radial-gradient(
+        44vmax 44vmax at 60% 112%,
+        rgb(var(--rgb-orange) / calc(var(--orb) * 0.75)),
+        rgb(var(--rgb-orange) / 0) 70%
+      );
+    background-attachment: fixed;
+    font-family: var(--font-sans);
+    font-size: 13.5px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+  button,
+  input,
+  textarea {
+    font: inherit;
+    color: inherit;
+  }
+  h1,
+  h2,
+  h3,
+  p {
+    margin: 0;
+  }
+  h1,
+  h2 {
+    text-wrap: balance;
+  }
+  svg.i {
+    width: 16px;
+    height: 16px;
+    flex: none;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.7;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  [hidden] {
+    display: none !important;
+  }
+  :focus-visible {
+    outline: 2px solid var(--brand);
+    outline-offset: 2px;
+  }
+  .mono {
+    font-family: var(--font-mono);
+    font-size: 12px;
+  }
+  .en {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+  .muted {
+    color: var(--ink-2);
+  }
+  .faint {
+    color: var(--ink-3);
+  }
+  .row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .grow {
+    flex: 1;
+    min-width: 0;
+  }
+
+  /* ---------- Page ---------- */
+  .page {
+    max-width: 1500px;
+    margin: 0 auto;
+    display: grid;
+    gap: 16px;
+    padding-block: 28px 64px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+  .hero {
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    gap: 20px;
+    flex-wrap: wrap;
+    padding: 4px 4px 8px;
+  }
+  .hero h1 {
+    font-size: clamp(30px, 3vw, 48px);
+    font-weight: 900;
+    letter-spacing: -0.02em;
+  }
+  .hero h1 span {
+    background: var(--apple);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .hero p {
+    max-width: 64ch;
+    margin-top: 8px;
+    color: var(--ink-2);
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    gap: 16px;
+  }
+  .grid > * {
+    min-width: 0;
+  }
+  .s4 {
+    grid-column: span 4;
+  }
+  .s5 {
+    grid-column: span 5;
+  }
+  .s6 {
+    grid-column: span 6;
+  }
+  .s7 {
+    grid-column: span 7;
+  }
+  .s8 {
+    grid-column: span 8;
+  }
+  .s12 {
+    grid-column: span 12;
+  }
+  @media (max-width: 1100px) {
+    .s4,
+    .s5,
+    .s6,
+    .s7,
+    .s8 {
+      grid-column: span 12;
+    }
+  }
+
+  .card {
+    display: grid;
+    gap: 14px;
+    align-content: start;
+    padding: 20px;
+    border-radius: 24px;
+    background: var(--sheet);
+    backdrop-filter: blur(30px) saturate(1.4);
+    -webkit-backdrop-filter: blur(30px) saturate(1.4);
+    box-shadow:
+      var(--shadow-glass),
+      inset 1px 1px 1px 0 var(--shine),
+      inset -1px -1px 1px 0 var(--shine);
+  }
+  .card {
+    position: relative;
+  }
+  .card:has([aria-expanded="true"]) {
+    z-index: 25;
+  }
+  .card-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .card-head h2 {
+    font-size: 16px;
+    font-weight: 900;
+  }
+  .card-note {
+    color: var(--ink-3);
+    font-size: 12px;
+    line-height: 1.6;
+  }
+  .demo {
+    display: grid;
+    gap: 12px;
+    padding: 16px;
+    border-radius: 18px;
+    background: var(--well);
+  }
+
+  /* ---------- Buttons: four ranks, three sizes ---------- */
+  .btn {
+    --bg: var(--surface);
+    --fg: var(--ink);
+    --bd: var(--line);
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: 32px;
+    padding: 0 14px;
+    border: 1px solid var(--bd);
+    border-radius: 10px;
+    background: var(--bg);
+    color: var(--fg);
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+    cursor: pointer;
+    transition:
+      background var(--t-fast) ease,
+      border-color var(--t-fast) ease,
+      transform var(--t-med) var(--ease-spring),
+      box-shadow var(--t-fast) ease;
+  }
+  .btn:hover:not(:disabled) {
+    --bg: var(--glass-hover);
+    --bd: var(--line-2);
+  }
+  .btn:active:not(:disabled) {
+    transform: scale(0.96);
+    transition-duration: 60ms;
+  }
+  .btn:disabled {
+    cursor: not-allowed;
+    color: var(--ink-3);
+    background: var(--well);
+    border-color: transparent;
+  }
+  .btn.primary {
+    --bg: var(--brand);
+    --fg: #fff;
+    --bd: transparent;
+    box-shadow:
+      0 6px 16px -6px rgb(var(--rgb-blue) / 60%),
+      inset 0 1px 0 rgb(255 255 255 / 25%);
+  }
+  .btn.primary:hover:not(:disabled) {
+    --bg: rgb(var(--rgb-blue) / 88%);
+    --bd: transparent;
+  }
+  .btn.primary:disabled {
+    box-shadow: none;
+  }
+  .btn.ghost {
+    --bg: transparent;
+    --bd: transparent;
+    color: var(--ink-2);
+  }
+  .btn.ghost:hover:not(:disabled) {
+    --bg: var(--hover);
+    color: var(--ink);
+  }
+  .btn.danger {
+    --fg: var(--danger);
+    --bd: rgb(var(--rgb-red) / 35%);
+    --bg: rgb(var(--rgb-red) / 6%);
+  }
+  .btn.danger:hover:not(:disabled) {
+    --bg: rgb(var(--rgb-red) / 12%);
+    --bd: rgb(var(--rgb-red) / 50%);
+  }
+  .btn.sm {
+    height: 26px;
+    padding: 0 10px;
+    font-size: 12px;
+    border-radius: 8px;
+  }
+  .btn.lg {
+    height: 40px;
+    padding: 0 18px;
+    font-size: 14px;
+    border-radius: 12px;
+  }
+  .btn.icon {
+    width: 32px;
+    padding: 0;
+  }
+  .btn.icon.sm {
+    width: 26px;
+  }
+  .btn.round {
+    border-radius: 999px;
+  }
+  .btn[data-loading] {
+    color: transparent;
+    pointer-events: none;
+  }
+  .btn[data-loading]::after {
+    content: "";
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    border: 2px solid currentColor;
+    border-color: var(--fg) transparent var(--fg) var(--fg);
+    opacity: 0.9;
+    animation: spin 0.7s linear infinite;
+    color: var(--fg);
+  }
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+  .rank {
+    display: grid;
+    grid-template-columns: 88px 1fr;
+    align-items: center;
+    gap: 10px 14px;
+  }
+  .rank > .en {
+    justify-self: start;
+  }
+
+  /* Tooltip: delayed, never on touch */
+  [data-tip] {
+    position: relative;
+  }
+  [data-tip]::before {
+    content: attr(data-tip);
+    position: absolute;
+    left: 50%;
+    bottom: calc(100% + 8px);
+    z-index: 40;
+    padding: 4px 8px;
+    border-radius: 8px;
+    background: var(--ink);
+    color: var(--canvas);
+    font-size: 11.5px;
+    font-weight: 500;
+    white-space: nowrap;
+    opacity: 0;
+    transform: translate(-50%, 4px);
+    pointer-events: none;
+    transition:
+      opacity var(--t-fast) ease,
+      transform var(--t-fast) ease;
+    transition-delay: 0ms;
+  }
+  @media (hover: hover) {
+    [data-tip]:hover::before {
+      opacity: 1;
+      transform: translate(-50%, 0);
+      transition-delay: 450ms;
+    }
+  }
+
+  /* ---------- Popover surface (menus, selects) ---------- */
+  .pop {
+    position: absolute;
+    z-index: 30;
+    min-width: 220px;
+    padding: 6px;
+    border-radius: 16px;
+    background: var(--raised);
+    box-shadow:
+      var(--shadow-pop),
+      inset 1px 1px 1px 0 var(--shine);
+    backdrop-filter: blur(30px) saturate(1.4);
+    -webkit-backdrop-filter: blur(30px) saturate(1.4);
+    transform-origin: var(--origin, top left);
+  }
+  .pop[data-state="open"] {
+    animation: pop-in var(--t-med) var(--ease-spring) both;
+  }
+  .pop[data-state="closing"] {
+    animation: pop-out var(--t-fast) var(--ease-out) both;
+  }
+  @keyframes pop-in {
+    from {
+      opacity: 0;
+      transform: scale(0.94) translateY(var(--dy, -4px));
+    }
+  }
+  @keyframes pop-out {
+    to {
+      opacity: 0;
+      transform: scale(0.97) translateY(var(--dy, -2px));
+    }
+  }
+  .anchor {
+    position: relative;
+    display: inline-flex;
+  }
+
+  .item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    min-height: 32px;
+    padding: 0 10px;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--ink);
+    text-align: left;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background var(--t-fast) ease;
+  }
+  .item .i {
+    color: var(--ink-2);
+  }
+  .item kbd {
+    margin-left: auto;
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    color: var(--ink-3);
+  }
+  .item small {
+    margin-left: auto;
+    color: var(--ink-3);
+    font-size: 11.5px;
+  }
+  .item[aria-selected="true"]::after,
+  .item[aria-checked="true"]::after {
+    content: "";
+    width: 14px;
+    height: 14px;
+    margin-left: 8px;
+    flex: none;
+    background: var(--brand);
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7'/%3E%3C/svg%3E")
+      center / contain no-repeat;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7'/%3E%3C/svg%3E")
+      center / contain no-repeat;
+  }
+  .item:hover,
+  .item.active {
+    background: var(--glass-hover);
+    box-shadow: inset -2px -2px 2px rgb(0 0 0 / 8%);
+  }
+  .item.danger {
+    color: var(--danger);
+  }
+  .item.danger .i {
+    color: var(--danger);
+  }
+  .item[aria-disabled="true"] {
+    color: var(--ink-3);
+    cursor: default;
+  }
+  .item[aria-disabled="true"]:hover {
+    background: none;
+    box-shadow: none;
+  }
+  .sep {
+    height: 1px;
+    margin: 5px 6px;
+    background: var(--line);
+  }
+  .group-label {
+    padding: 8px 10px 4px;
+  }
+  .pop-search {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 2px 2px 6px;
+    padding: 0 10px;
+    height: 34px;
+    border-radius: 10px;
+    background: var(--well);
+    color: var(--ink-3);
+  }
+  .pop-search input {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    background: none;
+    outline: none;
+    color: var(--ink);
+    font-size: 13px;
+  }
+  .pop-list {
+    max-height: 260px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+  }
+  .item .desc {
+    display: grid;
+    line-height: 1.3;
+    min-width: 0;
+  }
+  .item .desc span {
+    color: var(--ink-3);
+    font-size: 11.5px;
+  }
+  .empty-result {
+    padding: 14px 10px;
+    color: var(--ink-3);
+    font-size: 12.5px;
+  }
+
+  /* ---------- Select trigger ---------- */
+  .select {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 32px;
+    max-width: 100%;
+    padding: 0 10px 0 12px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: var(--well);
+    color: var(--ink);
+    font-size: 12.5px;
+    cursor: pointer;
+    transition:
+      border-color var(--t-fast) ease,
+      background var(--t-fast) ease,
+      box-shadow var(--t-fast) ease;
+  }
+  .select:hover {
+    border-color: var(--line-2);
+    background: var(--glass-hover);
+  }
+  .select[aria-expanded="true"] {
+    border-color: var(--brand);
+    box-shadow: 0 0 0 3px var(--brand-soft);
+  }
+  .select .label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .select .meta {
+    color: var(--ink-3);
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+  }
+  .select .chev {
+    color: var(--ink-3);
+    transition: transform var(--t-med) var(--ease-spring);
+  }
+  .select[aria-expanded="true"] .chev {
+    transform: rotate(180deg);
+  }
+  .select.field {
+    width: 100%;
+    height: 38px;
+    border-radius: 12px;
+    justify-content: space-between;
+  }
+  /* In the composer the model pill sits flush with the glass until hovered. */
+  .select.quiet {
+    border-color: transparent;
+    background: transparent;
+    padding-left: 10px;
+  }
+  .select.quiet:hover {
+    background: var(--hover);
+    border-color: transparent;
+  }
+  .select.quiet .meta {
+    padding: 1px 6px;
+    border-radius: 6px;
+    background: rgb(var(--rgb-purple) / 12%);
+    color: rgb(var(--rgb-purple));
+    font-family: var(--font-sans);
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .pop-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 6px;
+    padding: 10px 6px 4px;
+    border-top: 1px solid var(--line);
+  }
+  .pop-foot .seg button {
+    padding: 0 10px;
+  }
+  .seg.locked {
+    opacity: 0.55;
+  }
+  /* Floats just above the composer's top edge while a task runs; gone when idle. */
+  .run-float {
+    position: absolute;
+    right: 14px;
+    bottom: calc(100% + 8px);
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 4px 4px 12px;
+    border-radius: 999px;
+    background: var(--raised);
+    box-shadow:
+      var(--shadow-pop),
+      inset 1px 1px 1px 0 var(--shine);
+    backdrop-filter: blur(30px) saturate(1.4);
+    -webkit-backdrop-filter: blur(30px) saturate(1.4);
+    color: var(--ink-2);
+    font-size: 12px;
+    animation: rise var(--t-med) var(--ease-spring);
+  }
+  .run-float .seg {
+    padding: 2px;
+  }
+  .run-float .seg button {
+    height: 24px;
+    padding: 0 12px;
+    font-size: 12px;
+  }
+  .live-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--brand);
+    box-shadow: 0 0 0 0 rgb(var(--rgb-blue) / 50%);
+    animation: live 1.8s ease-out infinite;
+  }
+  @keyframes live {
+    70% {
+      box-shadow: 0 0 0 6px rgb(var(--rgb-blue) / 0);
+    }
+    100% {
+      box-shadow: 0 0 0 0 rgb(var(--rgb-blue) / 0);
+    }
+  }
+  .select.quiet .meta.tools-tag {
+    background: rgb(var(--rgb-orange) / 14%);
+    color: rgb(var(--rgb-orange));
+  }
+  .link-btn {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--brand);
+    font: inherit;
+    font-size: 12px;
+    cursor: pointer;
+  }
+  .link-btn:hover {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  .sub-anchor {
+    position: relative;
+  }
+  .pop.sub {
+    top: -6px;
+    left: calc(100% + 4px);
+    width: 240px;
+    --origin: top left;
+    --dy: 0px;
+  }
+  .pop.sub::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: -8px;
+    width: 8px;
+  }
+  .seg button:disabled {
+    cursor: not-allowed;
+  }
+  .ctx-pop {
+    width: 320px;
+  }
+  .ctx-number {
+    font-family: var(--font-display);
+    font-size: 52px;
+    font-weight: 800;
+    letter-spacing: -0.045em;
+    line-height: 0.9;
+    font-variant-numeric: tabular-nums;
+    background: linear-gradient(180deg, var(--brand) 30%, rgb(var(--rgb-blue) / 25%));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    transition: all var(--t-slow) var(--ease-spring);
+  }
+  .ctx-number small {
+    font-size: 0.4em;
+    font-weight: 300;
+    letter-spacing: 0;
+  }
+  .ctx-bar {
+    height: 6px;
+    border-radius: 3px;
+    background: var(--well);
+    overflow: hidden;
+  }
+  .ctx-bar i {
+    display: block;
+    height: 100%;
+    border-radius: 3px;
+    background: linear-gradient(90deg, rgb(var(--rgb-blue) / 35%), var(--brand));
+    transition: width var(--t-slow) var(--ease-out);
+  }
+  .ctx-kv {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 6px 12px;
+    margin: 0;
+    font-size: 12.5px;
+  }
+  .ctx-kv dt {
+    color: var(--ink-2);
+  }
+  .ctx-kv dd {
+    margin: 0;
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+  }
+  .run-hint {
+    font-size: 12px;
+  }
+  .run-hint kbd {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    padding: 1px 5px;
+    border-radius: 5px;
+    border: 1px solid var(--line);
+  }
+
+  /* ---------- Segmented control: sliding glass thumb ---------- */
+  .seg {
+    position: relative;
+    display: inline-grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 1fr;
+    padding: 3px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: var(--well);
+    isolation: isolate;
+  }
+  .seg button {
+    position: relative;
+    z-index: 1;
+    height: 28px;
+    padding: 0 14px;
+    border: 0;
+    border-radius: 999px;
+    background: none;
+    color: var(--ink-2);
+    font-size: 12.5px;
+    font-weight: 500;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: color var(--t-fast) ease;
+  }
+  .seg button[aria-checked="true"] {
+    color: var(--ink);
+  }
+  .seg .thumb {
+    position: absolute;
+    z-index: 0;
+    top: 3px;
+    bottom: 3px;
+    left: 0;
+    border-radius: 999px;
+    background: var(--glass-strong);
+    box-shadow:
+      var(--shadow-glass),
+      inset 1px 1px 0 var(--shine);
+    transition:
+      transform var(--t-slow) var(--ease-spring),
+      width var(--t-slow) var(--ease-spring);
+  }
+
+  /* ---------- Switch ---------- */
+  .switch {
+    position: relative;
+    width: 40px;
+    height: 24px;
+    flex: none;
+    padding: 0;
+    border: 0;
+    border-radius: 999px;
+    background: var(--line-2);
+    cursor: pointer;
+    transition: background var(--t-med) ease;
+  }
+  .switch::after {
+    content: "";
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 2px 6px rgb(0 0 0 / 25%);
+    transition:
+      transform var(--t-slow) var(--ease-spring),
+      width var(--t-fast) ease;
+  }
+  .switch:active::after {
+    width: 24px;
+  }
+  .switch[aria-checked="true"] {
+    background: rgb(var(--rgb-green));
+  }
+  .switch[aria-checked="true"]::after {
+    transform: translateX(16px);
+  }
+  .switch[aria-checked="true"]:active::after {
+    transform: translateX(12px);
+  }
+  .switch:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  /* ---------- Setting rows: label + description left, control right ---------- */
+  .rows {
+    display: grid;
+    border-radius: 18px;
+    background: var(--well);
+    overflow: hidden;
+  }
+  .set-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 14px 16px;
+  }
+  .set-row + .set-row {
+    border-top: 1px solid var(--line);
+  }
+  .set-row .text {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+    flex: 1;
+  }
+  .set-row strong {
+    font-size: 13.5px;
+    font-weight: 600;
+  }
+  .set-row .text span {
+    color: var(--ink-3);
+    font-size: 12px;
+  }
+
+  /* ---------- Fields ---------- */
+  .field-wrap {
+    display: grid;
+    gap: 6px;
+  }
+  .field-wrap > label {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--ink-2);
+  }
+  .input {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 38px;
+    padding: 0 6px 0 12px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--well);
+    transition:
+      border-color var(--t-fast) ease,
+      box-shadow var(--t-fast) ease;
+  }
+  .input:hover {
+    border-color: var(--line-2);
+  }
+  .input:focus-within {
+    border-color: var(--brand);
+    box-shadow: 0 0 0 3px var(--brand-soft);
+  }
+  .input input {
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+    border: 0;
+    background: none;
+    outline: none;
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+  }
+  .input.invalid {
+    border-color: var(--danger);
+    box-shadow: 0 0 0 3px rgb(var(--rgb-red) / 12%);
+  }
+  .hint {
+    color: var(--ink-3);
+    font-size: 12px;
+  }
+  .hint.error {
+    color: var(--danger);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    animation: shake 0.32s var(--ease-out);
+  }
+  .hint.ok {
+    color: rgb(var(--rgb-green));
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  @keyframes shake {
+    20%,
+    60% {
+      transform: translateX(-3px);
+    }
+    40%,
+    80% {
+      transform: translateX(3px);
+    }
+  }
+
+  /* ---------- Composer ---------- */
+  .composer {
+    position: relative;
+    display: grid;
+    gap: 6px;
+    padding: 12px 12px 10px 16px;
+    border-radius: 22px;
+    background: var(--glass-strong);
+    box-shadow:
+      var(--shadow-glass),
+      inset 2px 2px 1px 0 var(--shine),
+      inset -1px -1px 1px 1px var(--shine);
+    transition: box-shadow var(--t-med) ease;
+  }
+  .composer:focus-within {
+    box-shadow:
+      var(--shadow-glass),
+      inset 2px 2px 1px 0 var(--shine),
+      inset -1px -1px 1px 1px var(--shine),
+      0 0 0 3px var(--brand-soft);
+  }
+  .composer textarea {
+    width: 100%;
+    min-height: 46px;
+    max-height: 160px;
+    padding: 2px 0;
+    border: 0;
+    background: none;
+    outline: none;
+    resize: none;
+    font-size: 14.5px;
+    line-height: 1.6;
+  }
+  .composer textarea::placeholder {
+    color: var(--ink-3);
+  }
+  .toolbar {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-wrap: wrap;
+  }
+  .send {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+  }
+  .ring {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 30px;
+    padding: 0 8px;
+    border: 0;
+    border-radius: 9px;
+    background: none;
+    color: var(--ink-3);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    cursor: pointer;
+  }
+  .ring:hover {
+    background: var(--hover);
+    color: var(--ink);
+  }
+  .ring svg {
+    width: 18px;
+    height: 18px;
+    transform: rotate(-90deg);
+  }
+  .queue-chip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px 6px 10px;
+    border-radius: 12px;
+    border: 1px dashed rgb(var(--rgb-purple) / 45%);
+    font-size: 12.5px;
+    animation: rise var(--t-med) var(--ease-spring);
+  }
+  .tag {
+    display: inline-flex;
+    align-items: center;
+    height: 20px;
+    padding: 0 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .tag.purple {
+    color: rgb(var(--rgb-purple));
+    background: rgb(var(--rgb-purple) / 12%);
+  }
+  .tag.blue {
+    color: var(--brand);
+    background: var(--brand-soft);
+  }
+  .tag.green {
+    color: rgb(var(--rgb-green));
+    background: rgb(var(--rgb-green) / 12%);
+  }
+  .tag.red {
+    color: var(--danger);
+    background: rgb(var(--rgb-red) / 10%);
+  }
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+  }
+
+  /* Grouped "more" panel */
+  .panel-pop {
+    width: 340px;
+    padding: 8px;
+  }
+  .panel-sec {
+    display: grid;
+    gap: 8px;
+    padding: 10px;
+  }
+  .panel-sec + .panel-sec {
+    border-top: 1px solid var(--line);
+  }
+  .panel-sec .line {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    font-size: 13px;
+  }
+
+  /* ---------- Transcript pieces ---------- */
+  .tool {
+    border-radius: 14px;
+    background: var(--well);
+    border: 1px solid var(--line);
+    overflow: hidden;
+    transition:
+      border-color var(--t-med) ease,
+      background var(--t-med) ease;
+  }
+  .tool-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    min-height: 40px;
+    padding: 0 12px;
+    border: 0;
+    background: none;
+    text-align: left;
+    cursor: pointer;
+    font-size: 12.5px;
+  }
+  .tool-head code {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+  }
+  .tool-head .verb {
+    font-weight: 600;
+  }
+  .tool-head .chev {
+    color: var(--ink-3);
+    transition: transform var(--t-med) var(--ease-spring);
+  }
+  .tool[data-open="true"] .tool-head .chev {
+    transform: rotate(90deg);
+  }
+  .tool-body {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows var(--t-slow) var(--ease-out);
+  }
+  .tool[data-open="true"] .tool-body {
+    grid-template-rows: 1fr;
+  }
+  .tool-body > div {
+    overflow: hidden;
+  }
+  .tool-body pre {
+    margin: 0;
+    padding: 10px 14px 12px;
+    border-top: 1px solid var(--line);
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    line-height: 1.7;
+    color: var(--ink-2);
+    overflow-x: auto;
+  }
+  .status-dot {
+    width: 16px;
+    height: 16px;
+    flex: none;
+    display: grid;
+    place-items: center;
+  }
+  .tool[data-state="running"] {
+    border-color: rgb(var(--rgb-blue) / 30%);
+  }
+  .tool[data-state="running"] .status-dot::before {
+    content: "";
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 2px solid rgb(var(--rgb-blue) / 25%);
+    border-top-color: var(--brand);
+    animation: spin 0.8s linear infinite;
+  }
+  .tool[data-state="done"] .status-dot {
+    color: rgb(var(--rgb-green));
+  }
+  .tool[data-state="failed"] {
+    border-color: rgb(var(--rgb-red) / 35%);
+    background: rgb(var(--rgb-red) / 5%);
+  }
+  .tool[data-state="failed"] .status-dot {
+    color: var(--danger);
+  }
+  .shimmer {
+    background: linear-gradient(90deg, var(--ink-3) 0%, var(--ink) 45%, var(--ink-3) 90%);
+    background-size: 220% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: shimmer 1.6s linear infinite;
+  }
+  @keyframes shimmer {
+    from {
+      background-position: 120% 0;
+    }
+    to {
+      background-position: -120% 0;
+    }
+  }
+  .thinking {
+    display: grid;
+    gap: 0;
+  }
+  .thinking-head {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    width: fit-content;
+    height: 28px;
+    padding: 0 10px 0 8px;
+    border: 0;
+    border-radius: 999px;
+    background: none;
+    color: var(--ink-2);
+    font-size: 12.5px;
+    cursor: pointer;
+  }
+  .thinking-head:hover {
+    background: var(--hover);
+  }
+  .thinking-head .i {
+    color: rgb(var(--rgb-purple));
+  }
+  .thinking-body {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows var(--t-slow) var(--ease-out);
+  }
+  .thinking[data-open="true"] .thinking-body {
+    grid-template-rows: 1fr;
+  }
+  .thinking-body > div {
+    overflow: hidden;
+  }
+  .thinking-body p {
+    margin: 6px 0 4px 14px;
+    padding-left: 12px;
+    border-left: 2px solid rgb(var(--rgb-purple) / 35%);
+    color: var(--ink-2);
+    font-size: 12.5px;
+    line-height: 1.7;
+  }
+  .code {
+    border-radius: 14px;
+    border: 1px solid var(--line);
+    background: var(--well);
+    overflow: hidden;
+  }
+  .code-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 34px;
+    padding: 0 6px 0 12px;
+    border-bottom: 1px solid var(--line);
+  }
+  .code-head .mono {
+    color: var(--ink-2);
+  }
+  .code pre {
+    margin: 0;
+    padding: 12px 14px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    line-height: 1.7;
+    overflow-x: auto;
+  }
+  .tk {
+    color: rgb(var(--rgb-purple));
+  }
+  .tp {
+    color: var(--brand);
+  }
+  .tc {
+    color: var(--ink-3);
+  }
+
+  /* ---------- Skeleton ---------- */
+  .skel {
+    display: grid;
+    gap: 10px;
+  }
+  .skel-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .skel-row i {
+    display: block;
+    height: 10px;
+    border-radius: 6px;
+    background: linear-gradient(90deg, var(--well) 0%, var(--hover) 50%, var(--well) 100%);
+    background-size: 200% 100%;
+    animation: skel 1.3s ease-in-out infinite;
+  }
+  .skel-row i.box {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    flex: none;
+  }
+  @keyframes skel {
+    from {
+      background-position: 100% 0;
+    }
+    to {
+      background-position: -100% 0;
+    }
+  }
+
+  /* ---------- Toasts ---------- */
+  .toasts {
+    position: fixed;
+    right: max(16px, env(safe-area-inset-right, 0px));
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    z-index: 60;
+    display: grid;
+    gap: 8px;
+    width: min(360px, calc(100vw - 32px));
+  }
+  .toast {
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px 12px 14px;
+    overflow: hidden;
+    border-radius: 16px;
+    background: var(--raised);
+    box-shadow:
+      var(--shadow-pop),
+      inset 1px 1px 1px 0 var(--shine);
+    backdrop-filter: blur(30px);
+    animation: toast-in var(--t-slow) var(--ease-spring) both;
+  }
+  .toast.leaving {
+    animation: toast-out var(--t-med) var(--ease-out) both;
+  }
+  @keyframes toast-in {
+    from {
+      opacity: 0;
+      transform: translateY(16px) scale(0.96);
+    }
+  }
+  @keyframes toast-out {
+    to {
+      opacity: 0;
+      transform: translateX(24px);
+    }
+  }
+  .toast .ic {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    flex: none;
+  }
+  .toast .ic.ok {
+    color: rgb(var(--rgb-green));
+    background: rgb(var(--rgb-green) / 14%);
+  }
+  .toast .ic.err {
+    color: var(--danger);
+    background: rgb(var(--rgb-red) / 12%);
+  }
+  .toast .body {
+    flex: 1;
+    min-width: 0;
+    display: grid;
+    gap: 2px;
+  }
+  .toast strong {
+    font-size: 13px;
+  }
+  .toast p {
+    color: var(--ink-2);
+    font-size: 12px;
+  }
+  .toast .bar {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    height: 2px;
+    background: linear-gradient(90deg, rgb(var(--rgb-blue)), rgb(var(--rgb-blue) / 0));
+    animation: drain linear forwards;
+  }
+  .toast:hover .bar {
+    animation-play-state: paused;
+  }
+  @keyframes drain {
+    from {
+      width: 100%;
+    }
+    to {
+      width: 0;
+    }
+  }
+
+  /* ---------- Dialog ---------- */
+  .backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+    background: var(--overlay);
+    backdrop-filter: blur(3px);
+    animation: fade var(--t-med) ease both;
+  }
+  .backdrop.leaving {
+    animation: fade var(--t-fast) ease reverse both;
+  }
+  @keyframes fade {
+    from {
+      opacity: 0;
+    }
+  }
+  .dialog {
+    display: grid;
+    gap: 14px;
+    width: min(440px, 100%);
+    padding: 24px;
+    border-radius: 24px;
+    background: var(--raised);
+    box-shadow:
+      var(--shadow-pop),
+      inset 2px 2px 1px 0 var(--shine),
+      inset -1px -1px 1px 1px var(--shine);
+    animation: dialog-in var(--t-slow) var(--ease-spring) both;
+  }
+  .backdrop.leaving .dialog {
+    animation: dialog-out var(--t-fast) var(--ease-out) both;
+  }
+  @keyframes dialog-in {
+    from {
+      opacity: 0;
+      transform: scale(0.92) translateY(10px);
+    }
+  }
+  @keyframes dialog-out {
+    to {
+      opacity: 0;
+      transform: scale(0.97);
+    }
+  }
+  .dialog h3 {
+    font-size: 18px;
+    font-weight: 900;
+  }
+  .dialog .actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 4px;
+  }
+  .dialog .warn-ic {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    display: grid;
+    place-items: center;
+    color: var(--danger);
+    background: rgb(var(--rgb-red) / 10%);
+  }
+
+  /* ---------- Theme toggle in hero ---------- */
+  .legend {
+    display: grid;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--ink-2);
+  }
+  .legend b {
+    font-family: var(--font-mono);
+    font-weight: 500;
+    color: var(--ink);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 1ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 1ms !important;
+    }
+  }
+</style>
+
+<svg style="display: none" aria-hidden="true">
+  <symbol id="i-chev" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6" /></symbol>
+  <symbol id="i-right" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6" /></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7" /></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" /></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" /></symbol>
+  <symbol id="i-up" viewBox="0 0 24 24"><path d="M12 19V5M6 11l6-6 6 6" /></symbol>
+  <symbol id="i-stop" viewBox="0 0 24 24">
+    <rect x="7" y="7" width="10" height="10" rx="2" />
+  </symbol>
+  <symbol id="i-search" viewBox="0 0 24 24">
+    <circle cx="11" cy="11" r="7" />
+    <path d="M20 20l-3.5-3.5" />
+  </symbol>
+  <symbol id="i-dots" viewBox="0 0 24 24">
+    <circle cx="5" cy="12" r="1.2" />
+    <circle cx="12" cy="12" r="1.2" />
+    <circle cx="19" cy="12" r="1.2" />
+  </symbol>
+  <symbol id="i-sliders" viewBox="0 0 24 24">
+    <path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1" />
+    <circle cx="15" cy="6" r="2" />
+    <circle cx="9" cy="12" r="2" />
+    <circle cx="17" cy="18" r="2" />
+  </symbol>
+  <symbol id="i-image" viewBox="0 0 24 24">
+    <rect x="3" y="5" width="18" height="14" rx="2" />
+    <circle cx="8.5" cy="10" r="1.5" />
+    <path d="M21 16l-5-5-9 8" />
+  </symbol>
+  <symbol id="i-cube" viewBox="0 0 24 24">
+    <path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z M12 12l8-4.5M12 12v9M12 12L4 7.5" />
+  </symbol>
+  <symbol id="i-bulb" viewBox="0 0 24 24">
+    <path
+      d="M9 18h6M10 21h4M12 3a6 6 0 0 0-4 10.5c.8.8 1 1.5 1 2.5h6c0-1 .2-1.7 1-2.5A6 6 0 0 0 12 3z"
+    />
+  </symbol>
+  <symbol id="i-term" viewBox="0 0 24 24">
+    <rect x="3" y="4" width="18" height="16" rx="2" />
+    <path d="M7 9l3 3-3 3M13 15h4" />
+  </symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24">
+    <circle cx="12" cy="12" r="9" />
+    <path d="M12 7v5l3 2" />
+  </symbol>
+  <symbol id="i-pen" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z M13 7l4 4" /></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24">
+    <rect x="8" y="8" width="12" height="12" rx="2" />
+    <path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" />
+  </symbol>
+  <symbol id="i-branch" viewBox="0 0 24 24">
+    <circle cx="6" cy="5" r="2" />
+    <circle cx="6" cy="19" r="2" />
+    <circle cx="18" cy="7" r="2" />
+    <path d="M6 7v10M18 9a6 6 0 0 1-6 6H6" />
+  </symbol>
+  <symbol id="i-layers" viewBox="0 0 24 24"><path d="M12 3l9 5-9 5-9-5z M3 13l9 5 9-5" /></symbol>
+  <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M5 21h14" /></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13" /></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24">
+    <path d="M12 3l9.5 17h-19z M12 10v4M12 17.5v.01" />
+  </symbol>
+  <symbol id="i-eye" viewBox="0 0 24 24">
+    <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z" />
+    <circle cx="12" cy="12" r="3" />
+  </symbol>
+  <symbol id="i-retry" viewBox="0 0 24 24">
+    <path d="M4 12a8 8 0 0 1 14-5.3L20 9M20 4v5h-5" />
+  </symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24">
+    <circle cx="12" cy="12" r="4" />
+    <path
+      d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"
+    />
+  </symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24">
+    <path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z" />
+  </symbol>
+  <symbol id="i-monitor" viewBox="0 0 24 24">
+    <rect x="3" y="4" width="18" height="12" rx="2" />
+    <path d="M8 20h8M12 16v4" />
+  </symbol>
+  <symbol id="i-queue" viewBox="0 0 24 24">
+    <path d="M4 6h16M4 12h10M4 18h7M17 15v6M14 18h6" />
+  </symbol>
+</svg>
+
+<main class="page">
+  <header class="hero">
+    <div>
+      <span class="en">Pion · Component spec</span>
+      <h1>组件与<span>交互</span>样张</h1>
+      <p>
+        每个组件都能直接操作：键盘 ↑↓ / Enter / Esc
+        可用，动效只在状态变化时出现。外观是液态玻璃，信息密度和流程参考 Claude 与 Codex 桌面版。
+      </p>
+    </div>
+    <div class="seg" role="radiogroup" aria-label="主题" data-seg id="theme-seg">
+      <button role="radio" aria-checked="true" data-value="system">
+        <svg class="i" style="vertical-align: -3px; width: 14px; height: 14px">
+          <use href="#i-monitor" />
+        </svg>
+        跟随系统
+      </button>
+      <button role="radio" aria-checked="false" data-value="light">
+        <svg class="i" style="vertical-align: -3px; width: 14px; height: 14px">
+          <use href="#i-sun" />
+        </svg>
+        浅色
+      </button>
+      <button role="radio" aria-checked="false" data-value="dark">
+        <svg class="i" style="vertical-align: -3px; width: 14px; height: 14px">
+          <use href="#i-moon" />
+        </svg>
+        深色
+      </button>
+    </div>
+  </header>
+
+  <div class="grid">
+    <!-- ============ Composer ============ -->
+    <section class="card s8">
+      <div class="card-head">
+        <h2>输入框工具栏</h2>
+        <span class="en">Composer</span>
+      </div>
+      <p class="card-note">
+        工具栏只留四样，各管一件事：<b>＋</b> 只往消息里添加东西（图片、Pi 命令、技能）；<b>模型</b>
+        决定 Pi 怎么干活（模型、思考级别、工具预设，非默认预设才会显示在胶囊上）；<b>上下文小环</b>
+        看用量并压缩；<b>发送</b>。运行中输入框上方会浮出"引导 / 后续"切换，默认值在设置里改。
+      </p>
+      <div class="demo" style="background: none; padding: 36px 0 0">
+        <div class="composer" id="composer">
+          <div class="run-float" id="run-float" hidden>
+            <span class="live-dot" aria-hidden="true"></span><span>运行中，新消息</span>
+            <div class="seg" data-seg id="mode-seg" role="radiogroup" aria-label="运行中的新消息">
+              <button
+                role="radio"
+                data-value="steer"
+                aria-checked="true"
+                data-tip="立即插入当前任务"
+              >
+                引导</button
+              ><button
+                role="radio"
+                data-value="follow"
+                aria-checked="false"
+                data-tip="排队，这一轮结束后发送"
+              >
+                后续
+              </button>
+            </div>
+          </div>
+          <div class="queue-chip" id="queue" hidden>
+            <svg class="i" style="color: rgb(var(--rgb-purple))"><use href="#i-queue" /></svg
+            ><span class="tag purple">后续</span><span class="grow" id="queue-text"></span
+            ><button class="btn ghost icon sm" data-tip="移回输入框" id="queue-back">
+              <svg class="i"><use href="#i-up" /></svg></button
+            ><button class="btn ghost icon sm" data-tip="移除" id="queue-clear">
+              <svg class="i"><use href="#i-x" /></svg>
+            </button>
+          </div>
+          <textarea
+            id="composer-input"
+            placeholder="让 Pi 帮你探索、开发或修复…"
+            rows="2"
+          ></textarea>
+          <div class="toolbar">
+            <span class="anchor"
+              ><button
+                class="btn ghost icon sm round"
+                data-menu="more"
+                data-tip="添加"
+                aria-label="添加"
+                aria-haspopup="menu"
+                aria-expanded="false"
+              >
+                <svg class="i"><use href="#i-plus" /></svg></button
+            ></span>
+            <span class="anchor"
+              ><button
+                class="select quiet"
+                data-select="cmodel"
+                aria-haspopup="listbox"
+                aria-expanded="false"
+              >
+                <span class="label">claude-sonnet-5-5</span><span class="meta" data-think>中</span
+                ><span class="meta tools-tag" data-tools-tag hidden></span
+                ><svg class="i chev"><use href="#i-chev" /></svg></button
+            ></span>
+            <span class="grow"></span>
+            <button class="ring" data-tip="上下文 42% · 84K / 200K" aria-label="上下文 42%">
+              <svg viewBox="0 0 20 20">
+                <circle
+                  cx="10"
+                  cy="10"
+                  r="8"
+                  fill="none"
+                  stroke="var(--line-2)"
+                  stroke-width="2.5"
+                />
+                <circle
+                  cx="10"
+                  cy="10"
+                  r="8"
+                  fill="none"
+                  style="stroke: var(--brand)"
+                  stroke-width="2.5"
+                  stroke-linecap="round"
+                  stroke-dasharray="21.1 50.3"
+                />
+              </svg>
+            </button>
+            <button class="btn primary icon send" id="send" aria-label="发送">
+              <svg class="i"><use href="#i-up" /></svg>
+            </button>
+          </div>
+        </div>
+        <div class="row run-hint">
+          <span class="faint" id="run-hint">Enter 发送 · Shift + Enter 换行</span
+          ><span class="grow"></span><button class="btn sm" id="reset-run">重置演示</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ Menu ============ -->
+    <section class="card s4">
+      <div class="card-head">
+        <h2>菜单</h2>
+        <span class="en">Menu</span>
+      </div>
+      <p class="card-note">
+        图标 + 文字 +
+        快捷键三栏对齐，分组之间用分隔线，危险操作放最后并标红。弹层从触发点缩放展开，点外部或 Esc
+        关闭，焦点回到按钮。
+      </p>
+      <div class="demo" style="justify-items: start">
+        <span class="anchor"
+          ><button class="btn" data-menu="task" aria-haspopup="menu" aria-expanded="false">
+            <svg class="i"><use href="#i-dots" /></svg>任务操作
+          </button></span
+        >
+        <span class="faint" style="font-size: 12px" id="menu-result">选择一项看看反馈</span>
+      </div>
+    </section>
+
+    <!-- ============ Buttons ============ -->
+    <section class="card s7">
+      <div class="card-head">
+        <h2>按钮层级</h2>
+        <span class="en">Buttons</span>
+      </div>
+      <p class="card-note">
+        一屏只有一个主按钮。次级按钮是浅玻璃，文字按钮用于工具栏，危险按钮只在会丢数据时出现。按下有回弹，提交时按钮内显示进度而不是禁用整个表单。
+      </p>
+      <div class="demo rank">
+        <span class="en">Primary</span>
+        <div class="row">
+          <button class="btn primary" data-async>保存并连接</button
+          ><button class="btn primary lg" data-async>开始任务</button
+          ><button class="btn primary" disabled>保存</button>
+        </div>
+        <span class="en">Secondary</span>
+        <div class="row">
+          <button class="btn" data-async>测试连接</button><button class="btn sm">重新扫描</button
+          ><button class="btn">
+            <svg class="i"><use href="#i-plus" /></svg>添加自定义端点
+          </button>
+        </div>
+        <span class="en">Ghost</span>
+        <div class="row">
+          <button class="btn ghost">取消</button
+          ><button class="btn ghost icon" data-tip="复制">
+            <svg class="i"><use href="#i-copy" /></svg></button
+          ><button class="btn ghost icon" data-tip="从此处分支">
+            <svg class="i"><use href="#i-branch" /></svg>
+          </button>
+        </div>
+        <span class="en">Danger</span>
+        <div class="row">
+          <button class="btn danger" id="open-confirm">断开连接</button
+          ><button class="btn danger sm">
+            <svg class="i"><use href="#i-trash" /></svg>卸载
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ Selection controls ============ -->
+    <section class="card s5">
+      <div class="card-head">
+        <h2>选择控件</h2>
+        <span class="en">Segmented · Switch · Select</span>
+      </div>
+      <p class="card-note">
+        两三个互斥选项用分段控件，滑块带弹簧；开关用于立即生效的设置；选项多或需要说明时用下拉列表。
+      </p>
+      <div class="demo">
+        <div class="row" style="justify-content: space-between">
+          <span>安装范围</span>
+          <div class="seg" role="radiogroup" aria-label="安装范围" data-seg>
+            <button role="radio" aria-checked="true">用户</button
+            ><button role="radio" aria-checked="false">项目</button>
+          </div>
+        </div>
+        <div class="row" style="justify-content: space-between">
+          <span>界面语言</span>
+          <div class="seg" role="radiogroup" aria-label="界面语言" data-seg>
+            <button role="radio" aria-checked="true">简体中文</button
+            ><button role="radio" aria-checked="false">English</button>
+          </div>
+        </div>
+        <div class="row" style="justify-content: space-between">
+          <span>后台自动下载更新</span
+          ><button
+            class="switch"
+            role="switch"
+            aria-checked="true"
+            aria-label="后台自动下载更新"
+          ></button>
+        </div>
+        <div class="field-wrap">
+          <label>默认模型</label
+          ><span class="anchor" style="display: flex"
+            ><button
+              class="select field"
+              data-select="model"
+              aria-haspopup="listbox"
+              aria-expanded="false"
+            >
+              <span class="row" style="gap: 8px; flex-wrap: nowrap; min-width: 0"
+                ><svg class="i"><use href="#i-cube" /></svg
+                ><span class="label">claude-sonnet-5-5</span
+                ><span class="meta">anthropic</span></span
+              ><svg class="i chev"><use href="#i-chev" /></svg></button
+          ></span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ Transcript ============ -->
+    <section class="card s7">
+      <div class="card-head">
+        <h2>对话里的过程信息</h2>
+        <span class="en">Thinking · Tools · Code</span>
+      </div>
+      <p class="card-note">
+        思考进行中文字有流光，结束后折叠成一行并显示用时。工具调用是可展开的卡片：运行中转圈、完成打勾、失败标红并给出重试。展开收起用高度过渡，不跳动。
+      </p>
+      <div class="demo" style="background: none; padding: 0; gap: 10px" id="transcript">
+        <div class="thinking" data-open="false" id="thinking">
+          <button class="thinking-head" aria-expanded="false">
+            <svg class="i"><use href="#i-bulb" /></svg
+            ><span id="thinking-label" class="shimmer">正在思考…</span
+            ><svg class="i chev faint" style="width: 14px; height: 14px">
+              <use href="#i-right" />
+            </svg>
+          </button>
+          <div class="thinking-body">
+            <div>
+              <p>
+                设置页现在是单列表单，先确认 tokens
+                里有没有玻璃层变量，再决定卡片的网格划分。快捷键说明要保留原有分组。
+              </p>
+            </div>
+          </div>
+        </div>
+        <div class="tool" data-state="done" data-open="false">
+          <button class="tool-head" aria-expanded="false">
+            <span class="status-dot"
+              ><svg class="i" style="width: 14px; height: 14px"><use href="#i-check" /></svg></span
+            ><span class="verb">读取</span><code>src/ui/settings/Settings.module.css</code
+            ><span class="grow"></span><span class="faint mono">476 行 · 0.2s</span
+            ><svg class="i chev"><use href="#i-right" /></svg>
+          </button>
+          <div class="tool-body">
+            <div>
+              <pre>
+.settings {
+  max-width: 1040px;
+  min-width: 0;
+}
+.settings-card { padding: 24px 0 28px; border-top: 1px solid var(--line); }</pre>
+            </div>
+          </div>
+        </div>
+        <div class="tool" data-state="running" data-open="false" id="running-tool">
+          <button class="tool-head" aria-expanded="false">
+            <span class="status-dot"></span><span class="verb shimmer">编辑</span
+            ><code>src/ui/settings/Settings.tsx</code><span class="grow"></span
+            ><span class="faint mono" id="running-time">0.0s</span
+            ><svg class="i chev"><use href="#i-right" /></svg>
+          </button>
+          <div class="tool-body">
+            <div>
+              <pre>
++ &lt;PageHero eyebrow="General" title={t("Settings")} /&gt;
+- &lt;header className="page-heading"&gt;</pre>
+            </div>
+          </div>
+        </div>
+        <div class="tool" data-state="failed" data-open="true">
+          <button class="tool-head" aria-expanded="true">
+            <span class="status-dot"
+              ><svg class="i" style="width: 14px; height: 14px"><use href="#i-alert" /></svg></span
+            ><span class="verb">运行</span><code>npm test</code><span class="grow"></span
+            ><span class="tag red">失败</span><svg class="i chev"><use href="#i-right" /></svg>
+          </button>
+          <div class="tool-body">
+            <div>
+              <pre>
+✖ settings renders bento cards
+  Expected heading "Settings", received none</pre>
+              <div class="row" style="padding: 0 12px 12px">
+                <button class="btn sm">
+                  <svg class="i" style="width: 13px; height: 13px"><use href="#i-retry" /></svg
+                  >重新运行</button
+                ><button class="btn ghost sm">查看完整输出</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="code">
+          <div class="code-head">
+            <svg class="i faint" style="width: 14px; height: 14px"><use href="#i-term" /></svg
+            ><span class="mono">tokens.css</span><span class="grow"></span
+            ><button class="btn ghost sm" data-copy>
+              <svg class="i" style="width: 13px; height: 13px"><use href="#i-copy" /></svg
+              ><span>复制</span>
+            </button>
+          </div>
+          <pre><span class="tp">:root</span> {
+  <span class="tk">--pion-glass-tint</span>: rgb(255 255 255 / 34%);
+  <span class="tk">--pion-glass-shine</span>: rgb(255 255 255 / 85%);  <span class="tc">/* 卡片边缘高光 */</span>
+}</pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ Settings rows & fields ============ -->
+    <section class="card s5">
+      <div class="card-head">
+        <h2>设置行与表单</h2>
+        <span class="en">Rows · Fields</span>
+      </div>
+      <p class="card-note">
+        设置统一成"标题 + 一句说明 +
+        右侧控件"一行，立即生效不需要保存按钮。需要提交的表单在字段下方就地显示校验结果。
+      </p>
+      <div class="rows">
+        <div class="set-row">
+          <div class="text">
+            <strong>自动压缩上下文</strong><span>接近上限时由 Pi 自动生成摘要</span>
+          </div>
+          <button
+            class="switch"
+            role="switch"
+            aria-checked="true"
+            aria-label="自动压缩上下文"
+          ></button>
+        </div>
+        <div class="set-row">
+          <div class="text">
+            <strong>运行中的新消息</strong><span>默认方式；每次运行时可在输入框上方临时切换</span>
+          </div>
+          <div
+            class="seg"
+            data-seg
+            data-default-mode
+            role="radiogroup"
+            aria-label="运行中新消息的默认方式"
+          >
+            <button role="radio" data-value="steer" aria-checked="true">引导</button
+            ><button role="radio" data-value="follow" aria-checked="false">后续</button>
+          </div>
+        </div>
+        <div class="set-row">
+          <div class="text"><strong>自动重试</strong><span>请求失败时最多重试 3 次</span></div>
+          <button class="switch" role="switch" aria-checked="false" aria-label="自动重试"></button>
+        </div>
+        <div class="set-row">
+          <div class="text">
+            <strong>显示 /skill 命令</strong><span>在命令菜单中列出已安装技能</span>
+          </div>
+          <button
+            class="switch"
+            role="switch"
+            aria-checked="true"
+            aria-label="显示 skill 命令"
+          ></button>
+        </div>
+      </div>
+      <form class="field-wrap" id="key-form" novalidate>
+        <label for="api-key">OpenAI API Key</label>
+        <div class="input" id="key-box">
+          <input id="api-key" type="password" placeholder="sk-…" autocomplete="off" /><button
+            type="button"
+            class="btn ghost icon sm"
+            data-tip="显示"
+            id="toggle-key"
+          >
+            <svg class="i"><use href="#i-eye" /></svg></button
+          ><button type="submit" class="btn primary sm" id="key-save">保存</button>
+        </div>
+        <span class="hint" id="key-hint">保存到 Pi 的 auth.json，权限 0600，界面不回显。</span>
+      </form>
+    </section>
+
+    <!-- ============ Feedback ============ -->
+    <section class="card s6">
+      <div class="card-head">
+        <h2>反馈</h2>
+        <span class="en">Toast · Skeleton · Dialog</span>
+      </div>
+      <p class="card-note">
+        操作结果用右下角通知，带倒计时条，悬停时暂停。加载中用骨架屏占位，不显示"加载中…"文字。会丢数据的操作弹确认框，确认按钮写清楚后果。
+      </p>
+      <div class="demo">
+        <div class="row">
+          <button class="btn" id="toast-ok">成功通知</button
+          ><button class="btn" id="toast-err">失败通知</button
+          ><button class="btn danger" id="open-confirm-2">删除确认框</button
+          ><button class="btn ghost" id="toggle-skel">切换加载</button>
+        </div>
+        <div id="skel-area">
+          <div class="skel" id="skel" hidden>
+            <div class="skel-row">
+              <i class="box"></i>
+              <div style="display: grid; gap: 7px; flex: 1">
+                <i style="width: 40%"></i><i style="width: 70%"></i>
+              </div>
+            </div>
+            <div class="skel-row">
+              <i class="box"></i>
+              <div style="display: grid; gap: 7px; flex: 1">
+                <i style="width: 30%"></i><i style="width: 55%"></i>
+              </div>
+            </div>
+          </div>
+          <div id="loaded" style="display: grid; gap: 8px">
+            <div class="row" style="flex-wrap: nowrap">
+              <span class="tag green">已连接</span><strong>OpenAI</strong
+              ><span class="faint mono">3 个模型</span>
+            </div>
+            <div class="row" style="flex-wrap: nowrap">
+              <span class="tag blue">本地</span><strong>Ollama</strong
+              ><span class="faint mono">127.0.0.1:11434</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ Motion ============ -->
+    <section class="card s6">
+      <div class="card-head">
+        <h2>动效规范</h2>
+        <span class="en">Motion</span>
+      </div>
+      <p class="card-note">
+        用户主动唤起的东西（菜单、对话框、开关、分段）用弹簧；系统汇报的状态（通知消失、加载完成）用缓出。系统开启"减少动态效果"时全部降为瞬时。
+      </p>
+      <div class="demo legend">
+        <span><b>120ms</b> 悬停、颜色、按压</span>
+        <span><b>220ms 弹簧</b> 弹出菜单、下拉、排队消息出现</span>
+        <span><b>340ms 弹簧</b> 对话框、开关滑块、分段滑块、通知进入</span>
+        <span><b>340ms 缓出</b> 工具卡片与思考过程展开</span>
+        <span><b>1.6s 循环</b> 运行中的流光；完成后立即停止</span>
+      </div>
+    </section>
+  </div>
+</main>
+
+<div class="toasts" id="toasts" aria-live="polite"></div>
+
+<script>
+  const $ = (s, r = document) => r.querySelector(s);
+  const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+  const root = document.documentElement;
+
+  /* ---------- Segmented controls ---------- */
+  function setupSeg(seg, onChange) {
+    const thumb = document.createElement("span");
+    thumb.className = "thumb";
+    seg.prepend(thumb);
+    const place = () => {
+      const on = $('[aria-checked="true"]', seg);
+      if (!on) return;
+      thumb.style.width = on.offsetWidth + "px";
+      thumb.style.transform = `translateX(${on.offsetLeft}px)`;
+    };
+    $$("button", seg).forEach((b) => {
+      b.tabIndex = b.getAttribute("aria-checked") === "true" ? 0 : -1;
+      b.addEventListener("click", () => {
+        $$("button", seg).forEach((x) => {
+          x.setAttribute("aria-checked", String(x === b));
+          x.tabIndex = x === b ? 0 : -1;
+        });
+        place();
+        onChange?.(b.dataset.value);
+      });
+      b.addEventListener("keydown", (e) => {
+        if (!["ArrowLeft", "ArrowRight"].includes(e.key)) return;
+        const all = $$("button", seg);
+        const next =
+          all[(all.indexOf(b) + (e.key === "ArrowRight" ? 1 : all.length - 1)) % all.length];
+        next.focus();
+        next.click();
+      });
+    });
+    new ResizeObserver(place).observe(seg);
+    place();
+    return place;
+  }
+  $$("[data-seg]").forEach((seg) => {
+    if (seg.id === "theme-seg")
+      setupSeg(seg, (v) =>
+        v === "system" ? root.removeAttribute("data-theme") : root.setAttribute("data-theme", v),
+      );
+    else setupSeg(seg);
+  });
+
+  /* ---------- Switches ---------- */
+  document.addEventListener("click", (e) => {
+    const sw = e.target.closest(".switch");
+    if (sw && !sw.disabled)
+      sw.setAttribute("aria-checked", String(sw.getAttribute("aria-checked") !== "true"));
+  });
+
+  /* ---------- Popover engine: one open at a time, outside click / Esc close, focus returns ---------- */
+  let openPop = null;
+  function closePop(returnFocus = true) {
+    if (!openPop) return;
+    const { panel, trigger } = openPop;
+    openPop = null;
+    trigger.setAttribute("aria-expanded", "false");
+    panel.dataset.state = "closing";
+    panel.addEventListener("animationend", () => panel.remove(), { once: true });
+    setTimeout(() => panel.remove(), 200);
+    if (returnFocus) trigger.focus();
+  }
+  function showPop(trigger, panel, { above = false, align = "left" } = {}) {
+    if (openPop?.trigger === trigger) return closePop();
+    closePop(false);
+    const anchor = trigger.closest(".anchor") || trigger.parentElement;
+    // Prefer the requested side, flip when the viewport has no room for it.
+    if (above && trigger.getBoundingClientRect().top < 420) above = false;
+    panel.classList.add("pop");
+    panel.style[above ? "bottom" : "top"] = "calc(100% + 8px)";
+    panel.style[align] = "0";
+    panel.style.setProperty("--origin", `${above ? "bottom" : "top"} ${align}`);
+    panel.style.setProperty("--dy", above ? "6px" : "-6px");
+    panel.dataset.state = "open";
+    anchor.appendChild(panel);
+    trigger.setAttribute("aria-expanded", "true");
+    openPop = { trigger, panel };
+    return panel;
+  }
+  document.addEventListener("pointerdown", (e) => {
+    if (openPop && !openPop.panel.contains(e.target) && !openPop.trigger.contains(e.target))
+      closePop(false);
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && openPop) {
+      e.preventDefault();
+      closePop();
+    }
+  });
+
+  /* Roving active item inside a list: ↑↓ move, Enter picks, typing filters (when a search box exists). */
+  function listNav(panel, onPick) {
+    const items = () => $$(".item:not([hidden]):not([aria-disabled='true'])", panel);
+    let idx = Math.max(
+      0,
+      items().findIndex((i) => i.getAttribute("aria-selected") === "true"),
+    );
+    const paint = () =>
+      items().forEach((it, i) => {
+        it.classList.toggle("active", i === idx);
+        if (i === idx) it.scrollIntoView({ block: "nearest" });
+      });
+    panel.addEventListener("keydown", (e) => {
+      const list = items();
+      if (e.key === "ArrowDown") {
+        idx = (idx + 1) % list.length;
+        paint();
+        e.preventDefault();
+      } else if (e.key === "ArrowUp") {
+        idx = (idx - 1 + list.length) % list.length;
+        paint();
+        e.preventDefault();
+      } else if (e.key === "Enter" && list[idx]) {
+        e.preventDefault();
+        onPick(list[idx]);
+      }
+    });
+    panel.addEventListener("pointermove", (e) => {
+      const it = e.target.closest(".item");
+      if (it) {
+        idx = items().indexOf(it);
+        paint();
+      }
+    });
+    panel.addEventListener("click", (e) => {
+      const it = e.target.closest(".item");
+      if (it && it.getAttribute("aria-disabled") !== "true") onPick(it);
+    });
+    return {
+      reset() {
+        idx = 0;
+        paint();
+      },
+      paint,
+    };
+  }
+
+  /* ---------- Selects ---------- */
+  const selects = {
+    model: {
+      search: "搜索模型",
+      groups: [
+        [
+          "Anthropic",
+          [
+            ["claude-sonnet-5-5", "默认 · 200K"],
+            ["claude-opus-5-5", "200K · 支持图片"],
+            ["claude-haiku-5-5", "200K · 最快"],
+          ],
+        ],
+        [
+          "OpenRouter",
+          [
+            ["qwen3-coder", "256K"],
+            ["deepseek-v3.2", "128K"],
+          ],
+        ],
+        ["LM Studio", [["llama-3.3-70b", "本地 · 128K"]]],
+      ],
+      meta: {
+        "claude-sonnet-5-5": "anthropic",
+        "claude-opus-5-5": "anthropic",
+        "claude-haiku-5-5": "anthropic",
+        "qwen3-coder": "openrouter",
+        "deepseek-v3.2": "openrouter",
+        "llama-3.3-70b": "lmstudio",
+      },
+      value: "claude-sonnet-5-5",
+    },
+  };
+  selects.cmodel = selects.model;
+  let thinking = "中";
+  let tools = "full";
+  // Only a non-default tool preset earns space on the pill; "完整" is the quiet default.
+  function paintTools() {
+    $$("[data-tools-tag]").forEach((t) => {
+      t.hidden = tools === "full";
+      t.textContent = tools === "chat" ? "仅聊天" : "只读";
+    });
+  }
+  function openSelect(trigger) {
+    const key = trigger.dataset.select;
+    const conf = selects[key];
+    const composer = key === "cmodel";
+    const panel = document.createElement("div");
+    panel.setAttribute("role", "listbox");
+    panel.style.width = key === "model" ? "300px" : "260px";
+    panel.innerHTML =
+      (conf.search
+        ? `<label class="pop-search"><svg class="i"><use href="#i-search" /></svg><input placeholder="${conf.search}" aria-label="${conf.search}" /></label>`
+        : "") +
+      `<div class="pop-list">` +
+      conf.groups
+        .map(
+          ([g, opts]) =>
+            (g ? `<div class="en group-label">${g}</div>` : "") +
+            opts
+              .map(
+                ([v, d]) =>
+                  `<button class="item" role="option" data-value="${v}" aria-selected="${v === conf.value}"><span class="desc"><b style="font-weight:500">${v}</b><span>${d}</span></span></button>`,
+              )
+              .join(""),
+        )
+        .join("") +
+      `</div><div class="empty-result" hidden>没有匹配的模型</div>` +
+      (composer
+        ? `<div class="pop-foot"><span class="en">Thinking · 思考</span><div class="seg" data-think-seg role="radiogroup" aria-label="思考级别">${["关", "低", "中", "高"].map((v) => `<button role="radio" data-value="${v}" aria-checked="${v === thinking}">${v}</button>`).join("")}</div></div>
+           <div class="pop-foot" style="margin-top:0; border-top:0; padding-top:4px"><span class="en">Tools · 工具</span><div class="seg${running ? " locked" : ""}" data-tools-seg role="radiogroup" aria-label="工具预设">${[
+             ["full", "完整", "全部已注册工具，含写文件、执行命令和扩展工具"],
+             ["read-only", "只读", "仅内置 read、grep、find、ls"],
+             ["chat", "仅聊天", "不提供任何工具"],
+           ]
+             .map(
+               ([v, l, d]) =>
+                 `<button role="radio" data-value="${v}" data-tip="${d}" ${running ? "disabled" : ""} aria-checked="${v === tools}">${l}</button>`,
+             )
+             .join("")}</div></div>
+           ${running ? `<p class="hint" style="padding: 0 6px 4px">任务运行中不能切换工具预设。</p>` : ""}`
+        : "");
+    const above = !!trigger.closest(".composer");
+    showPop(trigger, panel, { above });
+    if (composer) {
+      setupSeg($("[data-think-seg]", panel), (v) => {
+        thinking = v;
+        $$("[data-think]").forEach((m) => (m.textContent = v));
+      });
+      setupSeg($("[data-tools-seg]", panel), (v) => {
+        tools = v;
+        paintTools();
+      });
+    }
+    const nav = listNav(panel, (it) => {
+      conf.value = it.dataset.value;
+      $$('[data-select="model"], [data-select="cmodel"]').forEach((t) => {
+        $(".label", t).textContent = conf.value;
+        const meta = $(".meta:not([data-think])", t);
+        if (meta && conf.meta) meta.textContent = conf.meta[conf.value];
+      });
+      closePop();
+    });
+    const search = $("input", panel);
+    if (search) {
+      search.focus();
+      search.addEventListener("input", () => {
+        const q = search.value.trim().toLowerCase();
+        let any = false;
+        $$(".item", panel).forEach((it) => {
+          const hit = it.dataset.value.toLowerCase().includes(q);
+          it.hidden = !hit;
+          any ||= hit;
+        });
+        $$(".group-label", panel).forEach((g) => {
+          let n = g.nextElementSibling,
+            vis = false;
+          while (n && n.classList.contains("item")) {
+            vis ||= !n.hidden;
+            n = n.nextElementSibling;
+          }
+          g.hidden = !vis;
+        });
+        $(".empty-result", panel).hidden = any;
+        nav.reset();
+      });
+    } else {
+      panel.tabIndex = -1;
+      panel.focus();
+    }
+    nav.paint();
+  }
+  $$("[data-select]").forEach((t) => t.addEventListener("click", () => openSelect(t)));
+  $$("[data-select]").forEach((t) =>
+    t.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+        e.preventDefault();
+        if (!openPop) openSelect(t);
+      }
+    }),
+  );
+
+  /* ---------- Menus ---------- */
+  const menus = {
+    task: [
+      ["i-clock", "会话历史", "⌘Y"],
+      ["i-pen", "重命名", "F2"],
+      ["i-copy", "克隆当前分支", ""],
+      null,
+      ["i-layers", "压缩上下文", ""],
+      ["i-download", "导出 HTML", "⌘E"],
+      null,
+      ["i-trash", "删除任务", "", "danger"],
+    ],
+  };
+  function openMenu(trigger) {
+    const key = trigger.dataset.menu;
+    if (key === "more") return openMore(trigger);
+    const panel = document.createElement("div");
+    panel.setAttribute("role", "menu");
+    panel.style.width = "232px";
+    panel.innerHTML = menus[key]
+      .map((m) =>
+        m
+          ? `<button class="item ${m[3] || ""}" role="menuitem"><svg class="i"><use href="#${m[0]}" /></svg>${m[1]}${m[2] ? `<kbd>${m[2]}</kbd>` : ""}</button>`
+          : `<div class="sep" role="separator"></div>`,
+      )
+      .join("");
+    showPop(trigger, panel);
+    panel.tabIndex = -1;
+    panel.focus();
+    const nav = listNav(panel, (it) => {
+      closePop();
+      const label = it.textContent.replace(/⌘\w|F2/, "").trim();
+      if (it.classList.contains("danger"))
+        confirmDialog(
+          "删除这个任务？",
+          "会话记录会从 Pion 移除，Pi 的会话文件保留在磁盘上。",
+          "删除任务",
+        );
+      else {
+        $("#menu-result").textContent = `已执行：${label}`;
+        toast("ok", label, "操作已完成");
+      }
+    });
+    nav.reset();
+  }
+  // ＋ only adds things to the message: images, a Pi command, a skill — or more capabilities.
+  const skills = [
+    ["code-review", "按团队规范审查改动"],
+    ["release-notes", "从提交生成发布说明"],
+    ["test-writer", "为选中模块补测试"],
+  ];
+  function insert(text) {
+    const at = input.selectionStart ?? input.value.length;
+    input.value = input.value.slice(0, at) + text + input.value.slice(at);
+    input.focus();
+    input.setSelectionRange(at + text.length, at + text.length);
+    paintSend();
+  }
+  function openMore(trigger) {
+    const panel = document.createElement("div");
+    panel.setAttribute("role", "menu");
+    panel.style.width = "236px";
+    panel.innerHTML = `
+      <button class="item" role="menuitem" data-add="image"><svg class="i"><use href="#i-image" /></svg>添加图片<kbd>${mod}U</kbd></button>
+      <button class="item" role="menuitem" data-add="command"><svg class="i"><use href="#i-term" /></svg>Pi 命令<kbd>/</kbd></button>
+      <div class="sub-anchor">
+        <button class="item" role="menuitem" aria-haspopup="menu" data-add="skills"><svg class="i"><use href="#i-bulb" /></svg>技能<svg class="i" style="margin-left:auto;width:14px;height:14px"><use href="#i-right" /></svg></button>
+      </div>
+      <div class="sep" role="separator"></div>
+      <button class="item" role="menuitem" data-add="packages"><svg class="i"><use href="#i-plus" /></svg>安装扩展包…</button>`;
+    showPop(trigger, panel, { above: true });
+    panel.tabIndex = -1;
+    panel.focus();
+    const subAnchor = $(".sub-anchor", panel);
+    let sub = null;
+    const openSub = () => {
+      if (sub) return;
+      sub = document.createElement("div");
+      sub.className = "pop sub";
+      sub.setAttribute("role", "menu");
+      sub.dataset.state = "open";
+      sub.innerHTML =
+        `<div class="en group-label">Installed skills</div>` +
+        skills
+          .map(
+            ([n, d]) =>
+              `<button class="item" role="menuitem" data-skill="${n}"><span class="desc"><b style="font-weight:500">${n}</b><span>${d}</span></span></button>`,
+          )
+          .join("");
+      subAnchor.appendChild(sub);
+      sub.addEventListener("click", (e) => {
+        const it = e.target.closest("[data-skill]");
+        if (it) {
+          closePop(false);
+          insert(`/skill:${it.dataset.skill} `);
+        }
+      });
+    };
+    const closeSub = () => {
+      sub?.remove();
+      sub = null;
+    };
+    subAnchor.addEventListener("pointerenter", openSub);
+    subAnchor.addEventListener("pointerleave", closeSub);
+    panel.addEventListener("keydown", (e) => {
+      const active = $(".item.active", panel);
+      if (e.key === "ArrowRight" && active?.dataset.add === "skills") {
+        openSub();
+        $(".item", sub).focus();
+        e.preventDefault();
+      }
+      if (e.key === "ArrowLeft" && sub) {
+        closeSub();
+        $('[data-add="skills"]', panel).focus();
+        e.preventDefault();
+      }
+    });
+    const nav = listNav(panel, (it) => {
+      const kind = it.dataset.add;
+      if (kind === "skills") return openSub();
+      if (it.dataset.skill) return;
+      closePop(false);
+      if (kind === "image") toast("ok", "选择图片", "PNG / JPEG / GIF / WebP，最多 5 张");
+      if (kind === "command") insert("/");
+      if (kind === "packages")
+        toast("ok", "打开设置 → 扩展包", "安装 Pi 包来增加工具、技能或服务商");
+    });
+    nav.reset();
+  }
+
+  /* Context ring: usage and every compaction control live behind the ring itself. */
+  function openContext(trigger) {
+    const panel = document.createElement("div");
+    panel.className = "panel-pop ctx-pop";
+    panel.setAttribute("role", "dialog");
+    panel.setAttribute("aria-label", "上下文");
+    panel.innerHTML = `
+      <div class="panel-sec">
+        <div class="line" style="align-items: end"><span class="ctx-number">42<small>%</small></span><span class="en">Context window</span></div>
+        <div class="ctx-bar"><i style="width: 42%"></i></div>
+        <dl class="ctx-kv"><dt>已用</dt><dd>84,120 / 200,000</dd><dt>本次会话费用</dt><dd>$1.27</dd></dl>
+      </div>
+      <div class="panel-sec">
+        <div class="line"><span>压缩上下文</span><div class="row" style="gap:6px"><button class="btn sm" data-compact>立即压缩</button><button class="btn ghost sm">按说明压缩…</button></div></div>
+        <div class="line"><span>接近上限时自动压缩</span><button class="switch" role="switch" aria-checked="true" aria-label="接近上限时自动压缩"></button></div>
+      </div>`;
+    showPop(trigger, panel, { above: true, align: "right" });
+    $("[data-compact]", panel).addEventListener("click", (e) => {
+      const b = e.currentTarget;
+      b.dataset.loading = "";
+      setTimeout(() => {
+        delete b.dataset.loading;
+        $(".ctx-number", panel).innerHTML = "9<small>%</small>";
+        $(".ctx-bar i", panel).style.width = "9%";
+        $(".ctx-kv dd", panel).textContent = "18,300 / 200,000";
+        toast("ok", "上下文已压缩", "84K → 约 18K tokens");
+      }, 1100);
+    });
+    $("button", panel).focus();
+  }
+  $(".composer .ring").addEventListener("click", (e) => openContext(e.currentTarget));
+  $$("[data-menu]").forEach((t) => t.addEventListener("click", () => openMenu(t)));
+
+  /* ---------- Composer run states ---------- */
+  const input = $("#composer-input"),
+    send = $("#send"),
+    queue = $("#queue"),
+    hint = $("#run-hint");
+  const mod = /Mac/.test(navigator.platform) ? "⌘" : "Ctrl";
+  let running = false;
+  let sendMode = "steer";
+  // The send key reflects what Enter would do right now: send, steer, or (empty while running) stop.
+  function paintSend() {
+    const text = input.value.trim();
+    const stop = running && !text;
+    send.innerHTML = `<svg class="i"><use href="#${stop ? "i-stop" : "i-up"}" /></svg>`;
+    const runLabel = sendMode === "steer" ? "引导当前任务" : "加入后续";
+    send.setAttribute("aria-label", stop ? "停止任务" : running ? runLabel : "发送");
+    send.dataset.tip = stop ? "停止任务" : running ? runLabel : "发送";
+    send.style.setProperty("--bg", stop ? "rgb(var(--rgb-red))" : "");
+    send.style.boxShadow = stop ? "0 6px 16px -6px rgb(var(--rgb-red) / 60%)" : "";
+    hint.innerHTML = running
+      ? `<kbd>Enter</kbd> ${sendMode === "steer" ? "引导当前任务" : "加入后续队列"} · 输入框为空时点按钮停止`
+      : `<kbd>Enter</kbd> 发送 · <kbd>Shift Enter</kbd> 换行`;
+  }
+  function submit(followUp) {
+    const text = input.value.trim();
+    if (!running) {
+      if (!text) {
+        input.focus();
+        return;
+      }
+      input.value = "";
+      running = true;
+      toast("ok", "任务已开始", text.slice(0, 40));
+      return paintSend();
+    }
+    if (!text) {
+      running = false;
+      queue.hidden = true;
+      toast("ok", "任务已停止", "可以继续输入新的需求");
+      return paintSend();
+    }
+    if (followUp) {
+      $("#queue-text").textContent = text;
+      queue.hidden = false;
+    } else toast("ok", "已引导当前任务", text.slice(0, 40));
+    input.value = "";
+    paintSend();
+  }
+  // Each run starts from the default chosen in Settings; the floating switch overrides it for this run only.
+  let defaultMode = "steer";
+  const runFloat = $("#run-float"),
+    modeSeg = $("#mode-seg");
+  const pickMode = (v) =>
+    $$("button", modeSeg).forEach((b) => (b.getAttribute("data-value") === v ? b.click() : null));
+  modeSeg.addEventListener("click", (e) => {
+    const b = e.target.closest("button");
+    if (b) {
+      sendMode = b.dataset.value;
+      paintSend();
+    }
+  });
+  new MutationObserver(() => {
+    runFloat.hidden = !running;
+  }).observe(send, { attributes: true, attributeFilter: ["aria-label"] });
+  const startRun = () => {
+    sendMode = defaultMode;
+    pickMode(defaultMode);
+  };
+  $$("[data-default-mode] button").forEach((b) =>
+    b.addEventListener("click", () => {
+      defaultMode = b.dataset.value;
+      if (!running) sendMode = defaultMode;
+      paintSend();
+    }),
+  );
+  send.addEventListener("click", () => {
+    if (!running && input.value.trim()) startRun();
+    submit(sendMode === "follow");
+  });
+  input.addEventListener("input", paintSend);
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      if (!running && input.value.trim()) startRun();
+      submit(sendMode === "follow");
+    }
+  });
+  $("#queue-back").addEventListener("click", () => {
+    input.value = $("#queue-text").textContent;
+    queue.hidden = true;
+    input.focus();
+    paintSend();
+  });
+  $("#queue-clear").addEventListener("click", () => {
+    queue.hidden = true;
+  });
+  $("#reset-run").addEventListener("click", () => {
+    running = false;
+    queue.hidden = true;
+    input.value = "";
+    paintSend();
+  });
+  paintSend();
+
+  /* ---------- Transcript ---------- */
+  $$(".tool-head, .thinking-head").forEach((h) =>
+    h.addEventListener("click", () => {
+      const box = h.parentElement;
+      const open = box.dataset.open !== "true";
+      box.dataset.open = String(open);
+      h.setAttribute("aria-expanded", String(open));
+    }),
+  );
+  const thinkingLabel = $("#thinking-label");
+  setTimeout(() => {
+    thinkingLabel.classList.remove("shimmer");
+    thinkingLabel.textContent = "思考过程 · 6 秒";
+  }, 3200);
+  const runTool = $("#running-tool");
+  let t0 = performance.now();
+  const tick = () => {
+    if (runTool.dataset.state !== "running") return;
+    const s = (performance.now() - t0) / 1000;
+    $("#running-time").textContent = s.toFixed(1) + "s";
+    if (s > 4.5) {
+      runTool.dataset.state = "done";
+      $(".status-dot", runTool).innerHTML =
+        '<svg class="i" style="width:14px;height:14px"><use href="#i-check" /></svg>';
+      $(".verb", runTool).classList.remove("shimmer");
+      setTimeout(() => {
+        runTool.dataset.state = "running";
+        $(".status-dot", runTool).innerHTML = "";
+        $(".verb", runTool).classList.add("shimmer");
+        t0 = performance.now();
+        requestAnimationFrame(tick);
+      }, 3500);
+      return;
+    }
+    requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+  $$("[data-copy]").forEach((b) =>
+    b.addEventListener("click", () => {
+      const label = $("span", b);
+      label.textContent = "已复制";
+      b.style.color = "rgb(var(--rgb-green))";
+      setTimeout(() => {
+        label.textContent = "复制";
+        b.style.color = "";
+      }, 1400);
+    }),
+  );
+
+  /* ---------- Buttons with async work ---------- */
+  $$("[data-async]").forEach((b) =>
+    b.addEventListener("click", () => {
+      b.dataset.loading = "";
+      setTimeout(() => {
+        delete b.dataset.loading;
+        toast("ok", b.textContent.trim(), "已完成");
+      }, 1200);
+    }),
+  );
+
+  /* ---------- Fields ---------- */
+  const keyInput = $("#api-key"),
+    keyBox = $("#key-box"),
+    keyHint = $("#key-hint");
+  $("#toggle-key").addEventListener("click", () => {
+    keyInput.type = keyInput.type === "password" ? "text" : "password";
+  });
+  keyInput.addEventListener("input", () => {
+    keyBox.classList.remove("invalid");
+    keyHint.className = "hint";
+    keyHint.textContent = "保存到 Pi 的 auth.json，权限 0600，界面不回显。";
+  });
+  $("#key-form").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const v = keyInput.value.trim();
+    if (!/^sk-[\w-]{8,}$/.test(v)) {
+      keyBox.classList.add("invalid");
+      keyHint.className = "hint error";
+      keyHint.innerHTML =
+        '<svg class="i" style="width:14px;height:14px"><use href="#i-alert" /></svg>API Key 应以 sk- 开头，至少 11 个字符。';
+      keyInput.focus();
+      return;
+    }
+    const btn = $("#key-save");
+    btn.dataset.loading = "";
+    setTimeout(() => {
+      delete btn.dataset.loading;
+      keyInput.value = "";
+      keyHint.className = "hint ok";
+      keyHint.innerHTML =
+        '<svg class="i" style="width:14px;height:14px"><use href="#i-check" /></svg>已保存。重新打开任务后生效。';
+    }, 900);
+  });
+
+  /* ---------- Toasts ---------- */
+  function toast(kind, title, text, ms = 4200) {
+    const el = document.createElement("div");
+    el.className = "toast";
+    el.setAttribute("role", kind === "err" ? "alert" : "status");
+    el.innerHTML = `<span class="ic ${kind}"><svg class="i" style="width:13px;height:13px"><use href="#${kind === "ok" ? "i-check" : "i-alert"}" /></svg></span>
+      <div class="body"><strong></strong><p></p></div>
+      ${kind === "err" ? '<button class="btn sm">重试</button>' : ""}
+      <button class="btn ghost icon sm" aria-label="关闭"><svg class="i"><use href="#i-x" /></svg></button>
+      <span class="bar" style="animation-duration:${ms}ms"></span>`;
+    $("strong", el).textContent = title;
+    $("p", el).textContent = text;
+    const leave = () => {
+      if (el.classList.contains("leaving")) return;
+      el.classList.add("leaving");
+      setTimeout(() => el.remove(), 240);
+    };
+    $(".bar", el).addEventListener("animationend", leave);
+    $$("button", el).forEach((b) => b.addEventListener("click", leave));
+    $("#toasts").appendChild(el);
+    const all = $$(".toast:not(.leaving)", $("#toasts"));
+    if (all.length > 3) (all[0].classList.add("leaving"), setTimeout(() => all[0].remove(), 240));
+  }
+  $("#toast-ok").addEventListener("click", () =>
+    toast("ok", "API Key 已保存", "重新打开任务后即可使用新模型。"),
+  );
+  $("#toast-err").addEventListener("click", () =>
+    toast("err", "连接失败", "127.0.0.1:11434 没有响应，确认 Ollama 已启动。", 6500),
+  );
+
+  /* ---------- Skeleton ---------- */
+  $("#toggle-skel").addEventListener("click", () => {
+    const sk = $("#skel"),
+      ld = $("#loaded");
+    const loading = sk.hidden;
+    sk.hidden = !loading;
+    ld.hidden = loading;
+    if (loading)
+      setTimeout(() => {
+        sk.hidden = true;
+        ld.hidden = false;
+      }, 1800);
+  });
+
+  /* ---------- Confirm dialog ---------- */
+  function confirmDialog(title, body, action) {
+    const prev = document.activeElement;
+    const bd = document.createElement("div");
+    bd.className = "backdrop";
+    bd.innerHTML = `<div class="dialog" role="alertdialog" aria-modal="true" aria-labelledby="dlg-t">
+      <span class="warn-ic"><svg class="i" style="width:20px;height:20px"><use href="#i-alert" /></svg></span>
+      <h3 id="dlg-t"></h3><p class="muted"></p>
+      <div class="actions"><button class="btn ghost" data-act="cancel">取消</button><button class="btn danger" data-act="ok"></button></div></div>`;
+    $("h3", bd).textContent = title;
+    $("p", bd).textContent = body;
+    $('[data-act="ok"]', bd).textContent = action;
+    const close = (ok) => {
+      bd.classList.add("leaving");
+      setTimeout(() => bd.remove(), 160);
+      document.removeEventListener("keydown", onKey);
+      prev?.focus();
+      if (ok) toast("ok", action, "已完成，可在 30 秒内撤销");
+    };
+    const onKey = (e) => {
+      if (e.key === "Escape") close(false);
+      if (e.key === "Tab") {
+        const f = $$("button", bd);
+        const i = f.indexOf(document.activeElement);
+        e.preventDefault();
+        f[(i + (e.shiftKey ? f.length - 1 : 1)) % f.length].focus();
+      }
+    };
+    bd.addEventListener("click", (e) => {
+      if (e.target === bd) close(false);
+    });
+    $('[data-act="cancel"]', bd).addEventListener("click", () => close(false));
+    $('[data-act="ok"]', bd).addEventListener("click", () => close(true));
+    document.addEventListener("keydown", onKey);
+    document.body.appendChild(bd);
+    $('[data-act="cancel"]', bd).focus();
+  }
+  $("#open-confirm").addEventListener("click", () =>
+    confirmDialog("断开 Pi 连接？", "正在运行的 2 个任务会停止，未发送的草稿会保留。", "断开连接"),
+  );
+  $("#open-confirm-2").addEventListener("click", () =>
+    confirmDialog(
+      "卸载 git-diff-plugin？",
+      "插件文件和它保存的面板布局会被删除，这个操作不能撤销。",
+      "卸载插件",
+    ),
+  );
+</script>
