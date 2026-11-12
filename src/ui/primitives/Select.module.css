@@ -1,0 +1,115 @@
+.select {
+  position: relative;
+  display: inline-flex;
+  min-width: 0;
+}
+
+/* Same footprint as a text field so forms keep their rhythm. */
+.trigger {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  min-height: 36px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0 10px 0 12px;
+  border: 1px solid var(--pion-color-line);
+  border-radius: var(--pion-size-radius-md);
+  background: var(--pion-color-surface-muted);
+  color: var(--pion-color-ink);
+  font-weight: 400;
+  text-align: left;
+}
+
+.trigger:hover:not(:disabled) {
+  border-color: var(--pion-color-line-strong);
+  background: var(--pion-color-surface-muted);
+}
+
+.trigger[aria-expanded="true"] {
+  border-color: var(--pion-color-brand);
+  box-shadow: 0 0 0 3px var(--pion-color-brand-soft);
+}
+
+.trigger:active:not(:disabled) {
+  transform: none;
+}
+
+.trigger > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.trigger > svg {
+  flex: none;
+  color: var(--pion-color-faint);
+  transition: transform var(--pion-duration-med) var(--pion-ease-spring-soft);
+}
+
+.trigger[aria-expanded="true"] > svg {
+  transform: rotate(180deg);
+}
+
+.placeholder {
+  color: var(--pion-color-faint);
+}
+
+.compact {
+  width: auto;
+  min-height: 30px;
+  padding: 0 8px 0 12px;
+  border-radius: var(--pion-size-radius-pill);
+  font-size: 12px;
+}
+
+.listbox {
+  min-width: 0;
+  max-height: min(320px, 50vh);
+  overflow-y: auto;
+}
+
+.option {
+  display: flex;
+  width: 100%;
+  min-height: 32px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--pion-color-ink);
+  font-size: 13px;
+  text-align: left;
+}
+
+.option > span {
+  display: grid;
+  min-width: 0;
+}
+
+.option small {
+  color: var(--pion-color-faint);
+  font-size: 11.5px;
+}
+
+.option:hover:not(:disabled),
+.option:focus-visible {
+  border: 0;
+  outline: none;
+  background-color: var(--pion-glass-hover);
+  box-shadow: inset -2px -2px 2px rgb(0 0 0 / 8%);
+}
+
+.option:active:not(:disabled) {
+  transform: none;
+}
+
+.option > svg {
+  flex: none;
+  color: var(--pion-color-brand);
+}

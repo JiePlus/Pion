@@ -1,0 +1,21 @@
+/* Same frosted chip as the rest of the glass UI: tint, shine edge, soft shadow. */
+.brand-mark {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  background: var(--pion-glass-tint-strong);
+  box-shadow:
+    var(--pion-glass-shadow),
+    inset 1px 1px 1px 0 var(--pion-glass-shine),
+    inset -1px -1px 1px 0 var(--pion-glass-shine);
+  color: var(--pion-color-ink);
+}
+
+.brand-mark svg {
+  display: block;
+}
+
+/* The ion is the only accent: brand blue, one hue. */
+.ion {
+  fill: var(--pion-color-brand);
+}

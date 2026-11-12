@@ -1,4 +1,5 @@
 import { componentClass } from "../componentClass.ts";
+import { Select } from "./Select.tsx";
 import type { Json, Location } from "../../core/api.ts";
 import { locations } from "../../core/api.ts";
 import { localized, t } from "../../core/i18n.ts";
@@ -64,17 +65,14 @@ export function Panel({
             <span>{title}</span>
           )}
           <div>
-            <select
-              aria-label={t("Move {title}", { title })}
+            <Select
+              compact
+              placement="bottom-end"
+              label={t("Move {title}", { title })}
               value={location}
-              onChange={(event) => onMove(event.target.value as Location)}
-            >
-              {locations.map((item) => (
-                <option key={item} value={item}>
-                  {t(locationLabels[item])}
-                </option>
-              ))}
-            </select>
+              onChange={onMove}
+              options={locations.map((item) => ({ value: item, label: t(locationLabels[item]) }))}
+            />
             <Button variant="icon" aria-label={t("Hide {title}", { title })} onClick={onHide}>
               −
             </Button>

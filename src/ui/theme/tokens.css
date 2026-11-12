@@ -45,14 +45,6 @@
   --pion-glass-shadow: 0 6px 6px rgb(20 24 60 / 8%), 0 0 20px rgb(20 24 60 / 6%);
   --pion-glass-hover: rgb(255 255 255 / 62%);
   --pion-sheet-blur: blur(30px) saturate(1.4);
-  /* Multi-hue gradient is reserved for headline numerals and titles. */
-  --pion-gradient-apple: linear-gradient(
-    100deg,
-    #0894ff 0%,
-    #c959dd 34%,
-    #ff2e54 68%,
-    #ff9004 100%
-  );
 
   --pion-size-rail: 272px;
   --pion-size-topbar: 52px;
@@ -63,7 +55,13 @@
   --pion-duration-rail: 260ms;
   --pion-ease-rail: cubic-bezier(0.32, 0.72, 0, 1);
   --pion-ease-spring: cubic-bezier(0.175, 0.885, 0.32, 2.2);
-  --pion-size-radius-sm: 8px;
+  /* Motion: springs for what the user summons, ease-out for what the system reports. */
+  --pion-ease-spring-soft: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --pion-ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --pion-duration-fast: 120ms;
+  --pion-duration-med: 220ms;
+  --pion-duration-slow: 340ms;
+  --pion-size-radius-sm: 10px;
   --pion-size-radius-md: 12px;
   --pion-size-radius-lg: 18px;
   --pion-size-radius-card: 2rem;

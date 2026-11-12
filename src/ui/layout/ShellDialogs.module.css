@@ -11,15 +11,33 @@
 }
 
 .modal {
+  display: grid;
   width: 540px;
   max-width: 100%;
   max-height: 85vh;
-  padding: 28px;
+  gap: 16px;
+  padding: 26px;
   overflow-y: auto;
-  border: 1px solid var(--pion-color-line);
-  border-radius: 12px;
+  border: 0;
+  border-radius: 24px;
   background: var(--pion-color-surface-raised);
-  box-shadow: var(--pion-shadow-card);
+  box-shadow:
+    var(--pion-shadow-card),
+    inset 2px 2px 1px 0 var(--pion-glass-shine),
+    inset -1px -1px 1px 1px var(--pion-glass-shine);
+}
+
+.modal > h2,
+.modal > h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.modal > input,
+.modal > textarea,
+.modal > label > input {
+  width: 100%;
 }
 
 .modal > p {
@@ -37,7 +55,7 @@
 .permissions li {
   padding: 10px 12px;
   border: 1px solid var(--pion-color-line);
-  border-radius: 7px;
+  border-radius: 10px;
   background: var(--pion-color-surface-muted);
 }
 
@@ -57,12 +75,20 @@
 }
 
 .palette {
-  padding: 14px;
+  gap: 4px;
+  padding: 12px;
 }
 
 .palette > input {
   width: 100%;
-  margin-bottom: 10px;
+  min-height: 44px;
+  margin-bottom: 6px;
+  border-radius: 14px;
+  font-size: 15px;
+}
+
+.palette > p {
+  margin: 4px 8px;
 }
 
 .palette > button {
@@ -70,14 +96,25 @@
   width: 100%;
   align-items: center;
   justify-content: space-between;
-  padding: 11px;
-  border-color: transparent;
+  padding: 0.5rem 0.7rem;
+  border: 0;
+  border-radius: 0.8rem;
   background: transparent;
+  box-shadow: none;
+  transition: all 0.1s ease-in;
+}
+
+.palette > button:hover:not(:disabled),
+.palette > button:focus-visible {
+  background-color: var(--pion-glass-hover);
+  box-shadow: inset -2px -2px 2px rgb(0 0 0 / 10%);
 }
 
 .palette small {
-  color: var(--pion-color-muted);
-  font-size: 9px;
+  color: var(--pion-color-faint);
+  font-family: var(--pion-font-mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
 }
 
 .toasts {
@@ -96,11 +133,13 @@
   gap: 12px;
   padding: 13px;
   overflow-wrap: anywhere;
-  border: 1px solid var(--pion-color-line);
-  border-radius: 8px;
+  border: 0;
+  border-radius: 18px;
   background: var(--pion-color-surface-raised);
-  box-shadow: var(--pion-shadow-low);
-  font-size: 11px;
+  box-shadow:
+    var(--pion-shadow-card),
+    inset 1px 1px 1px 0 var(--pion-glass-shine);
+  font-size: 12px;
 }
 
 .toast > div {
@@ -134,7 +173,7 @@
   padding: 8px;
   overflow: auto;
   border: 1px solid var(--pion-color-line);
-  border-radius: 7px;
+  border-radius: 10px;
   background: var(--pion-color-surface-muted);
   font-size: 12px;
 }
@@ -151,10 +190,22 @@
 
 .fork-messages button,
 .extension-options button {
+  min-height: 42px;
   overflow: hidden;
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: var(--pion-color-surface-muted);
+  box-shadow: none;
   text-align: left;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.fork-messages button:hover:not(:disabled),
+.extension-options button:hover:not(:disabled),
+.extension-options button:focus-visible {
+  border-color: rgb(var(--pion-rgb-blue) / 45%);
+  background: var(--pion-color-surface-selected);
 }
 
 .extension-dialog textarea {
