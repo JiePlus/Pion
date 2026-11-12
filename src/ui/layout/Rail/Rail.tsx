@@ -9,7 +9,7 @@ import { native } from "../../../core/host.ts";
 import { t } from "../../../core/i18n.ts";
 import type { useTasks } from "../../hooks/useTasks.ts";
 import type { Page } from "../types.ts";
-import pionMark from "../../../../src-tauri/icon.svg";
+import { BrandMark } from "../../primitives/BrandMark.tsx";
 import styles from "./Rail.module.css";
 import { ProjectTree } from "./ProjectTree.tsx";
 
@@ -62,7 +62,7 @@ export function Rail({
     >
       <div className={componentClass(styles, "rail-header")}>
         <div className={componentClass(styles, "brand")}>
-          <img src={pionMark} alt="" />
+          <BrandMark size={28} />
           <strong>Pion</strong>
         </div>
         <Button

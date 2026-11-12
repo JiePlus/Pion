@@ -35,10 +35,8 @@
   gap: 9px;
 }
 
-.brand img {
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
+.brand > :first-child {
+  flex: none;
 }
 
 .brand strong {
