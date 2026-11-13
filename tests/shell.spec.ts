@@ -78,7 +78,6 @@ test("initial setup installs missing Pi and continues after model authentication
       "fixture.setupStatus",
       JSON.stringify({
         installation: "missing",
-        verifiedVersion: "0.87.1",
         canInstall: true,
         modelReady: false,
         selectedModel: { provider: "openai", id: "gpt-test" },
@@ -112,7 +111,6 @@ test("setup shows a broken path and keeps task creation gated", async ({ page })
       JSON.stringify({
         installation: "broken",
         executable: "/missing/pi",
-        verifiedVersion: "0.87.1",
         canInstall: false,
         detail: "Cannot start Pi",
       }),
@@ -126,7 +124,7 @@ test("setup shows a broken path and keeps task creation gated", async ({ page })
   await expect(page.getByRole("textbox", { name: "Describe your task" })).toHaveCount(0);
 });
 
-test("settings checks a verified Pi update before enabling one-click update", async ({ page }) => {
+test("settings checks the latest Pi release before enabling one-click update", async ({ page }) => {
   await taskFixture(page);
   await page.goto("/");
   await page.evaluate(() => {
@@ -136,7 +134,6 @@ test("settings checks a verified Pi update before enabling one-click update", as
         installation: "ready",
         executable: "pi",
         installedVersion: "0.87.0",
-        verifiedVersion: "0.87.1",
         npmManaged: true,
         canInstall: true,
         modelReady: true,
@@ -149,7 +146,6 @@ test("settings checks a verified Pi update before enabling one-click update", as
       JSON.stringify({
         installation: "ready",
         installedVersion: "0.87.0",
-        verifiedVersion: "0.87.1",
         latestVersion: "0.87.1",
         npmManaged: true,
         canUpdate: true,
@@ -176,7 +172,6 @@ test("setup waits when the chosen model has no usable authentication", async ({ 
         installation: "ready",
         executable: "pi",
         installedVersion: "0.87.1",
-        verifiedVersion: "0.87.1",
         npmManaged: true,
         canInstall: true,
         modelReady: false,
@@ -203,7 +198,7 @@ test("setup motion respects reduced motion preference", async ({ page }) => {
   await page.evaluate(() =>
     localStorage.setItem(
       "fixture.setupStatus",
-      JSON.stringify({ installation: "missing", verifiedVersion: "0.87.1", canInstall: true }),
+      JSON.stringify({ installation: "missing", canInstall: true }),
     ),
   );
   await page.reload();
@@ -226,7 +221,6 @@ test("update failures leave tasks available", async ({ page }) => {
       JSON.stringify({
         installation: "ready",
         installedVersion: "0.87.0",
-        verifiedVersion: "0.87.1",
         latestVersion: "0.87.1",
         npmManaged: true,
         canUpdate: true,

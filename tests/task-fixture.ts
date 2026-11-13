@@ -65,7 +65,6 @@ export async function taskFixture(page: Page) {
         installation: "ready",
         executable: "pi",
         installedVersion: "0.87.0",
-        verifiedVersion: "0.87.0",
         npmManaged: true,
         canInstall: true,
         modelReady: true,
@@ -446,11 +445,10 @@ export async function taskFixture(page: Page) {
                   throw new Error("Pi scan failed; retry or enter the path manually");
                 return {
                   candidates: read("fixture.piCandidates", [
-                    { executable: "/usr/local/bin/pi", version: "0.87.0", verified: true },
+                    { executable: "/usr/local/bin/pi", version: "0.87.0" },
                     {
                       executable: "/Users/test/.nvm/versions/node/v22.19.0/bin/pi",
                       version: "0.87.1",
-                      verified: true,
                     },
                   ]),
                 };
@@ -485,7 +483,9 @@ export async function taskFixture(page: Page) {
                 if (localStorage.getItem("fixture.updateBlocked"))
                   throw new Error("Wait for running Pi tasks to finish before updating");
                 localStorage.setItem("fixture.piUpdated", "yes");
-                Object.assign(setupStatus, { installedVersion: setupStatus.verifiedVersion });
+                Object.assign(setupStatus, {
+                  installedVersion: read("fixture.versionStatus", {}).latestVersion ?? "0.87.1",
+                });
                 localStorage.setItem("fixture.setupStatus", JSON.stringify(setupStatus));
                 return setupStatus;
               case "package.list":

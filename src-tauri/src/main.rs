@@ -691,9 +691,14 @@ fn handle(app: &tauri::AppHandle, request: Value) -> Result<Value, String> {
             let action = field(&request, "op")?;
             let executable = field(&request, "executable")?;
             let home = app.path().home_dir().map_err(|e| e.to_string())?;
-            if action == "pi_setup.update" {
-                if !pi_setup::update_available(executable, &home) {
-                    return Err("No newer Pion-verified npm Pi version is available".into());
+            let latest = if action == "pi_setup.update" {
+                Some(pi_setup::latest_version()?)
+            } else {
+                None
+            };
+            if let Some(latest) = latest.as_deref() {
+                if !pi_setup::can_update(&pi_setup::inspect(executable, &home), latest) {
+                    return Err("Pi is already up to date".into());
                 }
                 if state.tasks.values_mut().any(pi_process_busy)
                     || state.prepared.as_mut().is_some_and(pi_process_busy)
@@ -705,10 +710,9 @@ fn handle(app: &tauri::AppHandle, request: Value) -> Result<Value, String> {
                 state.active_task = None;
                 let _ = app.emit("pi:status", json!({"generation":state.generation,"taskId":Value::Null,"active":true,"state":"disconnected","detail":"Pi update"}));
             }
-            let path = if action == "pi_setup.install" {
-                pi_setup::install(executable, &home)?
-            } else {
-                pi_setup::update(executable, &home)?
+            let path = match latest.as_deref() {
+                Some(latest) => pi_setup::update(executable, &home, latest)?,
+                None => pi_setup::install(executable, &home)?,
             };
             let settings_path = state.root.join("settings.json");
             let mut settings: Value = if settings_path.exists() {

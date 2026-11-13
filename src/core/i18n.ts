@@ -549,12 +549,10 @@ const zh = {
     "请选择模型并在下方连接其服务商。Pion 会检查认证状态，不会发送模型请求。",
   "Check model again": "重新检查模型",
   "Pi version": "版本与兼容性",
-  "Installed: {installed} · Pion verified: {verified}":
-    "已安装：{installed} · Pion 已验证：{verified}",
+  "Installed: {installed}": "已安装：{installed}",
   "Check Pi updates": "检查 Pi 更新",
   "Update Pi to {version}": "将 Pi 更新到 {version}",
   "Official latest: {version}": "官方最新版本：{version}",
-  "This release has not been verified with Pion yet.": "此版本尚未通过 Pion 验证。",
   "Only global npm installations can be updated here.": "这里只能更新 npm 全局安装的 Pi。",
   "Manual Pi update guide": "Pi 手动更新指南",
   Connected: "已连接",
@@ -611,8 +609,8 @@ const zh = {
   "Workspace directory": "工作区目录",
   "Pi executable": "可执行文件路径",
   "pi or an absolute executable path": "pi 或可执行文件的绝对路径",
-  "Connecting trusts the selected workspace and its Pi extensions. Pi runs with your user permissions. Tested with Pi 0.87.0.":
-    "连接表示信任所选工作区及其中的 Pi 扩展。Pi 使用当前用户权限运行。已验证 Pi 0.87.0。",
+  "Connecting trusts the selected workspace and its Pi extensions. Pi runs with your user permissions.":
+    "连接表示信任所选工作区及其中的 Pi 扩展。Pi 使用当前用户权限运行。",
   "Connecting…": "正在连接…",
   "Reconnect Pi": "重新连接 Pi",
   Disconnect: "断开连接",

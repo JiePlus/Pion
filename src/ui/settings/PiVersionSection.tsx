@@ -32,10 +32,7 @@ export function PiVersionSection({
     >
       <h3 id="pi-runtime-updates">{t("Pi runtime")}</h3>
       <p className={`settings-note ${utilityStyles.settingsNote}`}>
-        {t("Installed: {installed} · Pion verified: {verified}", {
-          installed: setupStatus?.installedVersion ?? "—",
-          verified: setupStatus?.verifiedVersion ?? "—",
-        })}
+        {t("Installed: {installed}", { installed: setupStatus?.installedVersion ?? "—" })}
       </p>
       <div className={`button-row ${utilityStyles.buttonRow}`}>
         <Button
@@ -53,7 +50,7 @@ export function PiVersionSection({
             disabled={setupBusy}
             onClick={() => void updatePi()}
           >
-            {t("Update Pi to {version}", { version: versionStatus.verifiedVersion })}
+            {t("Update Pi to {version}", { version: versionStatus.latestVersion ?? "" })}
           </Button>
         )}
       </div>
@@ -66,8 +63,6 @@ export function PiVersionSection({
       {versionStatus?.latestVersion && (
         <p className={`settings-note ${utilityStyles.settingsNote}`} role="status">
           {t("Official latest: {version}", { version: versionStatus.latestVersion })}
-          {versionStatus.latestVersion !== versionStatus.verifiedVersion &&
-            ` · ${t("This release has not been verified with Pion yet.")}`}
           {!versionStatus.npmManaged &&
             versionStatus.installation === "ready" &&
             ` · ${t("Only global npm installations can be updated here.")}`}

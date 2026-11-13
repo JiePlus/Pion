@@ -34,7 +34,6 @@ export interface PiSetupStatus {
   installation: "missing" | "broken" | "ready";
   executable?: string;
   installedVersion?: string;
-  verifiedVersion: string;
   latestVersion?: string;
   npmManaged?: boolean;
   canInstall: boolean;

@@ -10,10 +10,6 @@ use std::sync::mpsc::{self, Receiver};
 use std::thread;
 use std::time::{Duration, Instant};
 
-#[cfg(target_os = "macos")]
-pub const VERIFIED_VERSION: &str = "0.87.1";
-#[cfg(not(target_os = "macos"))]
-pub const VERIFIED_VERSION: &str = "0.87.0";
 const PACKAGE: &str = "@earendil-works/pi-coding-agent";
 const MAX_OUTPUT: usize = 64 * 1024;
 #[cfg(target_os = "windows")]
@@ -323,12 +319,12 @@ pub fn inspect(executable: &str, home: &Path) -> Value {
         })
     };
     let Some(path) = resolved else {
-        return json!({"installation":"missing","verifiedVersion":VERIFIED_VERSION,"canInstall":npm.is_some()});
+        return json!({"installation":"missing","canInstall":npm.is_some()});
     };
     let installed = match version(&path) {
         Ok(version) => version,
         Err(error) => {
-            return json!({"installation":"broken","detail":error,"executable":path,"verifiedVersion":VERIFIED_VERSION,"canInstall":npm.is_some()});
+            return json!({"installation":"broken","detail":error,"executable":path,"canInstall":npm.is_some()});
         }
     };
     let npm_managed = npm
@@ -339,7 +335,6 @@ pub fn inspect(executable: &str, home: &Path) -> Value {
         "installation":"ready",
         "executable":path,
         "installedVersion":installed,
-        "verifiedVersion":VERIFIED_VERSION,
         "npmManaged":npm_managed,
         "canInstall":npm.is_some()
     })
@@ -371,7 +366,7 @@ fn probe_candidates(paths: Vec<PathBuf>, timeout: Duration) -> Value {
         .map(|path| {
             thread::spawn(move || {
                 version_with_timeout(&path, timeout).ok().map(
-                    |installed| json!({"executable": path, "version": installed, "verified": true}),
+                    |installed| json!({"executable": path, "version": installed}),
                 )
             })
         })
@@ -384,7 +379,7 @@ fn probe_candidates(paths: Vec<PathBuf>, timeout: Duration) -> Value {
 }
 
 /// List Pi executables without changing configuration. Probe at most ten paths
-/// in parallel, with three seconds for npm discovery and three for verification.
+/// in parallel, with three seconds for npm discovery and three for each version probe.
 pub fn scan(executable: &str, home: &Path) -> Value {
     let mut paths: Vec<PathBuf> = Vec::new();
     if Path::new(executable).is_absolute() {
@@ -463,35 +458,26 @@ pub fn latest_version() -> Result<String, String> {
     Ok(latest.into())
 }
 
+/// One-click update is offered for global npm installations older than the
+/// official latest release.
 pub fn can_update(status: &Value, latest: &str) -> bool {
     if status["installation"] != "ready" || status["npmManaged"] != true {
         return false;
     }
-    let (Some(installed), Ok(verified), Ok(latest)) = (
+    let (Some(installed), Ok(latest)) = (
         status["installedVersion"]
             .as_str()
             .and_then(|value| Version::parse(value).ok()),
-        Version::parse(VERIFIED_VERSION),
         Version::parse(latest),
     ) else {
         return false;
     };
-    installed < verified && verified <= latest
+    installed < latest
 }
 
-pub fn update_available(executable: &str, home: &Path) -> bool {
-    let status = inspect(executable, home);
-    let Some(installed) = status["installedVersion"]
-        .as_str()
-        .and_then(|value| Version::parse(value).ok())
-    else {
-        return false;
-    };
-    status["npmManaged"] == true
-        && Version::parse(VERIFIED_VERSION).is_ok_and(|verified| installed < verified)
-}
-
-fn install_with_npm(npm: &Path, home: &Path) -> Result<PathBuf, String> {
+/// Installs Pi globally with npm: `target` when the latest release is known,
+/// otherwise npm's `latest` tag.
+fn install_with_npm(npm: &Path, home: &Path, target: Option<&str>) -> Result<PathBuf, String> {
     let node = npm.parent().ok_or("Cannot locate npm")?.join(NODE_NAME);
     let node = if node.is_file() {
         node
@@ -515,7 +501,7 @@ fn install_with_npm(npm: &Path, home: &Path) -> Result<PathBuf, String> {
             "--ignore-scripts",
             "--no-audit",
             "--no-fund",
-            &format!("{PACKAGE}@{VERIFIED_VERSION}"),
+            &format!("{PACKAGE}@{}", target.unwrap_or("latest")),
         ]),
         Duration::from_secs(300),
     )?;
@@ -530,7 +516,8 @@ fn install_with_npm(npm: &Path, home: &Path) -> Result<PathBuf, String> {
         ));
     }
     let path = global_pi(&npm_prefix(npm)?);
-    if version(&path)? != VERIFIED_VERSION {
+    let installed = version(&path)?;
+    if target.is_some_and(|target| target != installed) {
         return Err("Pi installation returned an unexpected version".into());
     }
     Ok(path)
@@ -539,15 +526,15 @@ fn install_with_npm(npm: &Path, home: &Path) -> Result<PathBuf, String> {
 pub fn install(executable: &str, home: &Path) -> Result<PathBuf, String> {
     let npm =
         npm_path(executable, home).ok_or("npm was not found; install Node.js 22.19+ first")?;
-    install_with_npm(&npm, home)
+    install_with_npm(&npm, home, latest_version().ok().as_deref())
 }
 
-pub fn update(executable: &str, home: &Path) -> Result<PathBuf, String> {
-    if !update_available(executable, home) {
-        return Err("No newer Pion-verified Pi version is available".into());
+pub fn update(executable: &str, home: &Path, latest: &str) -> Result<PathBuf, String> {
+    if !can_update(&inspect(executable, home), latest) {
+        return Err("Pi is already up to date".into());
     }
     let npm = npm_path(executable, home).ok_or("npm was not found")?;
-    install_with_npm(&npm, home)
+    install_with_npm(&npm, home, Some(latest))
 }
 
 #[cfg(test)]
@@ -563,7 +550,13 @@ mod tests {
                 "bin/pi"
             })
         );
-        assert!(Version::parse(VERIFIED_VERSION).unwrap() <= Version::parse("0.87.1").unwrap());
+        let ready = |installed: &str, npm: bool| {
+            json!({"installation":"ready","installedVersion":installed,"npmManaged":npm})
+        };
+        assert!(can_update(&ready("0.87.0", true), "0.88.0"));
+        assert!(!can_update(&ready("0.88.0", true), "0.88.0"));
+        assert!(!can_update(&ready("0.87.0", false), "0.88.0"));
+        assert!(!can_update(&json!({"installation":"missing"}), "0.88.0"));
     }
 
     #[test]
@@ -659,7 +652,7 @@ mod tests {
 
     #[cfg(unix)]
     #[test]
-    fn fake_npm_updates_only_the_pinned_version() {
+    fn fake_npm_updates_to_the_latest_release() {
         use std::os::unix::fs::PermissionsExt;
 
         let root = env::temp_dir().join(format!("pion-pi-setup-{}", std::process::id()));
@@ -683,7 +676,7 @@ mod tests {
                 "#!/bin/sh\nif [ \"$1\" = prefix ]; then echo '{}'; exit 0; fi\nprintf '%s\\n' \"$@\" > '{}'\necho '{}' > '{}'\n",
                 root.display(),
                 args_file.display(),
-                VERIFIED_VERSION,
+                "0.88.0",
                 version_file.display()
             ),
         )
@@ -692,14 +685,16 @@ mod tests {
             fs::set_permissions(path, fs::Permissions::from_mode(0o755)).unwrap();
         }
 
-        assert!(inspect(pi.to_str().unwrap(), &root)["npmManaged"] == true);
-        assert!(update_available(pi.to_str().unwrap(), &root));
-        assert_eq!(update(pi.to_str().unwrap(), &root).unwrap(), pi);
-        assert_eq!(version(&pi).unwrap(), VERIFIED_VERSION);
+        let status = inspect(pi.to_str().unwrap(), &root);
+        assert!(status["npmManaged"] == true);
+        assert!(status.get("verifiedVersion").is_none());
+        assert!(can_update(&status, "0.88.0"));
+        assert_eq!(update(pi.to_str().unwrap(), &root, "0.88.0").unwrap(), pi);
+        assert_eq!(version(&pi).unwrap(), "0.88.0");
         assert!(fs::read_to_string(&args_file)
             .unwrap()
-            .contains(&format!("{PACKAGE}@{VERIFIED_VERSION}")));
-        assert!(!update_available(pi.to_str().unwrap(), &root));
+            .contains(&format!("{PACKAGE}@0.88.0")));
+        assert!(update(pi.to_str().unwrap(), &root, "0.88.0").is_err());
         fs::remove_dir_all(root).unwrap();
     }
 
@@ -717,7 +712,7 @@ mod tests {
         for path in [&node, &npm] {
             fs::set_permissions(path, fs::Permissions::from_mode(0o755)).unwrap();
         }
-        assert!(install_with_npm(&npm, &root)
+        assert!(install_with_npm(&npm, &root, None)
             .unwrap_err()
             .contains("network unavailable"));
         fs::remove_dir_all(root).unwrap();

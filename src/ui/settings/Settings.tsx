@@ -133,10 +133,7 @@ export function Settings({
           value={setupStatus?.installedVersion ?? "—"}
           caption={
             setupStatus?.installedVersion
-              ? t("Installed: {installed} · Pion verified: {verified}", {
-                  installed: setupStatus.installedVersion,
-                  verified: setupStatus.verifiedVersion,
-                })
+              ? t("Installed: {installed}", { installed: setupStatus.installedVersion })
               : t("Pi setup required")
           }
         />
@@ -335,7 +332,7 @@ export function Settings({
           </label>
           <p className={`settings-note ${utilityStyles.settingsNote}`}>
             {t(
-              "Connecting trusts the selected workspace and its Pi extensions. Pi runs with your user permissions. Tested with Pi 0.87.0.",
+              "Connecting trusts the selected workspace and its Pi extensions. Pi runs with your user permissions.",
             )}
           </p>
           <div className={`button-row ${utilityStyles.buttonRow} ${styles.runtimeActions}`}>
