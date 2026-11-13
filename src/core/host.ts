@@ -1,6 +1,7 @@
 import { invoke, isTauri } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import type { Bundle, Json } from "./api.ts";
+import { createHostQueue } from "./host-queue.ts";
 import { Events } from "./registry.ts";
 
 export interface Installed {
@@ -45,22 +46,20 @@ export interface PiSetupStatus {
 }
 export const native = isTauri();
 export const hostEvents = new Events();
-let tail: Promise<unknown> = Promise.resolve();
 let generation = 0;
 let activeTask: string | null = null;
 
-// One host request in flight. Queue admission rechecks plugin lifetime before invoking Rust.
+const queue = createHostQueue((request) =>
+  native ? invoke("desktop", { request }) : preview(request),
+);
+
+// One request in flight per lane (Core, or one plugin). The guard rechecks plugin
+// lifetime when the request is admitted, just before Rust is invoked.
 export function host<T = Json>(
   request: Record<string, unknown>,
   guard: () => void = () => {},
 ): Promise<T> {
-  const task = () => {
-    guard();
-    return native ? invoke<T>("desktop", { request }) : (preview(request) as Promise<T>);
-  };
-  const result = tail.then(task);
-  tail = result.catch(() => {});
-  return result;
+  return queue.enqueue<T>(request, guard);
 }
 
 // Extension dialogs can block the command that caused them, so their response must bypass

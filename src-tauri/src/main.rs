@@ -1198,14 +1198,17 @@ fn handle(app: &tauri::AppHandle, request: Value) -> Result<Value, String> {
                         .plugins
                         .storage(id, field(args, "key")?, Some(args["value"].clone()))
                 }
+                // Read-only and network calls check permissions under the lock, then
+                // release it so a slow call does not block Core or other plugins.
                 "workspace.get" | "workspace.readFile" => {
                     state.plugins.require(id, "workspace.read")?;
-                    let root = state.workspace.as_ref().ok_or("No workspace is open")?;
+                    let root = state.workspace.clone().ok_or("No workspace is open")?;
+                    drop(state);
                     if method == "workspace.get" {
-                        Ok(workspace::describe(root))
+                        Ok(workspace::describe(&root))
                     } else {
                         Ok(json!(workspace::bounded_read(
-                            &workspace::within(root, field(args, "path")?)?,
+                            &workspace::within(&root, field(args, "path")?)?,
                             1024 * 1024
                         )?))
                     }
@@ -1229,14 +1232,16 @@ fn handle(app: &tauri::AppHandle, request: Value) -> Result<Value, String> {
                 }
                 "workspace.gitStatus" => {
                     state.plugins.require(id, "workspace.git")?;
-                    let root = state.workspace.as_ref().ok_or("No workspace is open")?;
-                    git::status(root)
+                    let root = state.workspace.clone().ok_or("No workspace is open")?;
+                    drop(state);
+                    git::status(&root)
                 }
                 "workspace.gitDiff" => {
                     state.plugins.require(id, "workspace.git")?;
-                    let root = state.workspace.as_ref().ok_or("No workspace is open")?;
+                    let root = state.workspace.clone().ok_or("No workspace is open")?;
+                    drop(state);
                     git::diff(
-                        root,
+                        &root,
                         field(args, "path")?,
                         args["staged"].as_bool().unwrap_or(false),
                     )
@@ -1244,6 +1249,7 @@ fn handle(app: &tauri::AppHandle, request: Value) -> Result<Value, String> {
                 "network.fetch" => {
                     state.plugins.require(id, "network.fetch")?;
                     let (_, allow) = state.plugins.allowlists(id);
+                    drop(state);
                     net::fetch(&allow, field(args, "url")?, &args["options"])
                 }
                 _ => {
