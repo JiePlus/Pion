@@ -626,6 +626,15 @@ fn handle(app: &tauri::AppHandle, request: Value) -> Result<Value, String> {
         "pi_setup.status" => {
             let home = app.path().home_dir().map_err(|e| e.to_string())?;
             let executable = field(&request, "executable")?;
+            // Quick: only confirm that Pi runs and the remembered model is signed in.
+            // The model list then comes from the workspace's own Pi process.
+            let quick = request["quick"].as_bool().unwrap_or(false);
+            state.generation += 1;
+            let generation = state.generation;
+            let data_root = state.root.clone();
+            let extension = state.pi_extension.clone();
+            // These checks start Pi and other processes; do not hold the shared state.
+            drop(state);
             let mut result = pi_setup::inspect(executable, &home);
             if result["installation"] != "ready" {
                 return Ok(result);
@@ -634,13 +643,28 @@ fn handle(app: &tauri::AppHandle, request: Value) -> Result<Value, String> {
                 .as_str()
                 .ok_or("Missing Pi executable")?
                 .to_string();
-            state.generation += 1;
+            let preferred = request["model"]
+                .as_object()
+                .filter(|model| model["provider"].is_string() && model["id"].is_string())
+                .map(|model| json!({"provider":model["provider"],"id":model["id"]}));
+            let signed_in = |model: &Value| {
+                let (Some(provider), Some(id)) = (model["provider"].as_str(), model["id"].as_str())
+                else {
+                    return false;
+                };
+                pi_setup::check_model(std::path::Path::new(&path), provider, id).unwrap_or(false)
+            };
+            if quick {
+                result["modelReady"] = json!(preferred.as_ref().is_some_and(signed_in));
+                result["selectedModel"] = json!(preferred);
+                return Ok(result);
+            }
             let probe = pi::Pi::start(
                 app.clone(),
                 &path,
-                &state.root,
-                &state.pi_extension,
-                state.generation,
+                &data_root,
+                &extension,
+                generation,
                 None,
                 None,
             );
@@ -651,28 +675,18 @@ fn handle(app: &tauri::AppHandle, request: Value) -> Result<Value, String> {
                     let models = process.request(json!({"type":"get_available_models"}));
                     match (pi_state, models) {
                         (Ok(pi_state), Ok(models)) => {
-                            let preferred = request["model"].as_object();
-                            let selected = preferred
-                                .filter(|model| model["provider"].is_string() && model["id"].is_string())
-                                .map(|model| json!({"provider":model["provider"],"id":model["id"]}))
-                                .or_else(|| pi_state["model"].as_object().map(|model| json!({"provider":model["provider"],"id":model["id"]})));
+                            let selected = preferred.clone().or_else(|| {
+                                let model = pi_state["model"].as_object()?;
+                                Some(json!({"provider":model["provider"],"id":model["id"]}))
+                            });
                             result["models"] = models["models"].clone();
                             result["modelReady"] = json!(selected.as_ref().is_some_and(|model| {
-                                let Some(provider) = model["provider"].as_str() else {
-                                    return false;
-                                };
-                                let Some(id) = model["id"].as_str() else {
-                                    return false;
-                                };
-                                if !models["models"].as_array().is_some_and(|items| {
+                                models["models"].as_array().is_some_and(|items| {
                                     items.iter().any(|item| {
-                                        item["provider"] == provider && item["id"] == id
+                                        item["provider"] == model["provider"]
+                                            && item["id"] == model["id"]
                                     })
-                                }) {
-                                    return false;
-                                }
-                                pi_setup::check_model(std::path::Path::new(&path), provider, id)
-                                    .unwrap_or(false)
+                                }) && signed_in(model)
                             }));
                             result["selectedModel"] = json!(selected);
                         }
@@ -693,7 +707,9 @@ fn handle(app: &tauri::AppHandle, request: Value) -> Result<Value, String> {
         }
         "pi_setup.check_update" => {
             let home = app.path().home_dir().map_err(|e| e.to_string())?;
-            let mut result = pi_setup::inspect(field(&request, "executable")?, &home);
+            // npm and the release check can take seconds; do not hold the shared state.
+            drop(state);
+            let mut result = pi_setup::inspect_with_npm(field(&request, "executable")?, &home);
             let latest = pi_setup::latest_version()?;
             result["canUpdate"] = json!(pi_setup::can_update(&result, &latest));
             result["latestVersion"] = json!(latest);
@@ -709,7 +725,10 @@ fn handle(app: &tauri::AppHandle, request: Value) -> Result<Value, String> {
                 None
             };
             if let Some(latest) = latest.as_deref() {
-                if !pi_setup::can_update(&pi_setup::inspect(executable, &home), latest) {
+                if !pi_setup::can_update(
+                    &pi_setup::inspect_with_npm(executable, &home),
+                    latest,
+                ) {
                     return Err("Pi is already up to date".into());
                 }
                 if state.tasks.values_mut().any(pi_process_busy)

@@ -49,6 +49,34 @@ test("completed setup stays out of regular settings", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Set up Pi" })).toHaveCount(0);
 });
 
+test("a remembered Pi setup connects the workspace without waiting for the check", async ({
+  page,
+}) => {
+  await taskFixture(page);
+  await page.goto("/");
+  await expect
+    .poll(() => page.evaluate(() => localStorage.getItem("pion.setupStatus")))
+    .not.toBeNull();
+  await page.evaluate(() => {
+    localStorage.setItem("fixture.delaySetupStatus", "yes");
+    localStorage.removeItem("fixture.setupStatusFinished");
+    localStorage.removeItem("fixture.prepareStarted");
+    localStorage.removeItem("fixture.prepareBeforeSetupStatus");
+  });
+  await page.reload();
+  await expect
+    .poll(() => page.evaluate(() => localStorage.getItem("fixture.prepareStarted")))
+    .toBe("yes");
+  expect(await page.evaluate(() => localStorage.getItem("fixture.prepareBeforeSetupStatus"))).toBe(
+    "yes",
+  );
+  await expect(page.getByText("Checking Pi…")).toHaveCount(0);
+  await expect(page.getByText("Finish Pi setup before starting a task.")).toHaveCount(0);
+  await expect
+    .poll(() => page.evaluate(() => localStorage.getItem("fixture.setupStatusFinished")))
+    .toBe("yes");
+});
+
 test("new task waits for Pi detection without showing a false setup warning", async ({ page }) => {
   await taskFixture(page);
   await page.goto("/");
@@ -56,6 +84,8 @@ test("new task waits for Pi detection without showing a false setup warning", as
     localStorage.setItem("fixture.delaySetupStatus", "yes");
     localStorage.removeItem("fixture.setupStatusFinished");
     localStorage.removeItem("fixture.prepareStarted");
+    // Without a remembered setup, startup runs the full check first.
+    localStorage.removeItem("pion.setupStatus");
   });
   await page.reload();
   await expect(page.getByRole("status").filter({ hasText: "Checking Pi…" })).toBeVisible();

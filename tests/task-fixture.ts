@@ -805,6 +805,8 @@ export async function taskFixture(page: Page) {
               }
               case "task.prepare":
                 localStorage.setItem("fixture.prepareStarted", "yes");
+                if (!localStorage.getItem("fixture.setupStatusFinished"))
+                  localStorage.setItem("fixture.prepareBeforeSetupStatus", "yes");
                 active = "draft";
                 generation++;
                 emit("pi:status", {

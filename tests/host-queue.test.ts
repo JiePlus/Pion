@@ -20,6 +20,9 @@ test("Core requests share one lane; each plugin has its own", () => {
   assert.notEqual(laneOf({ op: "plugin", id: "a" }), laneOf({ op: "plugin", id: "b" }));
   assert.equal(laneOf({ op: "dev.poll", id: "a" }), "dev:a");
   assert.notEqual(laneOf({ op: "dev.poll", id: "a" }), laneOf({ op: "plugin", id: "a" }));
+  assert.equal(laneOf({ op: "pi_setup.status" }), "setup");
+  assert.equal(laneOf({ op: "pi_setup.check_update" }), "setup");
+  assert.equal(laneOf({ op: "pi_setup.install" }), "core");
 });
 
 test("a stuck plugin call blocks neither Core nor other plugins", async () => {

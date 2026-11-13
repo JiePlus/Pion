@@ -6,6 +6,9 @@
 export function laneOf(request: Record<string, unknown>): string {
   if (request.op === "plugin") return `plugin:${String(request.id)}`;
   if (request.op === "dev.poll") return `dev:${String(request.id)}`;
+  // Pi setup checks start processes and can take seconds; a background check at
+  // startup must not delay connecting the workspace's Pi.
+  if (request.op === "pi_setup.status" || request.op === "pi_setup.check_update") return "setup";
   return "core";
 }
 

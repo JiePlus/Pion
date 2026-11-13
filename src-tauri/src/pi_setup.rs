@@ -327,17 +327,27 @@ pub fn inspect(executable: &str, home: &Path) -> Value {
             return json!({"installation":"broken","detail":error,"executable":path,"canInstall":npm.is_some()});
         }
     };
-    let npm_managed = npm
-        .as_ref()
-        .and_then(|npm| npm_prefix(npm).ok())
-        .is_some_and(|prefix| same_file(&path, &global_pi(&prefix)));
     json!({
         "installation":"ready",
         "executable":path,
         "installedVersion":installed,
-        "npmManaged":npm_managed,
         "canInstall":npm.is_some()
     })
+}
+
+/// `inspect` plus whether npm's global prefix manages this Pi. Asking npm takes a
+/// while, so only update checks and updates pay for it, not every startup.
+pub fn inspect_with_npm(executable: &str, home: &Path) -> Value {
+    let mut status = inspect(executable, home);
+    if status["installation"] == "ready" {
+        let path = status["executable"].as_str().map(PathBuf::from);
+        let managed = npm_path(executable, home)
+            .and_then(|npm| npm_prefix(&npm).ok())
+            .zip(path)
+            .is_some_and(|(prefix, path)| same_file(&path, &global_pi(&prefix)));
+        status["npmManaged"] = json!(managed);
+    }
+    status
 }
 
 const MAX_SCAN_CANDIDATES: usize = 10;
@@ -530,7 +540,7 @@ pub fn install(executable: &str, home: &Path) -> Result<PathBuf, String> {
 }
 
 pub fn update(executable: &str, home: &Path, latest: &str) -> Result<PathBuf, String> {
-    if !can_update(&inspect(executable, home), latest) {
+    if !can_update(&inspect_with_npm(executable, home), latest) {
         return Err("Pi is already up to date".into());
     }
     let npm = npm_path(executable, home).ok_or("npm was not found")?;
@@ -685,7 +695,10 @@ mod tests {
             fs::set_permissions(path, fs::Permissions::from_mode(0o755)).unwrap();
         }
 
-        let status = inspect(pi.to_str().unwrap(), &root);
+        assert!(inspect(pi.to_str().unwrap(), &root)
+            .get("npmManaged")
+            .is_none());
+        let status = inspect_with_npm(pi.to_str().unwrap(), &root);
         assert!(status["npmManaged"] == true);
         assert!(status.get("verifiedVersion").is_none());
         assert!(can_update(&status, "0.88.0"));
