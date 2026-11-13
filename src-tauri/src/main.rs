@@ -39,6 +39,8 @@ struct State {
     auth_sequence: u64,
     generation: u64,
     active_task: Option<String>,
+    /// Worktree tree captured when each task's latest prompt was sent ("Last turn" review).
+    turn_snapshots: HashMap<String, String>,
 }
 
 fn active_process(state: &State) -> Option<&pi::Pi> {
@@ -1117,6 +1119,19 @@ fn handle(app: &tauri::AppHandle, request: Value) -> Result<Value, String> {
                 .map(pi::Pi::generation)
                 .ok_or("No task is open")?;
             let task_id = state.active_task.clone();
+            if command == "prompt" {
+                // Remember the worktree before Pi starts so the review pane can show this turn.
+                if let (Some(id), Some(root)) = (task_id.clone(), state.workspace.clone()) {
+                    match git::snapshot(&root) {
+                        Ok(tree) => {
+                            state.turn_snapshots.insert(id, tree);
+                        }
+                        Err(_) => {
+                            state.turn_snapshots.remove(&id);
+                        }
+                    }
+                }
+            }
             let process = active_process_mut(&mut state).ok_or("No task is open")?;
             if command == "abort" {
                 process.request(json!({"type":"clear_queue"}))?;
@@ -1222,6 +1237,20 @@ fn handle(app: &tauri::AppHandle, request: Value) -> Result<Value, String> {
                 }
             }
         }
+        op if op.starts_with("git.") => {
+            let root = state
+                .workspace
+                .clone()
+                .ok_or("Open a task in a project to use Git")?;
+            let turn = state
+                .active_task
+                .as_ref()
+                .and_then(|id| state.turn_snapshots.get(id))
+                .cloned();
+            // Hooks and remotes can take a while; do not hold the shared state meanwhile.
+            drop(state);
+            git::call(&root, op, &request, turn.as_deref())
+        }
         _ => Err("Unknown host operation".into()),
     }
 }
@@ -1305,6 +1334,7 @@ fn main() {
                 auth_sequence: 0,
                 generation: 0,
                 active_task: None,
+                turn_snapshots: HashMap::new(),
             }));
             Ok(())
         })

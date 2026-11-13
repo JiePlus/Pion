@@ -145,7 +145,7 @@ fn search_dirs(home: &Path) -> Vec<PathBuf> {
     directories
 }
 
-fn command_path(name: &str, home: &Path) -> Option<PathBuf> {
+pub(crate) fn command_path(name: &str, home: &Path) -> Option<PathBuf> {
     search_dirs(home)
         .into_iter()
         .map(|directory| directory.join(name))

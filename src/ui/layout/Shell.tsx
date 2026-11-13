@@ -24,10 +24,12 @@ import { ThemeProvider } from "../theme/ThemeProvider.tsx";
 import { Panel } from "../primitives/Panel.tsx";
 import { GlassFilter } from "../primitives/Glass.tsx";
 import { useState } from "react";
+import { useGitReview } from "../hooks/useGitReview.ts";
 import styles from "./Shell.module.css";
 
 export function Shell({ runtime, boot }: { runtime: Runtime; boot: Boot }) {
   const controller = useShellController(runtime, boot);
+  const review = useGitReview(controller.task?.id ?? null);
   const appUpdate = useAppUpdate((title, message) => runtime.notice(title, message));
   const [addProviderRequest, setAddProviderRequest] = useState(0);
   const {
@@ -310,6 +312,7 @@ export function Shell({ runtime, boot }: { runtime: Runtime; boot: Boot }) {
               setRenameValue={setRenameValue}
               setRenameOpen={setRenameOpen}
               perform={perform}
+              review={review}
             />
           )}
           {!native && (
@@ -325,6 +328,7 @@ export function Shell({ runtime, boot }: { runtime: Runtime; boot: Boot }) {
               runtime={runtime}
               panel={panel}
               selectedProject={selectedProject}
+              review={review}
             />
           )}
           {settingsPage && (

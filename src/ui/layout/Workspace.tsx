@@ -8,6 +8,9 @@ import { TaskStart } from "../chat/TaskStart.tsx";
 import { TaskGlance } from "../chat/TaskGlance.tsx";
 import type { useShellController } from "../hooks/useShellController.ts";
 import { Slot } from "./Slot/Slot.tsx";
+import { ReviewPane } from "../review/ReviewPane.tsx";
+import type { GitReviewState } from "../hooks/useGitReview.ts";
+import { SlotResizer } from "./Slot/SlotResizer.tsx";
 import styles from "./Shell.module.css";
 
 export function Workspace({
@@ -15,11 +18,13 @@ export function Workspace({
   runtime,
   panel,
   selectedProject,
+  review,
 }: {
   controller: ReturnType<typeof useShellController>;
   runtime: Runtime;
   panel: (view: PanelView) => ReactNode;
   selectedProject: Project | undefined;
+  review: GitReviewState;
 }) {
   const {
     at,
@@ -215,6 +220,18 @@ export function Workspace({
           )}
           {at("mainPanel").map(panel)}
         </Slot>
+        {task && review.open && review.summary && (
+          <div className={componentClass(styles, "review-slot")}>
+            <SlotResizer axis="horizontal" edge="left" />
+            <ReviewPane
+              taskId={task.id}
+              refreshKey={review.revision}
+              working={working}
+              onChanged={() => void review.refresh()}
+              onClose={() => review.setOpen(false)}
+            />
+          </div>
+        )}
         {!!at("secondarySidebar").length && (
           <Slot kind="side" edge="right">
             {at("secondarySidebar").map(panel)}

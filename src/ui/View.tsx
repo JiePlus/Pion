@@ -212,6 +212,17 @@ function InlineInput({ view, run }: { view: Extract<View, { type: "input" }>; ru
     </form>
   );
 }
+// Key by type + command + occurrence rather than position, so inserting a status line above an
+// input does not remount it (a remount would re-read a draft that a successful submit clears).
+function childKeys(children: View[]): [View, string][] {
+  const seen = new Map<string, number>();
+  return children.map((child) => {
+    const base = `${child.type}:${"command" in child ? child.command : ""}`;
+    const count = seen.get(base) ?? 0;
+    seen.set(base, count + 1);
+    return [child, `${base}:${count}`];
+  });
+}
 function Stack({ view, run }: { view: Extract<View, { type: "stack" }>; run: Run }) {
   const element = useRef<HTMLDivElement>(null);
   const follow = useRef(true);
@@ -227,12 +238,8 @@ function Stack({ view, run }: { view: Extract<View, { type: "stack" }>; run: Run
         follow.current = node.scrollHeight - node.scrollTop - node.clientHeight < 80;
       }}
     >
-      {view.children.map((child, index) => (
-        <ViewRenderer
-          key={`${child.type}:${"command" in child ? child.command : ""}:${index}`}
-          view={child}
-          run={run}
-        />
+      {childKeys(view.children).map(([child, key]) => (
+        <ViewRenderer key={key} view={child} run={run} />
       ))}
     </div>
   );
@@ -244,12 +251,8 @@ function Row({ view, run }: { view: Extract<View, { type: "row" }>; run: Run }) 
       data-align={view.align ?? "center"}
       data-gap={view.gap ?? "md"}
     >
-      {view.children.map((child, index) => (
-        <ViewRenderer
-          key={`${child.type}:${"command" in child ? child.command : ""}:${index}`}
-          view={child}
-          run={run}
-        />
+      {childKeys(view.children).map(([child, key]) => (
+        <ViewRenderer key={key} view={child} run={run} />
       ))}
     </div>
   );

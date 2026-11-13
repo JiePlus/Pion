@@ -10,7 +10,7 @@ Pion = Application Shell
 Plugins = Features
 ```
 
-第一批只实现 Core、Plugin Runtime、Pi RPC Adapter 和 Pi 基础任务界面。Git、Terminal、Diff、Worktree 不在 Core 中。
+第一批只实现 Core、Plugin Runtime、Pi RPC Adapter 和 Pi 基础任务界面，以及内置的 Git 审阅面板。Terminal、Worktree 不在 Core 中。
 
 ## macOS 安装
 
@@ -122,6 +122,17 @@ npm run dev
 - Rust Pi JSONL：真实 `pi --mode rpc`、串行请求/响应关联、独立事件流、超时/退出处理。
 - 无需修改 Core 的 [Hello 插件](examples/hello-plugin)，以及演示写入/联网/丰富 UI 的 [Plugin API 示例](examples/plugin-api-demo)。
 - 一方 [Git/Diff 插件](plugins/git-diff-plugin)：只读展示当前工作区分支、staged/unstaged/untracked 改动与带行号的 unified diff（参考 VS Code / GitHub Desktop 的文件行与状态徽标），通过插件审核安装后加载，仅申请 `workspace.git` 权限。
+
+## Git 审阅面板
+
+打开任务后，顶栏的分支按钮显示当前项目未提交改动的 `+增 −删` 行数，点击即在对话右侧打开 **审阅** 面板（参考 Codex 的 Review 面板，宽度可拖动调整，开关状态会记住）：
+
+- **范围**：未暂存 / 已暂存 / 分支（对比 `origin/HEAD` 指向的默认分支或 `main`/`master` 的分叉点）/ 上一轮（发送消息时记录工作区快照，对比 Pi 本轮改动；快照用临时 index 写成 tree，不影响真实暂存区）。
+- **暂存与还原**：按文件或按 diff 块暂存、取消暂存、还原；还原与删除未跟踪文件需要再点一次确认。块操作会在宿主重新生成 diff 并逐字节匹配后才用 `git apply` 应用，diff 已变化时会提示刷新。
+- **提交**：提交对话框可选择是否包含未暂存改动，以及「提交 / 提交并推送 / 提交并创建 PR」。创建 PR 使用已登录的 GitHub CLI（`gh pr create --fill`），已存在的 PR 直接返回链接。
+- **分支与远程**：分支菜单可切换或新建分支；更多菜单提供抓取、拉取（仅快进）、推送、创建拉取请求。非 Git 项目可一键初始化仓库。
+
+Git 命令都由宿主在当前项目目录内执行：路径必须是项目内相对路径并按字面匹配，不弹出终端或编辑器，SSH 使用 BatchMode，本地命令 20 秒、远程与提交（含 hooks）90 秒超时，执行期间不占用宿主共享状态锁。任务运行中不能提交或切换分支。
 
 ## 安装自己的插件
 

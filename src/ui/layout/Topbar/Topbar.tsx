@@ -10,6 +10,7 @@ import type { ViewMode } from "../../chat/ChatMessage.tsx";
 import type { Page } from "../types.ts";
 import { MenuItem, Popover } from "../../primitives/Popover.tsx";
 import { useRef, useState } from "react";
+import type { GitReviewState } from "../../hooks/useGitReview.ts";
 import styles from "./Topbar.module.css";
 
 const viewModes = [
@@ -99,6 +100,7 @@ interface TopbarProps {
   setRenameOpen: Dispatch<SetStateAction<boolean>>;
   perform: (work: () => Promise<unknown>) => void;
   onAddProvider?: () => void;
+  review: GitReviewState;
 }
 
 export function Topbar({
@@ -125,6 +127,7 @@ export function Topbar({
   setRenameOpen,
   perform,
   onAddProvider,
+  review,
 }: TopbarProps) {
   return (
     <header className={componentClass(styles, "topbar")}>
@@ -181,6 +184,29 @@ export function Topbar({
       )}
       {page === "workspace" && task && (
         <div className={componentClass(styles, "header-actions")} ref={headerActions}>
+          {review.summary && (
+            <button
+              type="button"
+              className={`${componentClass(styles, "header-button")} ${componentClass(styles, "review-toggle")}`}
+              aria-pressed={review.open}
+              aria-label={t("Review changes")}
+              title={t("Review changes")}
+              onClick={() => review.setOpen(!review.open)}
+            >
+              <Icon name="branch" size={14} />
+              {!!review.summary.files && (
+                <span className={componentClass(styles, "review-stat")}>
+                  <span className={componentClass(styles, "plus")}>
+                    +{review.summary.additions ?? 0}
+                  </span>
+                  <span className={componentClass(styles, "minus")}>
+                    −{review.summary.deletions ?? 0}
+                  </span>
+                </span>
+              )}
+              {!review.summary.files && t("Review")}
+            </button>
+          )}
           <ViewModeMenu value={viewMode} onChange={setConversationView} />
           {!connected && (
             <span className={componentClass(styles, "connection-pill")} role="status">
