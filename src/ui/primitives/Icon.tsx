@@ -21,7 +21,17 @@ export type IconName =
   | "sun"
   | "monitor"
   | "download"
-  | "palette";
+  | "palette"
+  | "image"
+  | "stop"
+  | "check"
+  | "alert"
+  | "copy"
+  | "layers"
+  | "clock"
+  | "pen"
+  | "branch"
+  | "dots";
 
 export function Icon({
   name,
@@ -130,6 +140,45 @@ export function Icon({
         <circle cx="7" cy="11" r=".7" fill="currentColor" />
         <circle cx="10" cy="6.8" r=".7" fill="currentColor" />
         <circle cx="16" cy="7.5" r=".7" fill="currentColor" />
+      </>
+    ),
+    image: (
+      <>
+        <rect x="3" y="5" width="18" height="14" rx="2" />
+        <circle cx="8.5" cy="10" r="1.5" />
+        <path d="m21 16-5-5-9 8" />
+      </>
+    ),
+    stop: <rect x="7" y="7" width="10" height="10" rx="2" fill="currentColor" stroke="none" />,
+    check: <path d="M5 12.5 9.5 17 19 7" />,
+    alert: <path d="M12 3 21.5 20h-19L12 3ZM12 10v4M12 17.5v.01" />,
+    copy: (
+      <>
+        <rect x="8" y="8" width="12" height="12" rx="2" />
+        <path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" />
+      </>
+    ),
+    layers: <path d="m12 3 9 5-9 5-9-5 9-5ZM3 13l9 5 9-5" />,
+    clock: (
+      <>
+        <circle cx="12" cy="12" r="9" />
+        <path d="M12 7v5l3 2" />
+      </>
+    ),
+    pen: <path d="M4 20h4L19 9l-4-4L4 16v4ZM13 7l4 4" />,
+    branch: (
+      <>
+        <circle cx="6" cy="5" r="2" />
+        <circle cx="6" cy="19" r="2" />
+        <circle cx="18" cy="7" r="2" />
+        <path d="M6 7v10M18 9a6 6 0 0 1-6 6H6" />
+      </>
+    ),
+    dots: (
+      <>
+        <circle cx="5" cy="12" r="1.2" fill="currentColor" />
+        <circle cx="12" cy="12" r="1.2" fill="currentColor" />
+        <circle cx="19" cy="12" r="1.2" fill="currentColor" />
       </>
     ),
   } satisfies Record<IconName, ReactNode>;

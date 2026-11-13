@@ -1,35 +1,51 @@
 .settings-tabs {
-  display: flex;
-  min-height: 52px;
-  align-items: end;
-  gap: 4px;
-  margin: 0;
-  padding: 8px 40px 0;
-  border-bottom: 1px solid var(--pion-color-line);
-  background: var(--pion-color-surface);
+  display: grid;
+  align-content: start;
+  gap: 2px;
+  width: 210px;
+  flex-shrink: 0;
+  padding: 18px 10px;
+  overflow-y: auto;
+  border-right: 1px solid var(--pion-color-line);
 }
 
 .settings-tabs button {
   display: flex;
   align-items: center;
-  gap: 7px;
-  min-height: 32px;
-  border-color: transparent;
-  border-bottom-color: transparent;
-  border-radius: 6px 6px 0 0;
+  gap: 9px;
+  min-height: 34px;
+  padding: 0.4rem 0.6rem;
+  border: 0;
+  border-radius: 0.8rem;
   background: transparent;
   color: var(--pion-color-muted);
-  font-size: 12px;
+  text-align: left;
+  font-size: 13px;
+  transition: all 0.1s ease-in;
 }
 
+.settings-tabs button:hover:not(:disabled),
 .settings-tabs button.selected {
   color: var(--pion-color-ink);
-  border-bottom-color: var(--pion-color-brand);
+  background-color: var(--pion-glass-hover);
+  box-shadow: inset -2px -2px 2px rgb(0 0 0 / 10%);
+}
+
+.settings-tabs button.selected :global(svg) {
+  color: var(--pion-color-brand);
 }
 
 @media (max-width: 850px) {
   .settings-tabs {
-    padding-inline: 12px;
+    display: flex;
+    width: auto;
+    padding: 8px;
     overflow-x: auto;
+    border-right: 0;
+    border-bottom: 1px solid var(--pion-color-line);
+  }
+
+  .settings-tabs button {
+    flex-shrink: 0;
   }
 }

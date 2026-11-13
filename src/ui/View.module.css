@@ -60,7 +60,7 @@
   gap: 6px;
   padding: 4px 7px;
   border: 1px solid var(--pion-color-line);
-  border-radius: 5px;
+  border-radius: 10px;
   background: var(--pion-color-brand-soft);
   color: var(--pion-color-brand-strong);
   font-size: 9px;

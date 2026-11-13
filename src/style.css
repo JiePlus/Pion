@@ -21,7 +21,25 @@ body {
   margin: 0;
   overflow: hidden;
   color: var(--pion-color-ink);
-  background: var(--pion-color-canvas);
+  background-color: var(--pion-color-canvas);
+  /* Wallpaper behind every glass layer: three orbs, each one hue fading into itself. */
+  background-image:
+    radial-gradient(
+      40vmax 40vmax at 4% 8%,
+      rgb(var(--pion-rgb-blue) / var(--pion-orb-strength)),
+      rgb(var(--pion-rgb-blue) / 0) 70%
+    ),
+    radial-gradient(
+      34vmax 34vmax at 98% 4%,
+      rgb(var(--pion-rgb-purple) / var(--pion-orb-strength)),
+      rgb(var(--pion-rgb-purple) / 0) 70%
+    ),
+    radial-gradient(
+      44vmax 44vmax at 60% 112%,
+      rgb(var(--pion-rgb-orange) / calc(var(--pion-orb-strength) * 0.75)),
+      rgb(var(--pion-rgb-orange) / 0) 70%
+    );
+  background-attachment: fixed;
 }
 
 button,
@@ -40,7 +58,7 @@ select {
 
 button {
   min-height: 32px;
-  padding: 6px 10px;
+  padding: 6px 12px;
   border: 1px solid var(--pion-color-line);
   border-radius: var(--pion-size-radius-sm);
   background: var(--pion-color-surface);
@@ -58,7 +76,7 @@ button:hover:not(:disabled) {
 }
 
 button:active:not(:disabled) {
-  transform: translateY(1px);
+  transform: scale(0.97);
 }
 
 button:disabled {
@@ -67,26 +85,57 @@ button:disabled {
 }
 
 button:focus-visible,
-input:focus-visible,
-textarea:focus-visible,
-select:focus-visible,
 summary:focus-visible {
   outline: 2px solid var(--pion-color-brand);
   outline-offset: 2px;
 }
 
+/* Fields are recessed wells; focus lifts them with a soft brand ring instead of an outline. */
 input,
 textarea,
 select {
   border: 1px solid var(--pion-color-line);
-  border-radius: var(--pion-size-radius-sm);
-  background: var(--pion-color-surface);
+  border-radius: var(--pion-size-radius-md);
+  background: var(--pion-color-surface-muted);
+  transition:
+    border-color 120ms ease,
+    box-shadow 120ms ease,
+    background 120ms ease;
+}
+
+input:hover:not(:disabled),
+textarea:hover:not(:disabled),
+select:hover:not(:disabled) {
+  border-color: var(--pion-color-line-strong);
+}
+
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  border-color: var(--pion-color-brand);
+  outline: none;
+  box-shadow: 0 0 0 3px var(--pion-color-brand-soft);
 }
 
 input,
 select {
-  min-height: 34px;
-  padding: 6px 9px;
+  min-height: 36px;
+  padding: 7px 12px;
+}
+
+select {
+  padding-right: 32px;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2388889a' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-position: right 12px center;
+  background-repeat: no-repeat;
+  background-size: 12px;
+}
+
+select option {
+  background: var(--pion-color-canvas);
+  color: var(--pion-color-ink);
 }
 
 textarea {

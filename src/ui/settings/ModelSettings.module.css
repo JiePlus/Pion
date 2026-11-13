@@ -80,7 +80,7 @@
   height: 38px;
   place-items: center;
   border: 1px solid var(--pion-color-line);
-  border-radius: 8px;
+  border-radius: 10px;
   background: var(--pion-color-surface-muted);
   font-family: var(--pion-font-mono);
   font-size: 12px;

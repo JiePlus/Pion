@@ -18,11 +18,17 @@
   line-height: 1.6;
 }
 
+/* Each settings group is a card in the management bento grid. */
 .settings-card,
 .legacy-sessions {
   min-width: 0;
-  padding: 24px 0 28px;
-  border-top: 1px solid var(--pion-color-line);
+  padding: 22px;
+  border-radius: 24px;
+  background: var(--pion-color-surface);
+  box-shadow:
+    var(--pion-glass-shadow),
+    inset 1px 1px 1px 0 var(--pion-glass-shine),
+    inset -1px -1px 1px 0 var(--pion-glass-shine);
 }
 
 .settings-card h2,
@@ -266,21 +272,24 @@
 }
 
 .shortcut-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 10px;
   margin: 0;
 }
 
+/* Shortcut tiles: the keys are the figure, the action is the caption. */
 .shortcut-list > div {
   display: flex;
-  align-items: center;
+  min-height: 120px;
+  flex-direction: column-reverse;
   justify-content: space-between;
   gap: 18px;
-  padding: 12px 0;
-  border-bottom: 1px solid var(--pion-color-line);
+  padding: 16px;
+  border-radius: 16px;
+  background: var(--pion-color-surface-muted);
+  color: var(--pion-color-muted);
   font-size: 13px;
-}
-
-.shortcut-list > div:last-child {
-  border-bottom: 0;
 }
 
 .shortcut-list dd {
@@ -288,11 +297,15 @@
 }
 
 .shortcut-list kbd {
-  padding: 5px 8px;
-  border: 1px solid var(--pion-color-line);
-  border-radius: 5px;
-  background: var(--pion-color-surface-muted);
-  font-size: 11px;
+  display: inline-block;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--pion-color-ink);
+  font-family: var(--pion-font-display);
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
 }
 
 .product-updates {
@@ -473,4 +486,31 @@
   .update-progress span {
     transition: none;
   }
+}
+
+/* Setting rows: what it is and what it does on the left, the control on the right. */
+.setting-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: var(--pion-color-surface-muted);
+}
+
+.setting-row > div {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.setting-row strong {
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+.setting-row span {
+  color: var(--pion-color-faint);
+  font-size: 12px;
 }

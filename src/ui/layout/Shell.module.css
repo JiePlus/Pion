@@ -3,11 +3,12 @@
   /* The rail owns its width (see Rail.module.css) so collapsing animates the
      rail's own width, which every WebView engine can interpolate. */
   grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--pion-size-gutter);
   width: 100%;
   height: 100dvh;
   min-height: 0;
+  padding: var(--pion-size-gutter);
   overflow: hidden;
-  background: var(--pion-color-canvas);
 }
 
 .app.setup-page {
@@ -18,12 +19,46 @@
   --pion-size-rail: 60px;
 }
 
+/* The conversation sheet: one translucent pane that every page renders into. */
 .shell-content {
   display: flex;
   min-width: 0;
   min-height: 0;
   flex-direction: column;
-  background: var(--pion-color-surface);
+  overflow: hidden;
+  border: 1px solid var(--pion-color-line);
+  border-radius: var(--pion-size-radius-lg);
+  background: var(--pion-color-sheet);
+  backdrop-filter: var(--pion-sheet-blur);
+  -webkit-backdrop-filter: var(--pion-sheet-blur);
+}
+
+.app.setup-page .shell-content {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.app.setup-page {
+  padding: 0;
+}
+
+.settings-layout {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  flex: 1;
+}
+
+.settings-page {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  overflow: auto;
 }
 
 .models-page {
@@ -31,7 +66,6 @@
   min-height: 0;
   flex: 1;
   overflow: auto;
-  background: var(--pion-color-canvas);
 }
 
 .preview-banner,
@@ -45,7 +79,7 @@
 
 .preview-banner {
   color: var(--pion-color-muted);
-  background: var(--pion-color-surface-muted);
+  background: transparent;
 }
 
 .background-tasks {
@@ -89,12 +123,11 @@
   min-height: 30px;
   flex-shrink: 0;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 10px;
   padding: 5px 16px;
   border-top: 1px solid var(--pion-color-line);
   color: var(--pion-color-muted);
-  background: var(--pion-color-surface);
   font-family: var(--pion-font-mono);
   font-size: 12px;
 }
@@ -118,4 +151,10 @@
   box-shadow: var(--pion-shadow-low);
   font-size: 12px;
   line-height: 1.6;
+}
+
+@media (max-width: 850px) {
+  .settings-layout {
+    flex-direction: column;
+  }
 }

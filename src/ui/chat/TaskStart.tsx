@@ -1,17 +1,18 @@
 import { Button } from "../primitives/Button.tsx";
+import { Select } from "../primitives/Select.tsx";
 import { Icon } from "../primitives/Icon.tsx";
 import controlStyles from "../primitives/Controls.module.css";
 import { componentClass } from "../componentClass.ts";
-import type { Dispatch, RefObject, SetStateAction } from "react";
+import type { Dispatch, ReactNode, RefObject, SetStateAction } from "react";
 import { useRef } from "react";
 import { imageFailure } from "../../core/attachments.ts";
 import type { ImageAttachment } from "../../core/attachments.ts";
 import { native } from "../../core/host.ts";
 import type { Catalog, PiSetupStatus, Project, Task } from "../../core/host.ts";
 import { t } from "../../core/i18n.ts";
-import { ModelPicker } from "../layout/Topbar/ModelPicker.tsx";
+import { ModelMenu } from "./ModelMenu.tsx";
 import type { Page } from "../layout/types.ts";
-import pionMark from "../../../src-tauri/icon.svg";
+import { BrandMark } from "../primitives/BrandMark.tsx";
 import styles from "./TaskStart.module.css";
 
 interface TaskStartProps {
@@ -50,6 +51,7 @@ interface TaskStartProps {
     images?: ImageAttachment[];
     task?: Task;
   }) => Promise<void>;
+  footer?: ReactNode;
 }
 
 export function TaskStart({
@@ -83,12 +85,13 @@ export function TaskStart({
   setDraftToolPreset,
   selectedProject,
   openTask,
+  footer,
 }: TaskStartProps) {
   const prompt = useRef<HTMLTextAreaElement>(null);
   return (
     <div className={componentClass(styles, "task-start")}>
       <div className={componentClass(styles, "start-heading")}>
-        <img src={pionMark} alt="" />
+        <BrandMark size={52} />
         <h1>{t("What would you like to work on?")}</h1>
         <p>{t("Start a local Pi task in one of your projects.")}</p>
         <div className={componentClass(styles, "suggestions")} aria-label={t("Suggestions")}>
@@ -238,24 +241,22 @@ export function TaskStart({
                 else newImagePicker.current?.click();
               }}
             >
-              <Icon name="folder" size={16} />
+              <Icon name="image" size={16} />
             </button>
             {catalog.projects.length ? (
-              <label className={`compact-field ${controlStyles.compactField}`}>
-                <span className="sr-only">{t("Project")}</span>
-                <select
-                  aria-label={t("Project")}
-                  value={projectId}
-                  disabled={busy || working || preparing}
-                  onChange={(event) => setProjectId(event.target.value)}
-                >
-                  {catalog.projects.map((project) => (
-                    <option key={project.id} value={project.id}>
-                      {project.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <Select
+                compact
+                placement="top-start"
+                label={t("Project")}
+                value={projectId}
+                disabled={busy || working || preparing}
+                onChange={setProjectId}
+                options={catalog.projects.map((project) => ({
+                  value: project.id,
+                  label: project.name,
+                  description: project.path,
+                }))}
+              />
             ) : (
               <button type="button" disabled={busy || !native} onClick={() => perform(addProject)}>
                 ＋ {t("Add project")}
@@ -263,52 +264,27 @@ export function TaskStart({
             )}
             {!!catalog.projects.length && (
               <>
-                <ModelPicker
+                <ModelMenu
                   models={draftModels}
                   value={draftModel}
-                  disabled={busy || working || preparing || !draftModels.length}
-                  onChange={(value) => {
+                  onModel={(value) => {
                     setDraftModel(value);
                     localStorage.setItem(`pion.newTaskModel.${projectId}`, value);
                   }}
+                  levels={draftLevels}
+                  thinking={draftThinking}
+                  onThinking={(level) => {
+                    setDraftThinking(level);
+                    localStorage.setItem(`pion.newTaskThinking.${projectId}`, level);
+                  }}
+                  toolPreset={draftToolPreset}
+                  onToolPreset={(preset) => {
+                    setDraftToolPreset(preset);
+                    localStorage.setItem(`pion.newTaskToolPreset.${projectId}`, preset);
+                  }}
+                  disabled={busy || preparing || !draftModels.length}
+                  locked={working}
                 />
-                <label className={`compact-field ${controlStyles.compactField}`}>
-                  <span className="sr-only">{t("Thinking")}</span>
-                  <select
-                    aria-label={t("Thinking")}
-                    value={draftThinking}
-                    disabled={busy || working || preparing || !draftLevels.length}
-                    onChange={(event) => {
-                      setDraftThinking(event.target.value);
-                      localStorage.setItem(`pion.newTaskThinking.${projectId}`, event.target.value);
-                    }}
-                  >
-                    {draftLevels.map((level) => (
-                      <option key={level} value={level}>
-                        {t("Thinking")} · {level}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className={`compact-field ${controlStyles.compactField}`}>
-                  <span className="sr-only">{t("Tool preset")}</span>
-                  <select
-                    aria-label={t("Tool preset")}
-                    value={draftToolPreset}
-                    disabled={busy || working || preparing}
-                    onChange={(event) => {
-                      setDraftToolPreset(event.target.value);
-                      localStorage.setItem(
-                        `pion.newTaskToolPreset.${projectId}`,
-                        event.target.value,
-                      );
-                    }}
-                  >
-                    <option value="full">{t("Full tools")}</option>
-                    <option value="read-only">{t("Read-only tools")}</option>
-                    <option value="chat">{t("Chat only")}</option>
-                  </select>
-                </label>
               </>
             )}
           </div>
@@ -344,6 +320,7 @@ export function TaskStart({
           </span>
         </p>
       )}
+      {footer}
     </div>
   );
 }

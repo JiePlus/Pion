@@ -1,6 +1,7 @@
 import { componentClass } from "../componentClass.ts";
 import { t } from "../../core/i18n.ts";
 import managementStyles from "./Management.module.css";
+import { Card, PageHero } from "./PageKit.tsx";
 import styles from "./Settings.module.css";
 
 export function Shortcuts() {
@@ -15,12 +16,13 @@ export function Shortcuts() {
 
   return (
     <main className={componentClass(managementStyles, "management")}>
-      <header className={componentClass(styles, "page-heading")}>
-        <h1>{t("Keyboard shortcuts")}</h1>
-        <p>{t("Keyboard shortcuts for common actions.")}</p>
-      </header>
-      <section className={componentClass(styles, "settings-card")}>
-        <h2>{t("Common actions")}</h2>
+      <PageHero
+        eyebrow="Keyboard"
+        title={t("Keyboard shortcuts")}
+        description={t("Keyboard shortcuts for common actions.")}
+        stat={{ value: shortcuts.length, caption: "shortcuts", tone: "blue" }}
+      />
+      <Card icon="keyboard" title={t("Common actions")} headingId="common-actions-heading">
         <dl className={componentClass(styles, "shortcut-list")}>
           {shortcuts.map(([label, keys]) => (
             <div key={label}>
@@ -31,7 +33,7 @@ export function Shortcuts() {
             </div>
           ))}
         </dl>
-      </section>
+      </Card>
     </main>
   );
 }

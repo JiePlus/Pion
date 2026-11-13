@@ -9,7 +9,6 @@
 
 :global(.new-task) .slot-main {
   overflow: auto;
-  background: var(--pion-color-canvas);
 }
 
 .slot-side {
@@ -20,7 +19,6 @@
   overflow: auto;
   resize: horizontal;
   border-inline: 1px solid var(--pion-color-line);
-  background: var(--pion-color-surface-muted);
 }
 
 .slot-bottom {

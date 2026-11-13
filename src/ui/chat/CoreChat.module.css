@@ -23,7 +23,7 @@
 .extension-statuses span {
   padding: 4px 7px;
   border: 1px solid var(--pion-color-line);
-  border-radius: 6px;
+  border-radius: 10px;
   background: var(--pion-color-surface-raised);
 }
 
@@ -32,7 +32,7 @@
   padding: 8px 10px;
   overflow: auto;
   border: 1px solid var(--pion-color-line);
-  border-radius: 7px;
+  border-radius: 10px;
   background: var(--pion-color-surface-muted);
   white-space: pre-wrap;
 }

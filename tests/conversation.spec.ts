@@ -151,18 +151,23 @@ test("conversation detail modes summarize, collapse and fully reveal reasoning a
   await page.reload();
   await page.locator('.task-list button[title="Detail modes"]').click();
 
-  const detail = page.getByRole("combobox", { name: "Conversation detail" });
-  await detail.selectOption("summary");
+  const detail = {
+    selectOption: async (label: "Summary" | "Normal" | "Verbose") => {
+      await page.getByRole("button", { name: "Conversation detail" }).click();
+      await page.getByRole("menuitemradio", { name: label }).click();
+    },
+  };
+  await detail.selectOption("Summary");
   await expect(page.locator(".thinking-summary")).toBeVisible();
   await expect(page.locator(".thinking-block")).toHaveCount(0);
   await expect(page.locator(".tool-call-summary")).toBeVisible();
   await expect(page.locator(".tool-details")).toHaveCount(0);
 
-  await detail.selectOption("normal");
+  await detail.selectOption("Normal");
   await expect(page.locator(".thinking-block")).not.toHaveAttribute("open", "");
   await expect(page.locator(".tool-details")).not.toBeVisible();
 
-  await detail.selectOption("verbose");
+  await detail.selectOption("Verbose");
   await expect(page.locator(".thinking-block")).toHaveAttribute("open", "");
   await expect(page.locator(".tool-call")).toHaveAttribute("open", "");
   await expect

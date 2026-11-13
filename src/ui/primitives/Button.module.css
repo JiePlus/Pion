@@ -54,7 +54,7 @@
 :global(:root[data-theme="dark"]) .primary {
   border-color: var(--pion-color-brand);
   background: var(--pion-color-brand);
-  color: var(--pion-color-canvas);
+  color: var(--pion-color-on-brand);
 }
 
 .toolbar {

@@ -11,12 +11,15 @@
   flex-direction: column;
   padding: 0;
   overflow: hidden;
-  border: 1px solid var(--catalog-line);
-  border-radius: 8px;
+  border: 0;
+  border-radius: 24px;
   background: var(--catalog-panel);
   color: var(--catalog-text);
   font-family: var(--pion-font-sans);
-  box-shadow: var(--pion-shadow-card);
+  box-shadow:
+    var(--pion-shadow-card),
+    inset 2px 2px 1px 0 var(--pion-glass-shine),
+    inset -1px -1px 1px 1px var(--pion-glass-shine);
 }
 .dialogHeading {
   display: flex;
@@ -32,7 +35,9 @@
   height: 32px;
   flex: 0 0 32px;
   place-items: center;
-  color: var(--pion-color-brand-strong);
+  border: 1px solid rgb(var(--pion-rgb-blue) / 45%);
+  border-radius: 10px;
+  color: var(--pion-color-brand);
 }
 .dialogHeading > div {
   min-width: 0;
@@ -41,7 +46,7 @@
 .dialogHeading h2 {
   margin: 0;
   font-size: 20px;
-  font-weight: 600;
+  font-weight: 900;
   line-height: 1.3;
 }
 .dialogHeading p {
@@ -72,24 +77,33 @@
   overflow-y: auto;
   overscroll-behavior: contain;
 }
+/* Segmented control: one recessed track with the active segment raised as glass. */
 .modeTabs {
-  display: flex;
+  display: inline-flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 2px;
   margin-bottom: 22px;
+  padding: 3px;
+  border: 1px solid var(--catalog-line);
+  border-radius: var(--pion-size-radius-pill);
+  background: var(--catalog-inset);
 }
 .modeTabs button {
-  min-height: 34px;
-  padding: 5px 12px;
-  border-color: var(--catalog-line);
+  min-height: 30px;
+  padding: 4px 14px;
+  border: 0;
+  border-radius: var(--pion-size-radius-pill);
   background: transparent;
+  box-shadow: none;
   color: var(--catalog-muted);
   font-size: 12px;
 }
 .modeTabs .selected {
-  border-color: var(--pion-color-brand);
-  background: var(--pion-color-brand-soft);
-  color: var(--pion-color-brand-strong);
+  background: var(--pion-glass-tint-strong);
+  box-shadow:
+    inset 1px 1px 0 var(--pion-glass-shine),
+    var(--pion-glass-shadow);
+  color: var(--catalog-text);
 }
 .presetHeading {
   display: flex;
@@ -125,10 +139,11 @@
   min-width: 0;
   flex-direction: column;
   align-items: flex-start;
-  padding: 12px;
+  padding: 12px 14px;
   border: 1px solid var(--catalog-line);
-  border-radius: 5px;
-  background: var(--catalog-panel);
+  border-radius: 16px;
+  background: var(--catalog-inset);
+  box-shadow: none;
   color: var(--catalog-text);
   text-align: left;
 }
@@ -169,8 +184,8 @@
   min-width: 0;
   height: 36px;
   border: 1px solid var(--catalog-line);
-  border-radius: 5px;
-  background: var(--catalog-panel);
+  border-radius: var(--pion-size-radius-md);
+  background: var(--catalog-inset);
   color: var(--catalog-text);
   font-family: var(--pion-font-mono);
   font-size: 12px;
@@ -307,7 +322,7 @@
   height: 36px;
   margin: 14px 0;
   border: 1px solid var(--catalog-line);
-  border-radius: 5px;
+  border-radius: 10px;
   background: var(--catalog-panel);
   color: var(--catalog-text);
   font-size: 13px;

@@ -1,4 +1,6 @@
 import utilityStyles from "../primitives/Utilities.module.css";
+import { Select } from "../primitives/Select.tsx";
+import { apiTypes } from "../primitives/apiTypes.ts";
 import { Button } from "../primitives/Button.tsx";
 import { componentClass } from "../componentClass.ts";
 import { useEffect, useState } from "react";
@@ -223,15 +225,12 @@ export function CustomModels({
           </label>
           <label>
             {t("API type")}
-            <select
+            <Select
+              label={t("API type")}
               value={providerDraft.api}
-              onChange={(event) => setProviderDraft({ ...providerDraft, api: event.target.value })}
-            >
-              <option value="openai-completions">OpenAI Completions</option>
-              <option value="openai-responses">OpenAI Responses</option>
-              <option value="anthropic-messages">Anthropic Messages</option>
-              <option value="google-generative-ai">Google Generative AI</option>
-            </select>
+              onChange={(api) => setProviderDraft({ ...providerDraft, api })}
+              options={apiTypes}
+            />
           </label>
           <p className={`settings-note ${utilityStyles.settingsNote}`}>
             {t(

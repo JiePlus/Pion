@@ -18,9 +18,9 @@
   max-height: 320px;
   padding: 10px 14px;
   overflow: auto;
-  border: 1px solid var(--pion-color-line);
-  border-radius: 15px 15px 4px 15px;
-  background: var(--pion-color-surface-muted);
+  border: 1px solid rgb(var(--pion-rgb-blue) / 26%);
+  border-radius: 18px 18px 6px 18px;
+  background: rgb(var(--pion-rgb-blue) / 14%);
 }
 
 .message-content,
@@ -126,7 +126,7 @@
   margin: 14px 0;
   overflow: hidden;
   border: 1px solid var(--pion-color-line);
-  border-radius: 8px;
+  border-radius: 10px;
   background: var(--pion-color-surface-raised);
 }
 
@@ -182,7 +182,7 @@
   max-width: 100%;
   max-height: 320px;
   margin: 8px 0;
-  border-radius: 8px;
+  border-radius: 10px;
   object-fit: contain;
 }
 
@@ -308,13 +308,37 @@
   white-space: pre-wrap;
 }
 
+/* Neutral chip for a deliberate end (stopped, length limit): not an error, just a fact. */
 .message-notice {
-  display: flex;
+  display: inline-flex;
+  width: fit-content;
   align-items: center;
-  gap: 8px;
-  padding: 7px 0 18px;
+  gap: 6px;
+  margin: 2px 0 14px;
+  padding: 3px 10px;
+  border-radius: var(--pion-size-radius-pill);
+  background: var(--pion-color-surface-muted);
   color: var(--pion-color-muted);
   font-size: 12px;
+}
+
+.message-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  margin: 2px 0 12px;
+  padding: 10px 14px;
+  border: 1px solid rgb(var(--pion-rgb-red) / 28%);
+  border-radius: 14px;
+  background: rgb(var(--pion-rgb-red) / 7%);
+  color: var(--pion-color-danger);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.message-error > svg {
+  flex: none;
+  margin-top: 2px;
 }
 
 .tool-call.running :global(.dot) {

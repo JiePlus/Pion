@@ -1,4 +1,3 @@
-import { StatusDot } from "../primitives/StatusDot.tsx";
 import managementStyles from "../settings/Management.module.css";
 import { componentClass } from "../componentClass.ts";
 import { t, translate } from "../../core/i18n.ts";
@@ -23,6 +22,7 @@ import { ShellDialogs } from "./ShellDialogs.tsx";
 import { Workspace } from "./Workspace.tsx";
 import { ThemeProvider } from "../theme/ThemeProvider.tsx";
 import { Panel } from "../primitives/Panel.tsx";
+import { GlassFilter } from "../primitives/Glass.tsx";
 import { useState } from "react";
 import styles from "./Shell.module.css";
 
@@ -146,10 +146,110 @@ export function Shell({ runtime, boot }: { runtime: Runtime; boot: Boot }) {
       />
     );
   }
+  function settingsPages() {
+    return (
+      <>
+        {page === "models" && (
+          <main className={componentClass(styles, "models-page")}>
+            <ModelSettings
+              onPackages={() => action("core.navigate", "packages")}
+              models={setupStatus?.models}
+              selectedModel={setupStatus?.selectedModel}
+              runtimeVersion={setupStatus?.installedVersion}
+              addProviderRequest={addProviderRequest}
+            />
+          </main>
+        )}
+        {page === "packages" && (
+          <PiPackages
+            packageSource={packageSource}
+            setPackageSource={setPackageSource}
+            packageScope={packageScope}
+            setPackageScope={setPackageScope}
+            packageSources={packageSources}
+            packageBusy={packageBusy}
+            projectId={projectId}
+            packageAction={packageAction}
+            runtime={runtime}
+          />
+        )}
+        {page === "skills" && (
+          <Skills
+            skills={skills}
+            skillScope={skillScope}
+            setSkillScope={setSkillScope}
+            skillBusy={skillBusy}
+            skillPath={skillPath}
+            setSkillPath={setSkillPath}
+            projectId={projectId}
+            skillCommands={skillCommands}
+            skillAction={skillAction}
+            skillOverride={skillOverride}
+            skillToggle={skillToggle}
+            runtime={runtime}
+          />
+        )}
+        {page === "plugins" && (
+          <Plugins
+            installed={installed}
+            runtime={runtime}
+            path={path}
+            setPath={setPath}
+            busy={busy}
+            action={action}
+          />
+        )}
+        {page === "panels" && (
+          <Panels panels={panels} layout={layout} at={at} panel={panel} action={action} />
+        )}
+        {page === "shortcuts" && <Shortcuts />}
+        {page === "settings" && (
+          <Settings
+            locale={locale}
+            action={action}
+            themePreference={themePreference}
+            setTheme={setTheme}
+            executable={executable}
+            setExecutable={setExecutable}
+            busy={busy}
+            connected={connected}
+            setupError={setupError}
+            setupStatus={setupStatus}
+            setupBusy={setupBusy}
+            setupProgress={setupProgress}
+            refreshSetup={refreshSetup}
+            versionStatus={versionStatus}
+            checkPiUpdate={checkPiUpdate}
+            updatePi={updatePi}
+            appUpdate={appUpdate}
+            legacySessions={legacySessions}
+            legacyLoading={legacyLoading}
+            legacySelected={legacySelected}
+            setLegacySelected={setLegacySelected}
+            loadLegacySessions={loadLegacySessions}
+            importLegacySessions={importLegacySessions}
+            runtime={runtime}
+          />
+        )}
+      </>
+    );
+  }
   const selectedProject = catalog.projects.find((project) => project.id === projectId);
   const piInstalled = setupStatus?.installation === "ready";
   const runningCount = [...taskStatuses.values()].filter((value) => value === "working").length;
   const attentionCount = catalog.tasks.filter((item) => item.unread).length;
+  const settingsPage = (
+    ["settings", "models", "packages", "skills", "plugins", "panels", "shortcuts"] as const
+  ).includes(page as never);
+  const statusDetail = working
+    ? t("Working…")
+    : task
+      ? t("Local task")
+      : native && !setupStatus
+        ? t("Checking Pi…")
+        : native && !setupStatus?.modelReady
+          ? t("Finish Pi setup before starting a task.")
+          : t("Ready for a new task");
 
   return (
     <ThemeProvider value={themePreference}>
@@ -162,6 +262,7 @@ export function Shell({ runtime, boot }: { runtime: Runtime; boot: Boot }) {
           }
         }}
       >
+        <GlassFilter />
         {page !== "setup" && (
           <Rail
             tasks={tasksState}
@@ -178,6 +279,9 @@ export function Shell({ runtime, boot }: { runtime: Runtime; boot: Boot }) {
             clearExtensionUi={clearExtensionUi}
             perform={perform}
             action={action}
+            statusText={translate(locale, status)}
+            statusDetail={statusDetail}
+            runtimeVersion={setupStatus?.installedVersion}
           />
         )}
         <div className={componentClass(styles, "shell-content")}>
@@ -192,13 +296,7 @@ export function Shell({ runtime, boot }: { runtime: Runtime; boot: Boot }) {
               connected={connected}
               setupStatus={setupStatus}
               headerActions={headerActions}
-              usageButton={usageButton}
-              usageOpen={usageOpen}
-              showUsage={showUsage}
               runtime={runtime}
-              usageStats={usageStats}
-              usageLoading={usageLoading}
-              usageError={usageError}
               taskMenuButton={taskMenuButton}
               taskMenuOpen={taskMenuOpen}
               setTaskMenuOpen={setTaskMenuOpen}
@@ -222,24 +320,18 @@ export function Shell({ runtime, boot }: { runtime: Runtime; boot: Boot }) {
             </div>
           )}
           {page === "workspace" && (
-            <Workspace controller={controller} panel={panel} selectedProject={selectedProject} />
+            <Workspace
+              controller={controller}
+              runtime={runtime}
+              panel={panel}
+              selectedProject={selectedProject}
+            />
           )}
-          {(page === "settings" ||
-            page === "plugins" ||
-            page === "panels" ||
-            page === "shortcuts") && (
-            <SettingsTabs page={page} onNavigate={(next) => action("core.navigate", next)} />
-          )}
-          {page === "models" && (
-            <main className={componentClass(styles, "models-page")}>
-              <ModelSettings
-                onPackages={() => action("core.navigate", "packages")}
-                models={setupStatus?.models}
-                selectedModel={setupStatus?.selectedModel}
-                runtimeVersion={setupStatus?.installedVersion}
-                addProviderRequest={addProviderRequest}
-              />
-            </main>
+          {settingsPage && (
+            <div className={componentClass(styles, "settings-layout")}>
+              <SettingsTabs page={page} onNavigate={(next) => action("core.navigate", next)} />
+              <div className={componentClass(styles, "settings-page")}>{settingsPages()}</div>
+            </div>
           )}
           {page === "setup" && (
             <PiSetup
@@ -260,94 +352,8 @@ export function Shell({ runtime, boot }: { runtime: Runtime; boot: Boot }) {
               action={action}
             />
           )}
-          {page === "packages" && (
-            <PiPackages
-              packageSource={packageSource}
-              setPackageSource={setPackageSource}
-              packageScope={packageScope}
-              setPackageScope={setPackageScope}
-              packageSources={packageSources}
-              packageBusy={packageBusy}
-              projectId={projectId}
-              packageAction={packageAction}
-              runtime={runtime}
-            />
-          )}
-          {page === "skills" && (
-            <Skills
-              skills={skills}
-              skillScope={skillScope}
-              setSkillScope={setSkillScope}
-              skillBusy={skillBusy}
-              skillPath={skillPath}
-              setSkillPath={setSkillPath}
-              projectId={projectId}
-              skillCommands={skillCommands}
-              skillAction={skillAction}
-              skillOverride={skillOverride}
-              skillToggle={skillToggle}
-              runtime={runtime}
-            />
-          )}
-          {page === "plugins" && (
-            <Plugins
-              installed={installed}
-              runtime={runtime}
-              path={path}
-              setPath={setPath}
-              busy={busy}
-              action={action}
-            />
-          )}
-          {page === "panels" && (
-            <Panels panels={panels} layout={layout} at={at} panel={panel} action={action} />
-          )}
-          {page === "shortcuts" && <Shortcuts />}
-          {page === "settings" && (
-            <Settings
-              locale={locale}
-              action={action}
-              themePreference={themePreference}
-              setTheme={setTheme}
-              executable={executable}
-              setExecutable={setExecutable}
-              busy={busy}
-              connected={connected}
-              setupError={setupError}
-              setupStatus={setupStatus}
-              setupBusy={setupBusy}
-              setupProgress={setupProgress}
-              refreshSetup={refreshSetup}
-              versionStatus={versionStatus}
-              checkPiUpdate={checkPiUpdate}
-              updatePi={updatePi}
-              appUpdate={appUpdate}
-              legacySessions={legacySessions}
-              legacyLoading={legacyLoading}
-              legacySelected={legacySelected}
-              setLegacySelected={setLegacySelected}
-              loadLegacySessions={loadLegacySessions}
-              importLegacySessions={importLegacySessions}
-              runtime={runtime}
-            />
-          )}
-          {page !== "setup" && (
+          {page !== "setup" && !!at("statusBar").length && (
             <footer className={componentClass(styles, "statusbar")}>
-              <span>
-                <StatusDot offline={!connected} />
-                {translate(locale, status)}
-              </span>
-              <span>
-                {working
-                  ? t("Working…")
-                  : task
-                    ? t("Local task")
-                    : native && !setupStatus
-                      ? t("Checking Pi…")
-                      : native && !setupStatus?.modelReady
-                        ? t("Finish Pi setup before starting a task.")
-                        : t("Ready for a new task")}
-              </span>
               {at("statusBar").map(panel)}
             </footer>
           )}

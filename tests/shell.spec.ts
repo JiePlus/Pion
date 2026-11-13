@@ -1,6 +1,13 @@
 import { test, expect } from "@playwright/test";
 import { readFileSync } from "node:fs";
 import { taskFixture } from "./task-fixture";
+import type { Locator } from "@playwright/test";
+
+// App selects are glass listboxes, not native <select>: open, then pick the option by value.
+async function choose(combobox: Locator, value: string) {
+  await combobox.click();
+  await combobox.page().locator(`[role="listbox"] [role="option"][data-value="${value}"]`).click();
+}
 import { createHash } from "node:crypto";
 
 const builtin = JSON.parse(readFileSync("plugins/agent-chat/plugin.json", "utf8"));
@@ -246,19 +253,25 @@ test("new task prepares chat, resumes isolated history, keeps drafts and switche
   await page.goto("/");
   await expect(page.getByRole("button", { name: "Model", exact: true })).toContainText("GPT Test");
   await page.getByRole("button", { name: "Model", exact: true }).click();
+  await page.getByRole("menuitem", { name: "More models" }).click();
   await page.getByRole("button", { name: "Claude Test · anthropic" }).click();
-  await page.getByRole("combobox", { name: "Thinking" }).selectOption("high");
+  await page.getByRole("button", { name: "Model", exact: true }).click();
+  await page.getByRole("menuitem", { name: "Thinking" }).click();
+  await page.getByRole("menuitemradio", { name: "high" }).click();
+  await page.keyboard.press("Escape");
   await page.getByRole("textbox", { name: "Describe your task" }).fill("First task");
   await page.getByRole("button", { name: "Start task" }).click();
   await expect(page.locator(".core-chat")).toContainText("Reply for First task");
   await expect(page.locator(".core-chat")).toContainText("read");
-  await page.getByRole("button", { name: "More options" }).click();
   await expect(page.getByRole("button", { name: "Model", exact: true })).toContainText(
     "Claude Test",
   );
-  await expect(page.getByRole("combobox", { name: "Thinking" })).toHaveValue("high");
+  await page.getByRole("button", { name: "Model", exact: true }).click();
+  await expect(page.getByRole("menuitem", { name: "Thinking" })).toContainText("high");
+  await page.keyboard.press("Escape");
   await expect(page.getByRole("textbox", { name: /Ask Pi/ })).toHaveValue("");
-  await page.getByRole("button", { name: "Pi command" }).click();
+  await page.getByRole("button", { name: "Add", exact: true }).click();
+  await page.getByRole("menuitem", { name: "Pi command" }).click();
   await expect(page.getByRole("textbox", { name: /Ask Pi/ })).toHaveValue("/");
   await expect(page.getByRole("option", { name: /fix-tests/ })).toBeVisible();
   await page.getByRole("textbox", { name: /Ask Pi/ }).fill("/fi");
@@ -278,8 +291,7 @@ test("new task prepares chat, resumes isolated history, keeps drafts and switche
   await expect(page.getByRole("textbox", { name: /Ask Pi/ })).toHaveValue("\nFirst task draft");
   await page.getByRole("textbox", { name: /Ask Pi/ }).press("Enter");
   await expect(page.getByRole("button", { name: "Stop agent", exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "More options" }).click();
-  await expect(page.getByRole("button", { name: "Queue next", exact: true })).toBeVisible();
+  await expect(page.getByRole("radiogroup", { name: "Message while running" })).toBeVisible();
   await page
     .locator(".task-list")
     .getByRole("button", { name: "Second task", exact: true })
@@ -460,8 +472,11 @@ test("background task banner only counts tasks in the current project", async ({
 test("Pi packages stay separate from desktop plugins and support both scopes", async ({ page }) => {
   await taskFixture(page);
   await page.goto("/");
-  await page.getByRole("button", { name: "Pi packages", exact: true }).click();
-  await expect(page.getByRole("navigation", { name: "Settings sections" })).toHaveCount(0);
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await page
+    .getByRole("navigation", { name: "Settings sections" })
+    .getByRole("button", { name: "Pi packages", exact: true })
+    .click();
   await page.getByRole("textbox", { name: "Package source" }).fill("npm:example-pi");
   await page.getByRole("button", { name: "Install", exact: true }).click();
   await expect(page.locator(".plugin-card")).toContainText("npm:example-pi");
@@ -483,7 +498,7 @@ test("Pi packages stay separate from desktop plugins and support both scopes", a
       page.evaluate(() => JSON.parse(localStorage.getItem("fixture.packageAction") ?? "{}").op),
     )
     .toBe("package.remove");
-  await page.getByRole("combobox", { name: "Install scope" }).selectOption("project");
+  await choose(page.getByRole("combobox", { name: "Install scope" }), "project");
   await page.getByRole("textbox", { name: "Package source" }).fill("npm:project-pi");
   await page.getByRole("button", { name: "Install", exact: true }).click();
   await expect(page.locator(".plugin-card")).toContainText("npm:project-pi");
@@ -497,8 +512,11 @@ test("Pi packages stay separate from desktop plugins and support both scopes", a
 test("Pi skills use native paths and show installed skills", async ({ page }) => {
   await taskFixture(page);
   await page.goto("/");
-  await page.getByRole("button", { name: "Pi skills", exact: true }).click();
-  await expect(page.getByRole("navigation", { name: "Settings sections" })).toHaveCount(0);
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await page
+    .getByRole("navigation", { name: "Settings sections" })
+    .getByRole("button", { name: "Pi skills", exact: true })
+    .click();
   await page
     .getByRole("textbox", { name: "Skill file or directory" })
     .fill("/home/test/skills/review");
@@ -554,7 +572,11 @@ test("Pi package skills show source and can be toggled", async ({ page }) => {
     ),
   );
   await page.reload();
-  await page.getByRole("button", { name: "Pi skills", exact: true }).click();
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await page
+    .getByRole("navigation", { name: "Settings sections" })
+    .getByRole("button", { name: "Pi skills", exact: true })
+    .click();
   await expect(page.getByText("npm:example")).toBeVisible();
   const packageSwitch = page.getByRole("switch", { name: "package-skill", exact: true });
   await expect(packageSwitch).toBeChecked();
@@ -565,12 +587,16 @@ test("Pi package skills show source and can be toggled", async ({ page }) => {
 test("Pi skills support project paths, overrides, and slash commands", async ({ page }) => {
   await taskFixture(page);
   await page.goto("/");
-  await page.getByRole("button", { name: "Pi skills", exact: true }).click();
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await page
+    .getByRole("navigation", { name: "Settings sections" })
+    .getByRole("button", { name: "Pi skills", exact: true })
+    .click();
   await page
     .getByRole("textbox", { name: "Skill file or directory" })
     .fill("/home/test/skills/user-review");
   await page.getByRole("button", { name: "Add skill" }).click();
-  await page.getByRole("combobox", { name: "Skill scope" }).selectOption("project");
+  await choose(page.getByRole("combobox", { name: "Skill scope" }), "project");
   await page
     .getByRole("textbox", { name: "Skill file or directory" })
     .fill("/projects/Pion/.pi/skills/project-review");
@@ -581,27 +607,26 @@ test("Pi skills support project paths, overrides, and slash commands", async ({ 
       () => JSON.parse(localStorage.getItem("fixture.skillAction") ?? "{}").scope,
     ),
   ).toBe("project");
-  await page.getByRole("combobox", { name: "Project override user-review" }).selectOption("unload");
+  await choose(page.getByRole("combobox", { name: "Project override user-review" }), "unload");
   expect(
     await page.evaluate(
       () => JSON.parse(localStorage.getItem("fixture.skillAction") ?? "{}").state,
     ),
   ).toBe("unload");
-  await expect(page.getByRole("combobox", { name: "Project override user-review" })).toHaveValue(
-    "unload",
+  await expect(
+    page.getByRole("combobox", { name: "Project override user-review" }),
+  ).toHaveAttribute("data-value", "unload");
+  await choose(page.getByRole("combobox", { name: "Project override user-review" }), "inherit");
+  await choose(
+    page.getByRole("combobox", { name: "Show /skill:name commands in the command menu" }),
+    "disabled",
   );
-  await page
-    .getByRole("combobox", { name: "Project override user-review" })
-    .selectOption("inherit");
-  await page
-    .getByRole("combobox", { name: "Show /skill:name commands in the command menu" })
-    .selectOption("disabled");
   expect(
     await page.evaluate(
       () => JSON.parse(localStorage.getItem("fixture.skillAction") ?? "{}").scope,
     ),
   ).toBe("project");
-  await page.getByRole("combobox", { name: "Skill scope" }).selectOption("user");
+  await choose(page.getByRole("combobox", { name: "Skill scope" }), "user");
   await page
     .getByRole("checkbox", { name: "Show /skill:name commands in the command menu" })
     .uncheck();
@@ -615,7 +640,11 @@ test("Pi skills support project paths, overrides, and slash commands", async ({ 
 test("model services connect providers and edit custom models", async ({ page }) => {
   await taskFixture(page);
   await page.goto("/");
-  await page.getByRole("button", { name: "Pi models", exact: true }).click();
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await page
+    .getByRole("navigation", { name: "Settings sections" })
+    .getByRole("button", { name: "Model services", exact: true })
+    .click();
   await expect(page.getByRole("heading", { name: "Model services" })).toBeVisible();
   await page.getByRole("button", { name: "Configure OpenAI" }).click();
   await page.getByLabel("OpenAI API Key").fill("sk-test-secret");
@@ -623,9 +652,12 @@ test("model services connect providers and edit custom models", async ({ page })
   await expect(page.getByText("API key saved. Reopen tasks to apply changes.")).toBeVisible();
   await expect(page.getByText("sk-test-secret")).toHaveCount(0);
   await page.getByRole("radio", { name: "Pi login" }).check();
-  await expect(page.getByRole("combobox", { name: "Provider" })).toHaveValue("openai-codex");
+  await expect(page.getByRole("combobox", { name: "Provider" })).toHaveAttribute(
+    "data-value",
+    "openai-codex",
+  );
   await page.getByRole("button", { name: "Sign in with Pi" }).click();
-  await page.getByRole("combobox", { name: "Choose login method" }).selectOption("browser");
+  await choose(page.getByRole("combobox", { name: "Choose login method" }), "browser");
   await page.getByRole("button", { name: "Continue login" }).click();
   await expect(page.getByRole("link", { name: "https://example.test/login" })).toBeVisible();
   await page.getByRole("link", { name: "https://example.test/login" }).click();
@@ -732,17 +764,17 @@ test("compact composer fits a narrow window and its menu closes accessibly", asy
   await expect(page.locator(".core-chat")).toContainText("Reply for Small composer");
   const composer = page.locator(".core-composer");
   const bounds = await composer.boundingBox();
-  const more = await page.getByRole("button", { name: "More options" }).boundingBox();
+  const add = await page.getByRole("button", { name: "Add", exact: true }).boundingBox();
   const send = await page.getByRole("button", { name: "Send to Pi" }).boundingBox();
   expect(
-    bounds && more && send && more.x >= bounds.x && send.x + send.width <= bounds.x + bounds.width,
+    bounds && add && send && add.x >= bounds.x && send.x + send.width <= bounds.x + bounds.width,
   ).toBeTruthy();
-  await page.getByRole("button", { name: "More options" }).click();
-  await expect(page.getByRole("combobox", { name: "Thinking" })).toBeVisible();
+  await page.getByRole("button", { name: "Add", exact: true }).click();
+  await expect(page.getByRole("menuitem", { name: "Attach images" })).toBeVisible();
   await page.screenshot({ path: "test-results/compact-composer.png" });
-  await page.getByRole("button", { name: "More options" }).press("Escape");
-  await expect(page.getByRole("combobox", { name: "Thinking" })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "More options" })).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("menuitem", { name: "Attach images" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Add", exact: true })).toBeFocused();
 });
 
 test("model picker groups repeated names and filters a long catalog", async ({ page }) => {
@@ -764,7 +796,8 @@ test("model picker groups repeated names and filters a long catalog", async ({ p
   });
   await page.goto("/");
   await page.getByRole("button", { name: "Model", exact: true }).click();
-  const menu = page.getByRole("dialog", { name: "Model" });
+  await page.getByRole("menuitem", { name: "More models" }).click();
+  const menu = page.getByRole("dialog", { name: "More models" });
   await expect(menu.getByRole("heading", { name: "openai" })).toBeVisible();
   await expect(menu.getByRole("heading", { name: "openrouter" })).toHaveCount(1);
   const results = page.locator(".model-picker-results");
@@ -982,7 +1015,10 @@ test("project picker selection and plugin lifecycle remain available inside sett
   await taskFixture(page);
   await page.goto("/");
   await page.getByRole("button", { name: "Add project", exact: true }).click();
-  await expect(page.getByRole("combobox", { name: "Project", exact: true })).toHaveValue("p2");
+  await expect(page.getByRole("combobox", { name: "Project", exact: true })).toHaveAttribute(
+    "data-value",
+    "p2",
+  );
   await page.getByRole("textbox", { name: "Describe your task" }).fill("Other project task");
   await page.getByRole("button", { name: "Start task" }).click();
   await expect(page.locator(".topbar")).toContainText("Other");
@@ -1197,7 +1233,7 @@ test.describe("Chinese interface", () => {
     await expect(page.getByRole("button", { name: "发送给 Pi" })).toBeVisible();
     await page.getByRole("textbox", { name: /让 Pi 帮你/ }).fill("用户草稿 $& stays unchanged");
     await page.getByRole("button", { name: "设置", exact: true }).click();
-    await page.getByRole("combobox", { name: /界面语言/ }).selectOption("en");
+    await choose(page.getByRole("combobox", { name: /界面语言/ }), "en");
     await expect(page.locator("html")).toHaveAttribute("lang", "en");
     await page.locator(".task-list").getByRole("button", { name: "中文任务" }).click();
     await expect(page.getByRole("textbox", { name: /Ask Pi/ })).toHaveValue(
@@ -1206,8 +1242,11 @@ test.describe("Chinese interface", () => {
     await page.reload();
     await expect(page.locator("html")).toHaveAttribute("lang", "en");
     await page.getByRole("button", { name: "Settings", exact: true }).click();
-    await expect(page.getByRole("combobox", { name: /Language/ })).toHaveValue("en");
-    await page.getByRole("combobox", { name: /Language/ }).selectOption("zh-CN");
+    await expect(page.getByRole("combobox", { name: /Language/ })).toHaveAttribute(
+      "data-value",
+      "en",
+    );
+    await choose(page.getByRole("combobox", { name: /Language/ }), "zh-CN");
     await page.locator(".task-list").getByRole("button", { name: "中文任务" }).click();
     await expect(page.getByRole("button", { name: "发送给 Pi" })).toBeVisible();
     await page.screenshot({ path: "test-results/i18n-zh.png", fullPage: true });

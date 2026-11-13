@@ -1,0 +1,54 @@
+.switch {
+  position: relative;
+  width: 40px;
+  height: 24px;
+  min-height: 0;
+  flex: none;
+  padding: 0;
+  border: 0;
+  border-radius: var(--pion-size-radius-pill);
+  background: var(--pion-color-line-strong);
+  transition: background var(--pion-duration-med) ease;
+}
+
+.switch:hover:not(:disabled) {
+  border: 0;
+  background: var(--pion-color-line-strong);
+}
+
+.switch::after {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 6px rgb(0 0 0 / 25%);
+  content: "";
+  transition:
+    transform var(--pion-duration-slow) var(--pion-ease-spring-soft),
+    width var(--pion-duration-fast) ease;
+}
+
+.switch:active:not(:disabled) {
+  transform: none;
+}
+
+/* Pressing stretches the knob toward its destination, like the system control. */
+.switch:active:not(:disabled)::after {
+  width: 24px;
+}
+
+.switch[aria-checked="true"],
+.switch[aria-checked="true"]:hover:not(:disabled) {
+  background: rgb(var(--pion-rgb-green));
+}
+
+.switch[aria-checked="true"]::after {
+  transform: translateX(16px);
+}
+
+.switch[aria-checked="true"]:active:not(:disabled)::after {
+  transform: translateX(12px);
+}

@@ -5,19 +5,22 @@
 
 .model-picker-trigger {
   display: flex;
-  width: 190px;
-  max-width: 100%;
+  width: auto;
+  min-width: 150px;
+  max-width: min(300px, 100%);
   height: 30px;
   min-height: 30px;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding: 4px 8px;
+  padding: 4px 10px 4px 12px;
   overflow: hidden;
   border-color: var(--pion-color-line);
-  background: var(--pion-color-surface-raised);
+  border-radius: var(--pion-size-radius-pill);
+  background: var(--pion-color-surface-muted);
+  box-shadow: none;
   color: var(--pion-color-ink-soft);
-  font-size: 11px;
+  font-size: 12px;
   text-align: left;
 }
 
@@ -32,7 +35,8 @@
 .model-picker-trigger small {
   max-width: 72px;
   overflow: hidden;
-  color: var(--pion-color-muted);
+  color: var(--pion-color-faint);
+  font-family: var(--pion-font-mono);
   font-size: 10px;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -50,17 +54,60 @@
   bottom: calc(100% + 8px);
   left: 0;
   z-index: 20;
-  width: min(290px, calc(100vw - 40px));
-  padding: 7px;
+  width: min(300px, calc(100vw - 40px));
+  padding: 8px;
   border: 1px solid var(--pion-color-line);
-  border-radius: 10px;
+  border-radius: 18px;
   background: var(--pion-color-surface-raised);
   box-shadow: var(--pion-shadow-card);
+  backdrop-filter: var(--pion-sheet-blur);
+  -webkit-backdrop-filter: var(--pion-sheet-blur);
+  transform-origin: bottom left;
+  animation: picker-in var(--pion-duration-med) var(--pion-ease-spring-soft) both;
 }
 
-.model-picker-menu input {
+@keyframes picker-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.94);
+  }
+}
+
+/* Composer variant: no chrome until hover, so the pill reads as part of the glass. */
+.model-picker-trigger.quiet {
+  width: auto;
+  max-width: 320px;
+  border-color: transparent;
+  background: transparent;
+}
+
+.model-picker-trigger.quiet:hover:not(:disabled),
+.model-picker-trigger.quiet[aria-expanded="true"] {
+  border-color: transparent;
+  background: var(--pion-color-surface-hover);
+}
+
+.model-picker-trigger.quiet > span:first-child {
+  flex: 0 1 auto;
+}
+
+.model-picker-footer {
+  display: grid;
+  gap: 8px;
+  margin-top: 6px;
+  padding: 10px 6px 4px;
+  border-top: 1px solid var(--pion-color-line);
+}
+
+.model-list {
+  display: grid;
+  min-width: 0;
+}
+
+.model-list input {
   width: 100%;
-  min-height: 32px;
+  min-height: 34px;
+  border-radius: 12px;
   font-size: 12px;
 }
 
@@ -71,7 +118,7 @@
 }
 
 .model-picker-results section + section {
-  border-top: 1px solid var(--pion-color-line);
+  margin-top: 4px;
 }
 
 .model-picker-results h3 {
@@ -80,9 +127,11 @@
   margin: 0;
   padding: 9px 8px 5px;
   background: var(--pion-color-surface-raised);
-  color: var(--pion-color-muted);
+  color: var(--pion-color-faint);
+  font-family: var(--pion-font-mono);
   font-size: 10px;
-  font-weight: 600;
+  font-weight: 500;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
 }
 
@@ -93,11 +142,19 @@
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding: 5px 8px;
+  padding: 0.4rem 0.6rem;
   border-color: transparent;
+  border-radius: 0.8rem;
   background: transparent;
+  box-shadow: none;
   font-size: 12px;
   text-align: left;
+}
+
+.model-picker-results button:hover:not(:disabled) {
+  border-color: transparent;
+  background-color: var(--pion-glass-hover);
+  box-shadow: inset -2px -2px 2px rgb(0 0 0 / 10%);
 }
 
 .model-picker-results button[aria-pressed="true"] {
@@ -114,9 +171,10 @@
 :global(.pi-setup-model-choice) .model-picker-trigger {
   width: 100%;
   height: 40px;
-  padding: 7px 12px;
+  padding: 7px 14px;
   border-color: var(--pion-color-line-strong);
-  background: var(--pion-color-surface);
+  border-radius: var(--pion-size-radius-md);
+  background: var(--pion-color-surface-muted);
   color: var(--pion-color-ink);
   font-size: 13px;
 }
@@ -125,4 +183,14 @@
   top: calc(100% + 8px);
   bottom: auto;
   width: min(340px, 100%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .model-picker-menu {
+    animation: none;
+  }
+}
+
+.quiet + .model-picker-menu {
+  width: min(360px, calc(100vw - 40px));
 }

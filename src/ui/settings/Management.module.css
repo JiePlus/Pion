@@ -1,24 +1,223 @@
+/* Management pages: a 12-column bento of cards under a hero with one oversized figure. */
 .management {
+  display: grid;
   width: 100%;
-  max-width: 1120px;
+  max-width: 1240px;
   min-height: 0;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  align-content: start;
+  gap: 16px;
   margin: 0;
-  padding: 42px 40px 70px;
+  padding: 32px 36px 56px;
   flex: 1;
   overflow: auto;
 }
 
+.management > * {
+  min-width: 0;
+  grid-column: span 12;
+}
+
 .management > p {
-  margin-bottom: 28px;
+  margin: 0;
   font-size: 12px;
 }
 
 .management > h1 {
-  margin-bottom: 9px;
+  margin: 0;
 }
 
-.management h3 {
-  margin-top: 30px;
+.page-hero {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 4px 4px 12px;
+}
+
+.hero-copy {
+  display: grid;
+  min-width: 0;
+  gap: 8px;
+}
+
+.page-hero h1 {
+  margin: 0;
+  font-size: clamp(28px, 2.6vw, 44px);
+  font-weight: 900;
+  letter-spacing: -0.02em;
+}
+
+.page-hero p {
+  max-width: 62ch;
+  margin: 0;
+  color: var(--pion-color-muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.hero-stat {
+  display: grid;
+  flex-shrink: 0;
+  justify-items: end;
+  gap: 8px;
+}
+
+.hero-number {
+  font-family: var(--pion-font-display);
+  font-size: clamp(72px, 7vw, 140px);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.05em;
+  line-height: 0.82;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.blue {
+  background-image: linear-gradient(
+    180deg,
+    rgb(var(--pion-rgb-blue)) 30%,
+    rgb(var(--pion-rgb-blue) / 20%)
+  );
+}
+
+.green {
+  background-image: linear-gradient(
+    180deg,
+    rgb(var(--pion-rgb-green)) 30%,
+    rgb(var(--pion-rgb-green) / 20%)
+  );
+}
+
+.orange {
+  background-image: linear-gradient(
+    180deg,
+    rgb(var(--pion-rgb-orange)) 30%,
+    rgb(var(--pion-rgb-orange) / 20%)
+  );
+}
+
+.purple {
+  background-image: linear-gradient(
+    180deg,
+    rgb(var(--pion-rgb-purple)) 30%,
+    rgb(var(--pion-rgb-purple) / 20%)
+  );
+}
+
+.eyebrow {
+  color: var(--pion-color-faint);
+  font-family: var(--pion-font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+/* Cards sit on the sheet as lighter glass: tint plus the shine edge, no heavy fill. */
+.card {
+  display: grid;
+  min-width: 0;
+  align-content: start;
+  gap: 16px;
+  padding: 22px;
+  border-radius: 24px;
+  background: var(--pion-color-surface);
+  box-shadow:
+    var(--pion-glass-shadow),
+    inset 1px 1px 1px 0 var(--pion-glass-shine),
+    inset -1px -1px 1px 0 var(--pion-glass-shine);
+}
+
+.span-4 {
+  grid-column: span 4;
+}
+.span-5 {
+  grid-column: span 5;
+}
+.span-6 {
+  grid-column: span 6;
+}
+.span-7 {
+  grid-column: span 7;
+}
+.span-8 {
+  grid-column: span 8;
+}
+.span-12 {
+  grid-column: span 12;
+}
+
+.card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.card-title {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 10px;
+}
+
+.card-title h2 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.card-icon {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  flex: none;
+  place-items: center;
+  border: 1px solid rgb(var(--pion-rgb-blue) / 45%);
+  border-radius: 10px;
+  color: var(--pion-color-brand);
+}
+
+.card-body {
+  display: grid;
+  min-width: 0;
+  gap: 8px;
+}
+
+.empty-state {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px;
+  border: 1px dashed var(--pion-color-line-strong);
+  border-radius: 16px;
+}
+
+.empty-state > span {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  flex: none;
+  place-items: center;
+  border: 1px solid var(--pion-color-line-strong);
+  border-radius: 14px;
+  color: var(--pion-color-faint);
+}
+
+.empty-state p {
+  margin: 0;
+  font-size: 13px;
 }
 
 :global(.settings) form,
@@ -35,12 +234,14 @@
 
 .install-form {
   display: flex;
+  flex-wrap: wrap;
   align-items: end;
   gap: 10px;
-  margin: 28px 0;
+  margin: 0;
 }
 
 .install-form label {
+  min-width: 180px;
   flex: 1;
 }
 
@@ -50,26 +251,29 @@
   align-items: center;
   justify-content: space-between;
   gap: 18px;
-  padding: 17px 0;
-  border-bottom: 1px solid var(--pion-color-line);
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: var(--pion-color-surface-muted);
 }
 
 .plugin-card h2 {
-  margin-bottom: 6px;
-  font-size: 15px;
+  margin-bottom: 4px;
+  font-size: 14px;
+  font-weight: 700;
 }
 
 .plugin-card h2 small,
 .panel-management-list small {
   margin-left: 7px;
   color: var(--pion-color-muted);
+  font-family: var(--pion-font-mono);
   font-size: 10px;
 }
 
 .plugin-card p {
   margin-bottom: 0;
   color: var(--pion-color-muted);
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .card-actions {
@@ -80,13 +284,14 @@
 
 .card-actions button {
   min-height: 29px;
-  padding: 4px 8px;
-  font-size: 10px;
+  padding: 4px 10px;
+  border-radius: var(--pion-size-radius-pill);
+  font-size: 12px;
 }
 
 .panel-management-list {
-  max-width: 760px;
-  border-top: 1px solid var(--pion-color-line);
+  display: grid;
+  gap: 8px;
 }
 
 .panel-management-list article > div {
@@ -98,8 +303,27 @@
   margin: 3px 0 0;
 }
 
+@media (max-width: 1100px) {
+  .span-4,
+  .span-5,
+  .span-6,
+  .span-7,
+  .span-8 {
+    grid-column: span 12;
+  }
+}
+
 @media (max-width: 850px) {
   .management {
-    padding-inline: 24px;
+    padding-inline: 20px;
+  }
+
+  .page-hero {
+    flex-direction: column;
+    align-items: start;
+  }
+
+  .hero-stat {
+    justify-items: start;
   }
 }

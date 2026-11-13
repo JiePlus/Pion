@@ -1,6 +1,10 @@
 export { Button } from "./Button.tsx";
 export { Checkbox } from "./Checkbox.tsx";
 export { Dialog } from "./Dialog.tsx";
+export { Glass, GlassFilter } from "./Glass.tsx";
 export { Input } from "./Input.tsx";
 export { Panel, locationLabels } from "./Panel.tsx";
 export { StatusDot } from "./StatusDot.tsx";
+export { Popover, MenuItem, MenuSeparator } from "./Popover.tsx";
+export { Segmented } from "./Segmented.tsx";
+export { Switch } from "./Switch.tsx";

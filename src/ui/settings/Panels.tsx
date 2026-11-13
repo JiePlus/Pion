@@ -1,7 +1,9 @@
 import utilityStyles from "../primitives/Utilities.module.css";
+import { Select } from "../primitives/Select.tsx";
 import controlStyles from "../primitives/Controls.module.css";
 import { componentClass } from "../componentClass.ts";
 import managementStyles from "./Management.module.css";
+import { Card, EmptyState, PageHero } from "./PageKit.tsx";
 import type { ReactNode } from "react";
 import type { Json, Location } from "../../core/api.ts";
 import { locations } from "../../core/api.ts";
@@ -21,58 +23,61 @@ interface PanelsProps {
 export function Panels({ panels, layout, at, panel, action }: PanelsProps) {
   return (
     <main className={`${componentClass(managementStyles, "management")} settings`}>
-      <h1>{t("Extension panels")}</h1>
-      <p className="muted">
-        {t("Show, hide, and place the panels contributed by installed desktop plugins.")}
-      </p>
-      <div className={componentClass(managementStyles, "panel-management-list")}>
-        {!panels.filter((item) => item.owner !== "agent-chat").length && (
-          <p className={`settings-note ${utilityStyles.settingsNote}`}>
-            {t("No extension panels are available.")}
-          </p>
+      <PageHero
+        eyebrow="Extension panels"
+        title={t("Extension panels")}
+        description={t(
+          "Show, hide, and place the panels contributed by installed desktop plugins.",
         )}
-        {panels
-          .filter((item) => item.owner !== "agent-chat")
-          .map((item) => (
-            <article key={item.id}>
-              <div>
-                <strong>{localized(item.title, item.titleI18n)}</strong>
-                <small>{item.id}</small>
-              </div>
-              <label className={`compact-field ${controlStyles.compactField}`}>
-                <span className="sr-only">
-                  {t("Move {title}", { title: localized(item.title, item.titleI18n) })}
-                </span>
-                <select
-                  aria-label={t("Move {title}", {
-                    title: localized(item.title, item.titleI18n),
-                  })}
-                  value={layout[item.id]?.location ?? item.location}
-                  onChange={(event) =>
-                    action("core.layout", { id: item.id, location: event.target.value })
+        stat={{
+          value: panels.filter((item) => item.owner !== "agent-chat").length,
+          caption: "panels",
+          tone: "purple",
+        }}
+      />
+      <Card icon="sliders">
+        <div className={componentClass(managementStyles, "panel-management-list")}>
+          {!panels.filter((item) => item.owner !== "agent-chat").length && (
+            <EmptyState icon="sliders">{t("No extension panels are available.")}</EmptyState>
+          )}
+          {panels
+            .filter((item) => item.owner !== "agent-chat")
+            .map((item) => (
+              <article key={item.id}>
+                <div>
+                  <strong>{localized(item.title, item.titleI18n)}</strong>
+                  <small>{item.id}</small>
+                </div>
+                <label className={`compact-field ${controlStyles.compactField}`}>
+                  <span className="sr-only">
+                    {t("Move {title}", { title: localized(item.title, item.titleI18n) })}
+                  </span>
+                  <Select
+                    compact
+                    label={t("Move {title}", { title: localized(item.title, item.titleI18n) })}
+                    value={layout[item.id]?.location ?? item.location}
+                    onChange={(location) => action("core.layout", { id: item.id, location })}
+                    options={locations.map((location) => ({
+                      value: location,
+                      label: t(locationLabels[location]),
+                    }))}
+                  />
+                </label>
+                <button
+                  type="button"
+                  onClick={() =>
+                    action("core.layout", {
+                      id: item.id,
+                      hidden: !layout[item.id]?.hidden,
+                    })
                   }
                 >
-                  {locations.map((location) => (
-                    <option key={location} value={location}>
-                      {t(locationLabels[location])}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <button
-                type="button"
-                onClick={() =>
-                  action("core.layout", {
-                    id: item.id,
-                    hidden: !layout[item.id]?.hidden,
-                  })
-                }
-              >
-                {t(layout[item.id]?.hidden ? "Show" : "Hide")}
-              </button>
-            </article>
-          ))}
-      </div>
+                  {t(layout[item.id]?.hidden ? "Show" : "Hide")}
+                </button>
+              </article>
+            ))}
+        </div>
+      </Card>
       {at("settings").map(panel)}
     </main>
   );

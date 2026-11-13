@@ -1,26 +1,28 @@
 .rail {
-  display: flex;
   width: var(--pion-size-rail);
   min-width: 0;
   min-height: 0;
-  flex-direction: column;
-  padding: 0 10px 10px;
-  overflow: hidden;
-  border-right: 1px solid var(--pion-color-line);
-  background: var(--pion-color-surface);
+  border-radius: var(--pion-size-radius-lg);
   transition:
     width var(--pion-duration-rail) var(--pion-ease-rail),
     padding var(--pion-duration-rail) var(--pion-ease-rail);
+}
+
+.rail-inner {
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+  padding: 0 8px 8px;
+  overflow: hidden;
 }
 
 .rail-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  min-height: var(--pion-size-topbar);
-  margin: 0 -10px 14px;
-  padding: 0 16px;
-  border-bottom: 1px solid var(--pion-color-line);
+  min-height: 48px;
+  margin-bottom: 4px;
+  padding: 0 6px 0 8px;
   transition:
     min-height var(--pion-duration-rail) var(--pion-ease-rail),
     margin-bottom var(--pion-duration-rail) var(--pion-ease-rail);
@@ -33,74 +35,61 @@
   gap: 9px;
 }
 
-.brand img {
-  width: 34px;
-  height: 34px;
-  border-radius: 9px;
+.brand > :first-child {
+  flex: none;
 }
 
 .brand strong {
-  font-size: 16px;
-  font-weight: 650;
-  letter-spacing: -0.15px;
+  font-family: var(--pion-font-display);
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
 }
 
 .rail nav {
   display: grid;
-  gap: 4px;
-  margin-bottom: 20px;
-  padding: 0 5px 18px;
-  border-bottom: 1px solid var(--pion-color-line);
+  gap: 2px;
+  margin-bottom: 6px;
+  padding: 0 0 8px;
 }
 
 .rail nav button,
 .rail-bottom > button {
   display: flex;
   width: 100%;
-  min-height: 38px;
+  min-height: 34px;
   align-items: center;
-  gap: 10px;
-  padding: 7px 11px;
-  border-color: transparent;
+  gap: 9px;
+  padding: 0.4rem 0.6rem;
+  border: 0;
+  border-radius: 0.8rem;
   background: transparent;
+  color: var(--pion-color-ink-soft);
   text-align: left;
   font-size: 13px;
+  transition: all 0.1s ease-in;
 }
 
+.rail nav button:hover:not(:disabled),
+.rail-bottom > button:hover:not(:disabled),
 .rail nav button.selected,
 .rail-bottom > button.selected {
-  color: var(--pion-color-brand-strong);
-  background: var(--pion-color-surface-selected);
+  color: var(--pion-color-ink);
+  background-color: var(--pion-glass-hover);
+  box-shadow: inset -2px -2px 2px rgb(0 0 0 / 10%);
+  backdrop-filter: blur(2px);
 }
 
 .rail nav button.selected > span:first-child,
-.rail-bottom > button.selected > span:first-child,
-.rail nav .new-task-button > span:first-child {
+.rail-bottom > button.selected > span:first-child {
   color: var(--pion-color-brand);
-}
-
-.rail nav .new-task-button {
-  min-height: 42px;
-  margin-bottom: 12px;
-  justify-content: center;
-  border-color: var(--pion-color-line-strong);
-  background: var(--pion-color-surface-muted);
-  color: var(--pion-color-ink);
-  font-weight: 600;
-}
-
-.rail nav .new-task-button.selected {
-  background: var(--pion-color-surface-muted);
-  color: var(--pion-color-ink);
-}
-
-.rail nav .new-task-button:hover:not(:disabled) {
-  border-color: var(--pion-color-brand);
-  background: var(--pion-color-brand-soft);
 }
 
 .new-task-button kbd {
   margin-left: auto;
+  padding: 1px 6px;
+  border: 1px solid var(--pion-color-line);
+  border-radius: 5px;
   color: var(--pion-color-muted);
   font-size: 10px;
   font-weight: 400;
@@ -224,10 +213,8 @@
 }
 
 .project-group {
-  margin-bottom: 8px;
-  padding: 4px 5px;
-  border-radius: 9px;
-  background: color-mix(in srgb, var(--pion-color-surface-muted) 45%, transparent);
+  margin-bottom: 6px;
+  padding: 2px 0;
 }
 
 .project-row {
@@ -335,7 +322,7 @@
 .task-list {
   display: grid;
   gap: 1px;
-  padding: 1px 0 0 15px;
+  padding: 1px 0 0 12px;
 }
 
 .task-list button {
@@ -350,16 +337,11 @@
   font-size: 12px;
 }
 
+.task-list button:hover:not(:disabled),
 .task-list button.selected {
   color: var(--pion-color-ink);
-  background: var(--pion-color-surface-selected);
-  box-shadow: inset 2px 0 var(--pion-color-brand);
-}
-
-:global(:root[data-theme="dark"]) .task-list button.selected {
-  border: 1px solid var(--pion-color-line-strong);
-  background: var(--pion-color-surface-hover);
-  box-shadow: none;
+  background-color: var(--pion-glass-hover);
+  box-shadow: inset -2px -2px 2px rgb(0 0 0 / 10%);
 }
 
 .task-title {
@@ -434,32 +416,41 @@
 }
 
 .rail-bottom {
-  padding-top: 8px;
+  display: grid;
+  gap: 2px;
+  padding-top: 6px;
   border-top: 1px solid var(--pion-color-line);
-}
-
-.rail-bottom > button.selected {
-  border: 1px solid color-mix(in srgb, var(--pion-color-brand) 40%, var(--pion-color-line));
 }
 
 .runtime-label {
   display: flex;
   align-items: center;
-  gap: 7px;
-  padding: 12px 10px 0;
-  margin-top: 8px;
-  border-top: 1px solid var(--pion-color-line);
-  font-family: var(--pion-font-mono);
+  gap: 9px;
+  padding: 8px 10px 2px;
   color: var(--pion-color-muted);
-  font-size: 10px;
+  font-size: 11px;
 }
 
-.runtime-label > span:last-child {
-  margin-left: auto;
+.runtime-text {
+  display: grid;
+  min-width: 0;
+  line-height: 1.3;
 }
 
-:global(.rail-collapsed) .rail {
-  padding-inline: 8px;
+.runtime-text strong {
+  color: var(--pion-color-ink);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.runtime-text span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+:global(.rail-collapsed) .rail-inner {
+  padding-inline: 6px;
 }
 
 :global(.rail-collapsed) .brand strong,
@@ -475,7 +466,7 @@
 :global(.rail-collapsed) .project-row button:last-child,
 :global(.rail-collapsed) .task-list,
 :global(.rail-collapsed) .rail-bottom > button > span:last-child,
-:global(.rail-collapsed) .runtime-label > span:not(:global(.dot)) {
+:global(.rail-collapsed) .runtime-text {
   display: none;
 }
 
@@ -522,7 +513,7 @@
   :global(.app):not(:global(.rail-collapsed)) .project-row button:last-child,
   :global(.app):not(:global(.rail-collapsed)) .task-list,
   :global(.app):not(:global(.rail-collapsed)) .rail-bottom > button > span:last-child,
-  :global(.app):not(:global(.rail-collapsed)) .runtime-label > span:not(:global(.dot)) {
+  :global(.app):not(:global(.rail-collapsed)) .runtime-text {
     display: none;
   }
 

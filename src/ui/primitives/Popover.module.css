@@ -1,0 +1,202 @@
+.popover {
+  position: absolute;
+  z-index: 30;
+  min-width: 220px;
+  padding: 6px;
+  border-radius: 16px;
+  background: var(--pion-color-surface-raised);
+  box-shadow:
+    var(--pion-shadow-card),
+    inset 1px 1px 1px 0 var(--pion-glass-shine);
+  backdrop-filter: var(--pion-sheet-blur);
+  -webkit-backdrop-filter: var(--pion-sheet-blur);
+  text-align: left;
+  animation: popover-in var(--pion-duration-med) var(--pion-ease-spring-soft) both;
+}
+
+.popover[data-state="closing"] {
+  animation: popover-out var(--pion-duration-fast) var(--pion-ease-out) both;
+  pointer-events: none;
+}
+
+/* Each placement scales out of the corner nearest its trigger. */
+.top-start {
+  bottom: calc(100% + 8px);
+  left: 0;
+  transform-origin: bottom left;
+  --popover-shift: 6px;
+}
+
+.top-end {
+  right: 0;
+  bottom: calc(100% + 8px);
+  transform-origin: bottom right;
+  --popover-shift: 6px;
+}
+
+.bottom-start {
+  top: calc(100% + 8px);
+  left: 0;
+  transform-origin: top left;
+  --popover-shift: -6px;
+}
+
+.bottom-end {
+  top: calc(100% + 8px);
+  right: 0;
+  transform-origin: top right;
+  --popover-shift: -6px;
+}
+
+@keyframes popover-in {
+  from {
+    opacity: 0;
+    transform: translateY(var(--popover-shift)) scale(0.94);
+  }
+}
+
+@keyframes popover-out {
+  to {
+    opacity: 0;
+    transform: translateY(calc(var(--popover-shift) / 2)) scale(0.97);
+  }
+}
+
+.menu-item {
+  display: flex;
+  width: 100%;
+  min-height: 32px;
+  align-items: center;
+  gap: 10px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--pion-color-ink);
+  font-size: 13px;
+  text-align: left;
+  transition: background var(--pion-duration-fast) ease;
+}
+
+.menu-item > svg {
+  flex: none;
+  color: var(--pion-color-muted);
+}
+
+.menu-item:hover:not(:disabled),
+.menu-item:focus-visible,
+.menu-item[aria-expanded="true"] {
+  border: 0;
+  outline: none;
+  background-color: var(--pion-glass-hover);
+  box-shadow: inset -2px -2px 2px rgb(0 0 0 / 8%);
+}
+
+.menu-item:active:not(:disabled) {
+  transform: none;
+}
+
+.menu-item:disabled {
+  color: var(--pion-color-faint);
+  opacity: 1;
+}
+
+.menu-label {
+  display: grid;
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.menu-label small {
+  overflow: hidden;
+  color: var(--pion-color-faint);
+  font-size: 11.5px;
+  text-overflow: ellipsis;
+}
+
+.described {
+  min-height: 44px;
+  padding-block: 5px;
+}
+
+.menu-value {
+  color: var(--pion-color-muted);
+  font-size: 12.5px;
+}
+
+.menu-item > svg:last-child {
+  color: var(--pion-color-faint);
+}
+
+.check {
+  display: grid;
+  flex: none;
+  color: var(--pion-color-brand);
+}
+
+.sub-anchor {
+  position: relative;
+}
+
+/* Side menus open beside their row and grow upward, since composers sit at the bottom. */
+.submenu {
+  position: absolute;
+  bottom: -6px;
+  left: calc(100% + 6px);
+  z-index: 31;
+  display: grid;
+  width: 270px;
+  max-height: min(420px, 70vh);
+  padding: 6px;
+  overflow-y: auto;
+  border-radius: 16px;
+  background: var(--pion-color-surface-raised);
+  box-shadow:
+    var(--pion-shadow-card),
+    inset 1px 1px 1px 0 var(--pion-glass-shine);
+  transform-origin: bottom left;
+  animation: popover-in var(--pion-duration-med) var(--pion-ease-spring-soft) both;
+  --popover-shift: 0px;
+}
+
+.submenu.wide {
+  width: 320px;
+}
+
+/* An invisible bridge so moving the pointer across the gap keeps the side menu open. */
+.submenu::before {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -10px;
+  width: 10px;
+  content: "";
+}
+
+.menu-item kbd {
+  margin-left: auto;
+  color: var(--pion-color-faint);
+  font-size: 10.5px;
+}
+
+.danger,
+.danger > svg {
+  color: var(--pion-color-danger);
+}
+
+.separator {
+  height: 1px;
+  margin: 5px 6px;
+  background: var(--pion-color-line);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .submenu,
+  .popover,
+  .popover[data-state="closing"] {
+    animation: none;
+  }
+}

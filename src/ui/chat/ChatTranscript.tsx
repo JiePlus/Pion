@@ -1,5 +1,6 @@
-import { StatusDot } from "../primitives/StatusDot.tsx";
+import { Icon } from "../primitives/Icon.tsx";
 import { componentClass } from "../componentClass.ts";
+import { useEffect, useState } from "react";
 import type { Dispatch, RefObject, SetStateAction } from "react";
 import type { Json } from "../../core/api.ts";
 import { t } from "../../core/i18n.ts";
@@ -14,7 +15,7 @@ interface ChatTranscriptProps {
   toolResults: Map<string, Tool>;
   viewMode: ViewMode;
   working: boolean;
-  retry: { attempt: number; maxAttempts: number; delayMs: number } | null;
+  retry: RetryState | null;
   compaction: { summary: string; tokensBefore: number; estimatedTokensAfter: number } | null;
   syncError: string;
   error: string;
@@ -88,26 +89,10 @@ export function ChatTranscript({
                 viewMode={viewMode}
               />
             )}
-            {working && (
-              <div className={componentClass(styles, "chat-working")} role="status">
-                <StatusDot />
-                <span className={componentClass(styles, "working-label")}>{t("Working…")}</span>
-              </div>
+            {working && !retry && (
+              <WorkingIndicator activity={currentActivity(stream, messages, toolResults)} />
             )}
-            {retry && (
-              <div className={componentClass(styles, "retry-card")} role="status">
-                <span>
-                  {t("Retry {attempt}/{max} in {seconds}s", {
-                    attempt: retry.attempt,
-                    max: retry.maxAttempts,
-                    seconds: Math.ceil(retry.delayMs / 1000),
-                  })}
-                </span>
-                <button type="button" onClick={() => configure("abort_retry", {})}>
-                  {t("Cancel retry")}
-                </button>
-              </div>
-            )}
+            {retry && <RetryCard retry={retry} onCancel={() => configure("abort_retry", {})} />}
             {compaction && (
               <details className={componentClass(styles, "compaction-card")}>
                 <summary>{t("Compaction summary")}</summary>
@@ -132,9 +117,10 @@ export function ChatTranscript({
               </div>
             )}
             {!!error && (
-              <p className="error" role="alert">
-                {error}
-              </p>
+              <div className={`error ${componentClass(styles, "transcript-error")}`} role="alert">
+                <Icon name="alert" size={15} />
+                <span>{error}</span>
+              </div>
             )}
           </div>
         </div>
@@ -183,5 +169,99 @@ export function ChatTranscript({
         </section>
       )}
     </>
+  );
+}
+
+export interface RetryState {
+  attempt: number;
+  maxAttempts: number;
+  delayMs: number;
+  error?: string;
+  startedAt?: number;
+}
+
+// Elapsed seconds since the current turn started; one quiet tick per second.
+function useElapsed(since: number) {
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+  return Math.max(0, Math.floor((now - since) / 1000));
+}
+
+// What Pi is doing right now, in words: the newest running tool, else thinking or replying.
+function currentActivity(stream: Message | null, messages: Message[], tools: Map<string, Tool>) {
+  for (const message of [stream, ...[...messages].reverse()]) {
+    if (!message || typeof message.content === "string") continue;
+    const blocks = message.content ?? [];
+    for (const block of [...blocks].reverse()) {
+      if (block.type !== "toolCall" || tools.get(block.id ?? "")?.status !== "running") continue;
+      const args = block.arguments ?? {};
+      const path =
+        String(args.path ?? args.file_path ?? "")
+          .split("/")
+          .pop() ?? "";
+      const command = String(args.command ?? "").split("\n")[0];
+      const target = command.length > 48 ? `${command.slice(0, 47)}…` : command;
+      if (block.name === "read" && path) return t("Reading {target}", { target: path });
+      if ((block.name === "edit" || block.name === "write") && path)
+        return t("Editing {target}", { target: path });
+      if (block.name === "bash" && target) return t("Running {target}", { target });
+      if (["grep", "find", "ls"].includes(block.name ?? ""))
+        return t("Searching {target}", { target: String(args.pattern ?? path) });
+      return t("Using {tool}", { tool: block.name ?? "tool" });
+    }
+  }
+  const last = typeof stream?.content === "string" ? null : stream?.content?.at(-1);
+  if (last?.type === "thinking") return t("Thinking…");
+  if (last?.type === "text") return t("Writing a reply…");
+  return t("Working…");
+}
+
+// The one place that says Pi is busy: a glass pill with the current action and elapsed time.
+function WorkingIndicator({ activity }: { activity: string }) {
+  const [since] = useState(Date.now);
+  const seconds = useElapsed(since);
+  return (
+    <div className={componentClass(styles, "chat-working")} role="status">
+      <span className={componentClass(styles, "working-dot")} aria-hidden="true" />
+      <span className={componentClass(styles, "working-label")}>{activity}</span>
+      {seconds >= 2 && <span className={componentClass(styles, "working-time")}>{seconds}s</span>}
+    </div>
+  );
+}
+
+// One amber card for the whole retry: countdown, the failure that caused it, and a way out.
+function RetryCard({ retry, onCancel }: { retry: RetryState; onCancel: () => void }) {
+  const [since] = useState(() => retry.startedAt ?? Date.now());
+  const elapsed = useElapsed(since);
+  const total = Math.ceil(retry.delayMs / 1000);
+  const remaining = Math.max(0, total - elapsed);
+  return (
+    <div className={componentClass(styles, "retry-card")} role="status">
+      <span className={componentClass(styles, "retry-icon")} aria-hidden="true">
+        <Icon name="clock" size={16} />
+      </span>
+      <div className={componentClass(styles, "retry-text")}>
+        <strong>
+          {t("Retry {attempt}/{max} in {seconds}s", {
+            attempt: retry.attempt,
+            max: retry.maxAttempts,
+            seconds: remaining,
+          })}
+        </strong>
+        {!!retry.error && <code>{retry.error}</code>}
+      </div>
+      <button type="button" onClick={onCancel}>
+        {t("Cancel retry")}
+      </button>
+      <span
+        className={componentClass(styles, "retry-bar")}
+        aria-hidden="true"
+        style={{ animationDuration: `${retry.delayMs}ms` }}
+        key={retry.attempt}
+      />
+    </div>
   );
 }

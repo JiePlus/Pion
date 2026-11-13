@@ -15,6 +15,8 @@ import { ChatTranscript } from "./ChatTranscript.tsx";
 import { usePiEvents } from "../hooks/usePiEvents.ts";
 import type { Message, Tool, ViewMode } from "./ChatMessage.tsx";
 import { ChatComposer } from "./ChatComposer.tsx";
+import type { UsageProps } from "./UsageIndicator.tsx";
+import type { RetryState } from "./ChatTranscript.tsx";
 import styles from "./CoreChat.module.css";
 
 interface Model {
@@ -63,6 +65,8 @@ export function CoreChat({
   externalDraft,
   onExternalDraftApplied,
   viewMode,
+  usage,
+  onManagePackages,
 }: {
   taskId: string;
   connected: boolean;
@@ -75,6 +79,8 @@ export function CoreChat({
   externalDraft: string | null;
   onExternalDraftApplied: () => void;
   viewMode: ViewMode;
+  usage?: UsageProps;
+  onManagePackages?: () => void;
 }) {
   const cached = snapshots.get(taskId);
   const [messages, setMessages] = useState<Message[]>(cached?.messages ?? []);
@@ -101,11 +107,7 @@ export function CoreChat({
     tokensBefore: number;
     estimatedTokensAfter: number;
   } | null>(null);
-  const [retry, setRetry] = useState<{
-    attempt: number;
-    maxAttempts: number;
-    delayMs: number;
-  } | null>(null);
+  const [retry, setRetry] = useState<RetryState | null>(null);
   const [autoRetry, setAutoRetry] = useState<boolean | null>(null);
   const [customCompactOpen, setCustomCompactOpen] = useState(false);
   const [customCompactText, setCustomCompactText] = useState("");
@@ -115,39 +117,11 @@ export function CoreChat({
   const [showLatest, setShowLatest] = useState(false);
   const composer = useRef<HTMLTextAreaElement>(null);
   const picker = useRef<HTMLInputElement>(null);
-  const [moreOpen, setMoreOpen] = useState(false);
-  const more = useRef<HTMLDivElement>(null);
-  const moreButton = useRef<HTMLButtonElement>(null);
   const sendingRef = useRef(false);
 
   useEffect(() => {
     snapshots.set(taskId, { messages, state, models, levels, commands, queue });
   }, [taskId, messages, state, models, levels, commands, queue]);
-
-  useEffect(() => {
-    if (!moreOpen) return;
-    const close = (event: PointerEvent) => {
-      if (
-        !more.current?.contains(event.target as Node) &&
-        !moreButton.current?.contains(event.target as Node)
-      ) {
-        setMoreOpen(false);
-      }
-    };
-    const escape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        event.preventDefault();
-        setMoreOpen(false);
-        moreButton.current?.focus();
-      }
-    };
-    document.addEventListener("pointerdown", close);
-    document.addEventListener("keydown", escape);
-    return () => {
-      document.removeEventListener("pointerdown", close);
-      document.removeEventListener("keydown", escape);
-    };
-  }, [moreOpen]);
 
   useLayoutEffect(() => {
     if (!composer.current) return;
@@ -447,6 +421,11 @@ export function CoreChat({
       ))}
 
       <ChatComposer
+        usage={usage}
+        skills={commands.filter(
+          (command) => command.source === "skill" || command.name.startsWith("skill:"),
+        )}
+        onManagePackages={onManagePackages}
         connected={connected}
         working={working}
         sending={sending}
@@ -459,10 +438,6 @@ export function CoreChat({
         setCustomCompactText={setCustomCompactText}
         picker={picker}
         composer={composer}
-        moreButton={moreButton}
-        more={more}
-        moreOpen={moreOpen}
-        setMoreOpen={setMoreOpen}
         matchingCommands={matchingCommands}
         models={models}
         activeModel={activeModel}

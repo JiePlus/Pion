@@ -22,42 +22,95 @@
   text-align: center;
 }
 
+/* A glass pill, like every other status in the transcript. */
 .chat-working {
-  display: flex;
+  display: inline-flex;
+  width: fit-content;
+  max-width: 100%;
   align-items: center;
-  gap: 8px;
-  padding: 7px 0 18px;
-  color: var(--pion-color-muted);
-  font-size: 12px;
+  gap: 9px;
+  margin: 4px 0 18px;
+  padding: 6px 14px 6px 12px;
+  border-radius: var(--pion-size-radius-pill);
+  background: var(--pion-glass-tint-strong);
+  box-shadow:
+    var(--pion-glass-shadow),
+    inset 1px 1px 1px 0 var(--pion-glass-shine);
+  font-size: 12.5px;
+  animation: working-in var(--pion-duration-med) var(--pion-ease-spring-soft) both;
 }
 
-.chat-working :global(.dot) {
+@keyframes working-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+
+/* Pulse with transform and opacity only so it never repaints the glass behind it. */
+.working-dot {
   position: relative;
-  width: 12px;
-  height: 12px;
-  flex: 0 0 12px;
-  background: transparent;
+  width: 7px;
+  height: 7px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--pion-color-brand);
 }
 
-.chat-working :global(.dot)::before {
+.working-dot::after {
   position: absolute;
-  inset: 2px;
-  border-radius: 1px;
+  inset: 0;
+  border-radius: 50%;
   background: var(--pion-color-brand);
   content: "";
-  transform: rotate(45deg);
-  transform-origin: center;
-  animation: working-spin 1.4s linear infinite;
+  animation: working-pulse 1.8s ease-out infinite;
 }
 
-.working-label {
-  font-weight: 600;
-}
-
-@keyframes working-spin {
-  to {
-    transform: rotate(405deg);
+@keyframes working-pulse {
+  0% {
+    opacity: 0.5;
+    transform: scale(1);
   }
+  70%,
+  100% {
+    opacity: 0;
+    transform: scale(2.6);
+  }
+}
+
+/* Shimmer: the label's own colour sweeping through it while Pi works. */
+.working-label {
+  background: linear-gradient(
+      90deg,
+      var(--pion-color-faint) 0%,
+      var(--pion-color-ink) 45%,
+      var(--pion-color-faint) 90%
+    )
+    0 0 / 220% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  animation: working-shimmer 1.6s linear infinite;
+}
+
+@keyframes working-shimmer {
+  from {
+    background-position: 120% 0;
+  }
+  to {
+    background-position: -120% 0;
+  }
+}
+
+.working-time {
+  color: var(--pion-color-faint);
+  font-family: var(--pion-font-mono);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
 }
 
 @keyframes working-shine {
@@ -93,24 +146,116 @@
 .message-queue span {
   padding: 4px 7px;
   border: 1px solid var(--pion-color-line);
-  border-radius: 6px;
+  border-radius: 10px;
   background: var(--pion-color-surface-raised);
 }
 
-.retry-card,
 .compaction-card {
   margin: 10px 0;
-  padding: 9px 11px;
+  padding: 10px 14px;
   border: 1px solid var(--pion-color-line);
-  border-radius: 7px;
+  border-radius: 14px;
   background: var(--pion-color-surface-muted);
+  font-size: 12.5px;
+}
+
+/* Retry: one amber card, single hue fading into itself, with a draining countdown bar. */
+.retry-card {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 6px 0 14px;
+  padding: 12px 12px 14px;
+  overflow: hidden;
+  border: 1px solid rgb(var(--pion-rgb-orange) / 30%);
+  border-radius: 16px;
+  background: rgb(var(--pion-rgb-orange) / 8%);
+  font-size: 12.5px;
+}
+
+.retry-icon {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  flex: none;
+  place-items: center;
+  border-radius: 10px;
+  background: rgb(var(--pion-rgb-orange) / 14%);
+  color: var(--pion-color-amber);
+}
+
+.retry-text {
+  display: grid;
+  min-width: 0;
+  flex: 1;
+  gap: 2px;
+}
+
+.retry-text strong {
+  color: var(--pion-color-ink);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.retry-text code {
+  overflow: hidden;
+  color: var(--pion-color-muted);
+  font-size: 11.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.retry-card > button {
+  min-height: 28px;
+  flex: none;
+  padding: 0 12px;
+  border-color: transparent;
+  background: transparent;
+  color: var(--pion-color-amber);
   font-size: 12px;
 }
 
-.retry-card {
+.retry-card > button:hover:not(:disabled) {
+  border-color: transparent;
+  background: rgb(var(--pion-rgb-orange) / 12%);
+}
+
+.retry-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 2px;
+  background: linear-gradient(90deg, rgb(var(--pion-rgb-orange)), rgb(var(--pion-rgb-orange) / 0));
+  animation: retry-drain linear forwards;
+}
+
+@keyframes retry-drain {
+  from {
+    width: 100%;
+  }
+  to {
+    width: 0;
+  }
+}
+
+.transcript-error {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  align-items: flex-start;
+  gap: 9px;
+  margin: 6px 0 14px;
+  padding: 10px 14px;
+  border: 1px solid rgb(var(--pion-rgb-red) / 28%);
+  border-radius: 14px;
+  background: rgb(var(--pion-rgb-red) / 7%);
+  color: var(--pion-color-danger);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.transcript-error > svg {
+  flex: none;
+  margin-top: 2px;
 }
 
 .compaction-card p {
@@ -120,5 +265,14 @@
 @media (max-width: 1040px) {
   .chat-scroll {
     padding-inline: 22px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chat-working,
+  .working-dot::after,
+  .working-label,
+  .retry-bar {
+    animation: none;
   }
 }

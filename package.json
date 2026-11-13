@@ -20,6 +20,8 @@
     "check:format": "prettier --check . && node scripts/check-format.mjs && cargo fmt --manifest-path src-tauri/Cargo.toml -- --check"
   },
   "dependencies": {
+    "@fontsource/jetbrains-mono": "^5.3.0",
+    "@fontsource/outfit": "^5.3.0",
     "@tauri-apps/api": "^2.0.0",
     "@tauri-apps/plugin-process": "^2.4.0",
     "@tauri-apps/plugin-updater": "^2.14.1",

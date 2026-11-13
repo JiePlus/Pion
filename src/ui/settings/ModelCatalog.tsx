@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { Select } from "../primitives/Select.tsx";
+import { apiTypes } from "../primitives/apiTypes.ts";
 import { host, native } from "../../core/host.ts";
 import { t } from "../../core/i18n.ts";
 import { Icon } from "../primitives/Icon.tsx";
@@ -399,15 +401,22 @@ export function ModelCatalog({
   return (
     <div className={styles.catalog}>
       <header className={styles.heading}>
-        <div className={styles.titleLine}>
-          <h1>{t("Model services")}</h1>
-          {runtimeVersion && <span className={styles.version}>Pi {runtimeVersion}</span>}
+        <div>
+          <span className={styles.eyebrow}>Model services</span>
+          <div className={styles.titleLine}>
+            <h1>{t("Model services")}</h1>
+            {runtimeVersion && <span className={styles.version}>Pi {runtimeVersion}</span>}
+          </div>
+          <p>
+            {t(
+              "Manage local and cloud models in one place. Reopen tasks after saving configuration.",
+            )}
+          </p>
         </div>
-        <p>
-          {t(
-            "Manage local and cloud models in one place. Reopen tasks after saving configuration.",
-          )}
-        </p>
+        <div className={styles.heroStat} aria-hidden="true">
+          <span className={styles.heroNumber}>{models.length}</span>
+          <span className={styles.eyebrow}>models</span>
+        </div>
       </header>
       <div className={styles.toolbar}>
         <label className={styles.search}>
@@ -1051,15 +1060,12 @@ function ProviderForm({
         </label>
         <label>
           {t("API type")}
-          <select
+          <Select
+            label={t("API type")}
             value={draft.api}
-            onChange={(event) => setDraft({ ...draft, api: event.target.value })}
-          >
-            <option value="openai-completions">OpenAI Completions</option>
-            <option value="openai-responses">OpenAI Responses</option>
-            <option value="anthropic-messages">Anthropic Messages</option>
-            <option value="google-generative-ai">Google Generative AI</option>
-          </select>
+            onChange={(api) => setDraft({ ...draft, api })}
+            options={apiTypes}
+          />
         </label>
       </div>
       <p className={styles.help}>

@@ -6,10 +6,9 @@
   min-height: var(--pion-size-topbar);
   align-items: center;
   justify-content: space-between;
-  gap: 20px;
-  padding: 0 30px;
+  gap: 16px;
+  padding: 0 12px 0 20px;
   border-bottom: 1px solid var(--pion-color-line);
-  background: var(--pion-color-surface);
   font-size: 13px;
 }
 
@@ -21,7 +20,8 @@
 }
 
 .task-breadcrumb strong {
-  font-weight: 600;
+  font-weight: 700;
+  font-size: 14px;
 }
 
 .slash {
@@ -38,24 +38,34 @@
 }
 
 .view-mode-control {
-  display: block;
+  position: relative;
+  display: inline-flex;
   min-width: 0;
 }
 
-.view-mode-control select,
+.view-mode-control > button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.view-mode-control > button svg {
+  color: var(--pion-color-faint);
+}
+
 .header-button {
   height: 30px;
   min-height: 30px;
   padding: 4px 8px;
   border-color: transparent;
+  border-radius: 12px;
   background: transparent;
   color: var(--pion-color-ink-soft);
   font-size: 12px;
 }
 
-.view-mode-control select:hover,
 .header-button:hover:not(:disabled) {
-  background: var(--pion-color-surface-hover);
+  background-color: var(--pion-color-surface-hover);
 }
 
 .connection-pill {
@@ -64,8 +74,8 @@
   gap: 6px;
   padding: 5px 10px;
   border: 1px solid var(--pion-color-line);
-  border-radius: 6px;
-  background: var(--pion-color-surface-raised);
+  border-radius: var(--pion-size-radius-pill);
+  background: var(--pion-color-surface-muted);
   color: var(--pion-color-muted);
   font-size: 12px;
   white-space: nowrap;
@@ -101,11 +111,13 @@
   right: 0;
   z-index: 20;
   width: 230px;
-  padding: 7px;
+  padding: 6px;
   border: 1px solid var(--pion-color-line);
-  border-radius: 10px;
+  border-radius: 16px;
   background: var(--pion-color-surface-raised);
   box-shadow: var(--pion-shadow-card);
+  backdrop-filter: var(--pion-sheet-blur);
+  -webkit-backdrop-filter: var(--pion-sheet-blur);
 }
 
 .task-menu {
@@ -115,9 +127,16 @@
 .task-menu button {
   justify-content: flex-start;
   border-color: transparent;
+  border-radius: 0.8rem;
   background: transparent;
   text-align: left;
-  font-size: 12px;
+  font-size: 13px;
+}
+
+.task-menu button:hover:not(:disabled) {
+  border-color: transparent;
+  background-color: var(--pion-glass-hover);
+  box-shadow: inset -2px -2px 2px rgb(0 0 0 / 10%);
 }
 
 .usage-popover {
@@ -155,6 +174,7 @@
 .usage-popover dd {
   margin: 0;
   font-family: var(--pion-font-mono);
+  font-variant-numeric: tabular-nums;
 }
 
 .connection-pill.offline :global(.dot) {

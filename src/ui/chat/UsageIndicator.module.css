@@ -1,0 +1,175 @@
+.usage-indicator {
+  position: relative;
+  display: flex;
+}
+
+.usage-ring {
+  display: inline-grid;
+  width: 32px;
+  height: 32px;
+  min-height: 0;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--pion-color-muted);
+  font-family: var(--pion-font-mono);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.usage-ring:hover:not(:disabled),
+.usage-ring[aria-expanded="true"] {
+  border: 0;
+  background: var(--pion-color-surface-hover);
+  color: var(--pion-color-ink);
+}
+
+.usage-ring svg {
+  width: 18px;
+  height: 18px;
+  transform: rotate(-90deg);
+}
+
+.ring-track,
+.ring-fill {
+  fill: none;
+  stroke-width: 2.5;
+}
+
+.ring-track {
+  stroke: var(--pion-color-line-strong);
+}
+
+.ring-fill {
+  stroke: var(--pion-color-brand);
+  stroke-linecap: round;
+}
+
+.usage-popover {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 10px);
+  z-index: 12;
+  display: grid;
+  width: 300px;
+  gap: 0;
+  padding: 6px;
+  border: 0;
+  border-radius: 18px;
+  background: var(--pion-color-surface-raised);
+  box-shadow: var(--pion-shadow-card);
+  backdrop-filter: var(--pion-sheet-blur);
+  -webkit-backdrop-filter: var(--pion-sheet-blur);
+  text-align: left;
+  transform-origin: bottom right;
+  animation: usage-in var(--pion-duration-med) var(--pion-ease-spring-soft) both;
+}
+
+@keyframes usage-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.94);
+  }
+}
+
+.usage-section {
+  display: grid;
+  gap: 10px;
+  padding: 10px;
+}
+
+.usage-section + * {
+  border-top: 1px solid var(--pion-color-line);
+}
+
+.usage-bar {
+  height: 6px;
+  overflow: hidden;
+  border-radius: 3px;
+  background: var(--pion-color-surface-muted);
+}
+
+.usage-bar i {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+  background: linear-gradient(90deg, rgb(var(--pion-rgb-blue) / 35%), rgb(var(--pion-rgb-blue)));
+  transition: width var(--pion-duration-slow) var(--pion-ease-out);
+}
+
+.usage-popover p {
+  margin: 0;
+  font-size: 12px;
+}
+
+.usage-hero {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+/* One hue fading into itself: the context share is a single measure. */
+.usage-number {
+  background: linear-gradient(
+    180deg,
+    rgb(var(--pion-rgb-blue)) 30%,
+    rgb(var(--pion-rgb-blue) / 25%)
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  font-family: var(--pion-font-display);
+  font-size: 56px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.045em;
+  line-height: 0.9;
+}
+
+.usage-number small {
+  margin-left: 2px;
+  font-size: 0.4em;
+  font-weight: 300;
+  letter-spacing: 0;
+}
+
+.usage-caption {
+  color: var(--pion-color-faint);
+  font-family: var(--pion-font-mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.usage-popover dl {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.usage-popover dl > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  font-size: 12px;
+}
+
+.usage-popover dt {
+  color: var(--pion-color-muted);
+}
+
+.usage-popover dd {
+  margin: 0;
+  font-family: var(--pion-font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .usage-popover {
+    animation: none;
+  }
+}

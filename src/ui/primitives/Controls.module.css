@@ -8,17 +8,23 @@
 .queueButton {
   height: 30px;
   min-height: 30px;
-  padding: 4px 8px;
+  padding: 4px 10px;
   border-color: var(--pion-color-line);
-  background: var(--pion-color-surface-raised);
+  border-radius: var(--pion-size-radius-pill);
+  background-color: var(--pion-color-surface-muted);
   color: var(--pion-color-ink-soft);
-  font-size: 11px;
+  font-size: 12px;
+}
+
+.compactField select {
+  padding-right: 28px;
+  background-position: right 10px center;
 }
 
 .compactField select:hover,
 .commandButton:hover:not(:disabled),
 .queueButton:hover:not(:disabled) {
-  background: var(--pion-color-surface-hover);
+  background-color: var(--pion-color-surface-hover);
 }
 
 .commandButton {
