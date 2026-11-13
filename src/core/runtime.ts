@@ -16,7 +16,12 @@ export interface PluginState {
 }
 interface Instance {
   bundle: Bundle;
-  live: boolean;
+  /** active → closing (deactivate() may still use storage) → closed (worker destroyed). */
+  phase: "active" | "closing" | "closed";
+  /** The API request in flight, so shutdown can let a final write land. */
+  apiCall: Promise<unknown>;
+  /** Ends the closing phase early, when the worker reports that deactivate() finished. */
+  finishClosing?: () => void;
   port: ReturnType<typeof sandbox>;
   subscriptions: Map<string, () => void>;
   pending: Map<
@@ -54,6 +59,11 @@ const methods: Record<string, Permission> = {
   "notifications.show": "notifications",
 };
 
+/** How long deactivate() may run before its worker is destroyed. */
+export const DEACTIVATE_GRACE_MS = 2000;
+/** The only API methods a plugin may call from deactivate(). */
+const closingMethods = new Set(["storage.get", "storage.set"]);
+
 export class Runtime {
   readonly commands = new Commands();
   readonly events = new Events();
@@ -66,6 +76,8 @@ export class Runtime {
   private sequence = 0;
   private lifecycle: Promise<unknown> = Promise.resolve();
   private tickets = new Map<string, number>();
+  /** Plugins whose previous worker is still shutting down; a reload waits for it. */
+  private closing = new Map<string, Promise<void>>();
 
   constructor() {
     i18n.subscribe(() => {
@@ -114,18 +126,23 @@ export class Runtime {
     this.changed();
     if (!enabled) return;
     // Admission is synchronous; activation is serial even when boot discovers many plugins.
-    this.lifecycle = this.lifecycle
-      .then(() => {
-        if (this.tickets.get(manifest.id) !== ticket) return;
-        return this.activate({ manifest, source });
-      })
-      .catch((error) => {
-        if (
-          this.tickets.get(manifest.id) === ticket &&
-          this.plugins.get(manifest.id)?.state === "loading"
-        )
-          this.crash(manifest.id, String(error));
-      });
+    // A reload first lets the previous worker finish deactivate(), outside the serial queue
+    // so other plugins do not wait for it.
+    const previous = this.closing.get(manifest.id) ?? Promise.resolve();
+    void previous.then(() => {
+      this.lifecycle = this.lifecycle
+        .then(() => {
+          if (this.tickets.get(manifest.id) !== ticket) return;
+          return this.activate({ manifest, source });
+        })
+        .catch((error) => {
+          if (
+            this.tickets.get(manifest.id) === ticket &&
+            this.plugins.get(manifest.id)?.state === "loading"
+          )
+            this.crash(manifest.id, String(error));
+        });
+    });
   }
   private activate(bundle: Bundle): Promise<void> {
     const id = bundle.manifest.id;
@@ -133,7 +150,8 @@ export class Runtime {
       const port = sandbox(bundle.source, (message) => this.receive(id, instance, message));
       const instance: Instance = {
         bundle,
-        live: true,
+        phase: "active",
+        apiCall: Promise.resolve(),
         port,
         subscriptions: new Map(),
         pending: new Map(),
@@ -160,7 +178,12 @@ export class Runtime {
       throw new Error(`Permission denied: ${permission}`);
   }
   private receive(id: string, instance: Instance, input: unknown) {
-    if (!instance.live || this.instances.get(id) !== instance) return;
+    if (instance.phase === "closed") return;
+    if (instance.phase === "closing") {
+      this.receiveClosing(id, instance, input);
+      return;
+    }
+    if (this.instances.get(id) !== instance) return;
     try {
       if (++instance.count > 1500 || JSON.stringify(input).length > 300_000)
         throw new Error("Plugin message quota exceeded");
@@ -271,54 +294,9 @@ export class Runtime {
           this.events.emit(name, message.payload);
           break;
         }
-        case "call": {
-          const method = text(message.method);
-          const args = object(message.args);
-          const requestId = message.id;
-          if (!Number.isSafeInteger(requestId)) throw new Error("Invalid API correlation id");
-          if (instance.apiBusy) throw new Error("Only one API request may be in flight");
-          instance.apiBusy = true;
-          const finish = (value: Json, error?: string) => {
-            instance.apiBusy = false;
-            if (instance.live) instance.port.send({ kind: "result", id: requestId, value, error });
-          };
-          if (method === "commands.execute") {
-            // Reject reentrancy instead of deadlocking the serial command queue.
-            if (instance.pending.size) {
-              finish(null, "Nested command execution is not supported in API v1");
-              break;
-            }
-            this.commands.execute(text(args.id), args.args as Json, id).then(
-              (value) => finish(value),
-              (error) => finish(null, String(error)),
-            );
-          } else {
-            if (!methods[method]) {
-              finish(null, "Unknown API method");
-              break;
-            }
-            try {
-              this.require(instance, methods[method]);
-            } catch (error) {
-              finish(null, String(error));
-              break;
-            }
-            if (method === "notifications.show") {
-              this.notice(id, text(args.message, 2000));
-              finish(null);
-              break;
-            }
-            host<Json>({ op: "plugin", id, method, args }, () => {
-              if (!instance.live || this.instances.get(id) !== instance)
-                throw new Error("Plugin was unloaded");
-              this.require(instance, methods[method]);
-            }).then(
-              (value) => finish(value),
-              (error) => finish(null, String(error)),
-            );
-          }
+        case "call":
+          this.call(id, instance, message);
           break;
-        }
         default:
           throw new Error("Unknown plugin message");
       }
@@ -326,8 +304,79 @@ export class Runtime {
       this.crash(id, String(error));
     }
   }
+  // While deactivate() runs, the worker may only read and write its storage, and
+  // say that it is done. Anything else is answered with an error or ignored.
+  private receiveClosing(id: string, instance: Instance, input: unknown) {
+    try {
+      if (++instance.count > 1500 || JSON.stringify(input).length > 300_000)
+        throw new Error("Plugin message quota exceeded");
+      const message = object(input);
+      if (message.kind === "deactivated" || message.kind === "crash") instance.finishClosing?.();
+      else if (message.kind === "call") this.call(id, instance, message);
+    } catch {
+      instance.finishClosing?.();
+    }
+  }
+  private call(id: string, instance: Instance, message: Record<string, unknown>) {
+    const method = text(message.method);
+    const args = object(message.args);
+    const requestId = message.id;
+    if (!Number.isSafeInteger(requestId)) throw new Error("Invalid API correlation id");
+    if (instance.apiBusy) throw new Error("Only one API request may be in flight");
+    instance.apiBusy = true;
+    const finish = (value: Json, error?: string) => {
+      instance.apiBusy = false;
+      if (instance.phase !== "closed")
+        instance.port.send({ kind: "result", id: requestId, value, error });
+    };
+    if (instance.phase === "closing" && !closingMethods.has(method)) {
+      finish(null, "Only storage is available while the plugin shuts down");
+      return;
+    }
+    if (method === "commands.execute") {
+      // Reject reentrancy instead of deadlocking the serial command queue.
+      if (instance.pending.size) {
+        finish(null, "Nested command execution is not supported in API v1");
+        return;
+      }
+      this.commands.execute(text(args.id), args.args as Json, id).then(
+        (value) => finish(value),
+        (error) => finish(null, String(error)),
+      );
+      return;
+    }
+    if (!methods[method]) {
+      finish(null, "Unknown API method");
+      return;
+    }
+    try {
+      this.require(instance, methods[method]);
+    } catch (error) {
+      finish(null, String(error));
+      return;
+    }
+    if (method === "notifications.show") {
+      this.notice(id, text(args.message, 2000));
+      finish(null);
+      return;
+    }
+    const request = host<Json>({ op: "plugin", id, method, args }, () => {
+      // Rechecked at admission: the plugin may have been unloaded while this waited.
+      if (
+        instance.phase === "closed" ||
+        (instance.phase === "closing" && !closingMethods.has(method))
+      )
+        throw new Error("Plugin was unloaded");
+      this.require(instance, methods[method]);
+    });
+    instance.apiCall = request.catch(() => {});
+    request.then(
+      (value) => finish(value),
+      (error) => finish(null, String(error)),
+    );
+  }
   private invoke(instance: Instance, command: string, args?: Json): Promise<Json> {
-    if (!instance.live) return Promise.reject(new Error("Plugin unloaded"));
+    if (instance.phase !== "active") return Promise.reject(new Error("Plugin unloaded"));
     if (instance.pending.size >= 8) return Promise.reject(new Error("Command queue is full"));
     return new Promise((resolve, reject) => {
       const id = ++this.sequence;
@@ -340,11 +389,16 @@ export class Runtime {
       instance.port.send({ kind: "command", id, command, args });
     });
   }
-  unload(id: string): void {
+  /**
+   * Stops a plugin at once: its commands, panels, events and pending work end now.
+   * With `grace`, its worker then has up to DEACTIVATE_GRACE_MS to run deactivate(),
+   * with storage only. The returned promise settles when the worker is gone.
+   */
+  unload(id: string, grace = true): Promise<void> {
     this.tickets.set(id, (this.tickets.get(id) ?? 0) + 1);
     const instance = this.instances.get(id);
     if (instance) {
-      instance.live = false;
+      instance.phase = "closing";
       clearTimeout(instance.timer);
       clearInterval(instance.heartbeat);
       instance.failed(new Error("Plugin unloaded"));
@@ -354,9 +408,8 @@ export class Runtime {
         pending.reject(new Error("Plugin unloaded"));
       });
       instance.pending.clear();
-      instance.port.send({ kind: "deactivate" });
-      setTimeout(() => instance.port.destroy(), 150);
       this.instances.delete(id);
+      this.shutDown(id, instance, grace);
     }
     this.commands.removeOwner(id);
     for (const [key, panel] of this.panels) if (panel.owner === id) this.panels.delete(key);
@@ -366,14 +419,43 @@ export class Runtime {
       this.events.emit("plugin:unloaded", { id });
     }
     this.changed();
+    return this.closing.get(id) ?? Promise.resolve();
   }
-  forget(id: string) {
-    this.unload(id);
+  private shutDown(id: string, instance: Instance, grace: boolean) {
+    const done = new Promise<void>((resolve) => {
+      let finished = false;
+      const finish = () => {
+        if (finished) return;
+        finished = true;
+        clearTimeout(timer);
+        // Let a storage write that is already on its way reach the host, but not forever.
+        const settled = new Promise((wait) => setTimeout(wait, DEACTIVATE_GRACE_MS));
+        void Promise.race([instance.apiCall, settled]).then(() => {
+          instance.phase = "closed";
+          instance.port.destroy();
+          resolve();
+        });
+      };
+      instance.finishClosing = finish;
+      const timer = setTimeout(finish, grace ? DEACTIVATE_GRACE_MS : 0);
+    });
+    if (grace) instance.port.send({ kind: "deactivate" });
+    // A quick second reload may find an earlier worker still closing; wait for both.
+    const previous = this.closing.get(id) ?? Promise.resolve();
+    const entry: Promise<void> = Promise.all([previous, done]).then(() => {
+      if (this.closing.get(id) === entry) this.closing.delete(id);
+    });
+    this.closing.set(id, entry);
+  }
+  forget(id: string): Promise<void> {
+    const closed = this.unload(id);
     this.plugins.delete(id);
     this.changed();
+    return closed;
   }
   private crash(id: string, error: string) {
-    this.unload(id);
+    // A crashed or unresponsive worker gets no deactivate() window.
+    void this.unload(id, false);
     const plugin = this.plugins.get(id);
     if (plugin) {
       plugin.state = "crashed";

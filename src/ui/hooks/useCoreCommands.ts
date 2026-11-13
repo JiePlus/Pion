@@ -85,7 +85,8 @@ export function useCoreCommands({
         const { id, action } = args as { id: string; action: string };
         const record = installed.find((r) => r.bundle.manifest.id === id);
         if (!record) throw new Error(t("Plugin unavailable"));
-        runtime.unload(id);
+        // Let deactivate() finish its storage writes before the host disables or removes it.
+        await runtime.unload(id);
         try {
           if (action === "remove") await host({ op: "remove", id });
           else await host({ op: "enable", id, enabled: action !== "disable" });

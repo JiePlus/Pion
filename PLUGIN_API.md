@@ -138,6 +138,26 @@ function deactivate() {
 }
 ```
 
+### Shutting down
+
+`deactivate()` runs when the plugin is disabled, reloaded, uninstalled or
+unlinked, and may be `async`. By then its commands, panels and event
+subscriptions are already gone. For up to 2 seconds it may still call
+`context.storage.get` and `context.storage.set`, so it can save state; every
+other API call fails. Pion destroys the worker when `deactivate()` returns or
+the 2 seconds run out, whichever comes first, and only then disables or removes
+the plugin or starts its new version.
+
+```js
+let draft = "";
+async function deactivate() {
+  await context.storage.set("draft", draft);
+}
+```
+
+A plugin that crashes or stops responding is destroyed at once, without calling
+`deactivate()`.
+
 ## Declarative views
 
 Views are plain JSON data. The host validates and renders them; plugins cannot
@@ -174,7 +194,8 @@ must use declared column keys.
   at install time. Editing source requires a new review. `Reload` only reloads
   the approved snapshot. The exception is a folder linked for development (see
   below), whose code reloads but whose permissions stay fixed.
-- Payload, message-rate, activation (8 s), heartbeat and command (30 s) limits
+- Payload, message-rate, activation (8 s), heartbeat, command (30 s) and
+  shutdown (2 s, storage only) limits
   apply per plugin.
 
 This sandbox suits a controlled MVP; it is not an OS container. Distributing
