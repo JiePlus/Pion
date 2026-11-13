@@ -22,6 +22,7 @@ sha2 = "0.10"
 zip = { version = "4", default-features = false, features = ["deflate"] }
 git2 = { version = "0.21.0", default-features = false }
 notify = "8.2.2"
+tokio = { version = "1.54.1", features = ["process", "io-util", "sync", "time", "macros", "rt"] }
 
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"

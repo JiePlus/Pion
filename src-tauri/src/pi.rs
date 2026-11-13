@@ -1,23 +1,26 @@
 use serde_json::{json, Value};
 use std::collections::HashMap;
-use std::io::{BufRead, BufReader, Read, Write};
 use std::path::Path;
-use std::process::{Child, ChildStdin, Stdio};
+use std::process::Stdio;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
-use std::sync::{mpsc, Arc, Mutex};
+use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 use tauri::{Emitter, Manager};
+use tokio::io::{AsyncBufRead, AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
+use tokio::process::{Child, ChildStderr, ChildStdin, ChildStdout};
+use tokio::sync::{mpsc, oneshot};
 
 const MAX_FRAME: usize = 40 * 1024 * 1024;
 const MAX_REQUEST: usize = 36 * 1024 * 1024;
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(20);
 
 /// LF is the only delimiter. Unicode U+2028/U+2029 remain inside JSON strings.
-fn read_frame(reader: &mut impl BufRead) -> Result<Option<Value>, String> {
+async fn read_frame<B: AsyncBufRead + Unpin>(reader: &mut B) -> Result<Option<Value>, String> {
     let mut bytes = Vec::new();
-    let n = reader
+    let n = (&mut *reader)
         .take((MAX_FRAME + 1) as u64)
         .read_until(b'\n', &mut bytes)
+        .await
         .map_err(|e| e.to_string())?;
     if n == 0 {
         return Ok(None);
@@ -31,6 +34,34 @@ fn read_frame(reader: &mut impl BufRead) -> Result<Option<Value>, String> {
     serde_json::from_slice(&bytes)
         .map(Some)
         .map_err(|e| format!("Invalid Pi JSONL: {e}"))
+}
+
+/// What a session's actor is asked to do. The actor is the only owner of the Pi
+/// process, its stdin and its table of waiting requests.
+enum Command {
+    /// Write an RPC line; its response goes to `reply`.
+    Request {
+        id: String,
+        line: String,
+        reply: oneshot::Sender<Value>,
+    },
+    /// The caller gave up waiting; drop its reply slot.
+    Forget(String),
+    /// Write a line that expects no response (extension UI answers).
+    Line(String),
+    Stop,
+}
+
+/// Writes lines to a session's Pi through its actor.
+#[derive(Clone)]
+pub struct LineWriter(mpsc::UnboundedSender<Command>);
+
+impl LineWriter {
+    fn write(&self, line: String) -> Result<(), String> {
+        self.0
+            .send(Command::Line(line))
+            .map_err(|_| "Pi is disconnected".to_string())
+    }
 }
 
 struct PendingUi {
@@ -62,7 +93,7 @@ fn extension_ui_response(id: &str, method: &str, response: &Value) -> Result<Val
 
 #[derive(Default)]
 struct ExtensionUiSession {
-    stdin: Option<Arc<Mutex<ChildStdin>>>,
+    stdin: Option<LineWriter>,
     pending: HashMap<String, PendingUi>,
 }
 
@@ -72,7 +103,7 @@ pub struct ExtensionUiBridge {
 }
 
 impl ExtensionUiBridge {
-    fn activate(&mut self, generation: u64, stdin: Arc<Mutex<ChildStdin>>) {
+    fn activate(&mut self, generation: u64, stdin: LineWriter) {
         self.sessions.insert(
             generation,
             ExtensionUiSession {
@@ -104,14 +135,9 @@ impl ExtensionUiBridge {
         ];
         if !supported.contains(&method) {
             if let Some(stdin) = &session.stdin {
-                let mut input = stdin.lock().map_err(|e| e.to_string())?;
-                writeln!(
-                    input,
-                    "{}",
-                    json!({"type":"extension_ui_response","id":id,"cancelled":true})
-                )
-                .map_err(|e| e.to_string())?;
-                input.flush().map_err(|e| e.to_string())?;
+                stdin.write(
+                    json!({"type":"extension_ui_response","id":id,"cancelled":true}).to_string(),
+                )?;
             }
             return Err(format!("Unsupported extension UI method: {method}"));
         }
@@ -162,9 +188,7 @@ impl ExtensionUiBridge {
         }
         let message = extension_ui_response(id, &pending.method, response)?;
         let stdin = session.stdin.as_ref().ok_or("Pi is disconnected")?;
-        let mut input = stdin.lock().map_err(|e| e.to_string())?;
-        writeln!(input, "{message}").map_err(|e| e.to_string())?;
-        input.flush().map_err(|e| e.to_string())
+        stdin.write(message.to_string())
     }
 
     pub fn clear(&mut self, generation: u64) {
@@ -182,14 +206,7 @@ impl ExtensionUiBridge {
             .get(&generation)
             .ok_or("Stale Pi generation")?;
         let stdin = session.stdin.as_ref().ok_or("Pi is disconnected")?;
-        let mut input = stdin.lock().map_err(|e| e.to_string())?;
-        writeln!(
-            input,
-            "{}",
-            json!({"type":"extension_ui_response","id":id,"cancelled":true})
-        )
-        .map_err(|e| e.to_string())?;
-        input.flush().map_err(|e| e.to_string())
+        stdin.write(json!({"type":"extension_ui_response","id":id,"cancelled":true}).to_string())
     }
 
     fn cancel_pending(&mut self, generation: u64) {
@@ -204,17 +221,11 @@ impl ExtensionUiBridge {
         let Some(stdin) = &session.stdin else {
             return;
         };
-        let Ok(mut input) = stdin.lock() else {
-            return;
-        };
         for id in ids {
-            let _ = writeln!(
-                input,
-                "{}",
-                json!({"type":"extension_ui_response","id":id,"cancelled":true})
+            let _ = stdin.write(
+                json!({"type":"extension_ui_response","id":id,"cancelled":true}).to_string(),
             );
         }
-        let _ = input.flush();
     }
 }
 
@@ -254,24 +265,26 @@ pub enum SessionTarget<'a> {
 /// concurrent requests in any order; each response goes to its own waiter.
 #[derive(Default)]
 struct Pending {
-    waiters: HashMap<String, mpsc::Sender<Value>>,
+    waiters: HashMap<String, oneshot::Sender<Value>>,
     closed: Option<String>,
 }
 
 impl Pending {
-    fn register(&mut self, id: &str) -> Result<mpsc::Receiver<Value>, String> {
-        if let Some(reason) = &self.closed {
-            return Err(reason.clone());
+    fn insert(&mut self, id: String, reply: oneshot::Sender<Value>) {
+        match &self.closed {
+            Some(reason) => {
+                let _ = reply.send(json!({ "transportError": reason }));
+            }
+            None => {
+                self.waiters.insert(id, reply);
+            }
         }
-        let (sender, receiver) = mpsc::channel();
-        self.waiters.insert(id.to_string(), sender);
-        Ok(receiver)
     }
 
     /// Hands a response to its waiter. Late responses to abandoned requests are dropped.
     fn resolve(&mut self, frame: Value) {
-        if let Some(sender) = frame["id"].as_str().and_then(|id| self.waiters.remove(id)) {
-            let _ = sender.send(frame);
+        if let Some(reply) = frame["id"].as_str().and_then(|id| self.waiters.remove(id)) {
+            let _ = reply.send(frame);
         }
     }
 
@@ -282,26 +295,201 @@ impl Pending {
     /// The transport ended: fail every waiting request and refuse new ones.
     fn close(&mut self, reason: &str) {
         self.closed = Some(reason.to_string());
-        for (_, sender) in self.waiters.drain() {
-            let _ = sender.send(json!({ "transportError": reason }));
+        for (_, reply) in self.waiters.drain() {
+            let _ = reply.send(json!({ "transportError": reason }));
         }
     }
 }
 
-/// One Pi RPC process. All methods take `&self`, so callers share it as `Arc<Pi>`
-/// and talk to it without holding any application-wide lock.
-pub struct Pi<R: tauri::Runtime = tauri::Wry> {
+/// State the actor and the handle share.
+struct Shared<R: tauri::Runtime> {
     app: tauri::AppHandle<R>,
-    child: Mutex<Child>,
-    stdin: Arc<Mutex<ChildStdin>>,
-    pending: Arc<Mutex<Pending>>,
-    alive: Arc<AtomicBool>,
-    working: Arc<AtomicBool>,
-    visible: Arc<AtomicBool>,
-    task_id: Arc<Mutex<Option<String>>>,
+    alive: AtomicBool,
+    working: AtomicBool,
+    visible: AtomicBool,
+    task_id: Mutex<Option<String>>,
     generation: u64,
+}
+
+impl<R: tauri::Runtime> Shared<R> {
+    fn task_id(&self) -> Option<String> {
+        self.task_id.lock().ok().and_then(|task_id| task_id.clone())
+    }
+
+    /// Everything Pi sends that is not a response: task status, extension UI and
+    /// the visible session's event stream.
+    fn event(&self, frame: Value) {
+        let generation = self.generation;
+        let task_id = self.task_id();
+        if frame["type"] == "agent_start" {
+            self.working.store(true, Ordering::Release);
+            if let Some(task_id) = &task_id {
+                let _ = self
+                    .app
+                    .emit("task:status", json!({"taskId":task_id,"state":"working"}));
+            }
+        } else if frame["type"] == "agent_settled" {
+            self.working.store(false, Ordering::Release);
+            if let Some(task_id) = &task_id {
+                let unread = !self.visible.load(Ordering::Acquire);
+                if unread {
+                    let _ = self
+                        .app
+                        .state::<Arc<crate::tasks::UnreadState>>()
+                        .set(task_id, true);
+                }
+                let _ = self.app.emit(
+                    "task:status",
+                    json!({"taskId":task_id,"state":"idle","unread":unread}),
+                );
+            }
+        }
+        let visible = self.visible.load(Ordering::Acquire);
+        if frame["type"] == "extension_ui_request" {
+            let tracked = self
+                .app
+                .state::<Mutex<ExtensionUiBridge>>()
+                .lock()
+                .map_err(|e| e.to_string())
+                .and_then(|mut bridge| {
+                    if visible {
+                        bridge.track(generation, &frame)
+                    } else {
+                        bridge.cancel(generation, &frame)
+                    }
+                });
+            if let Err(error) = tracked {
+                publish(
+                    &self.app,
+                    json!({"generation":generation,"taskId":task_id,"event":{"type":"desktop_extension_ui_error", "error":error}}),
+                );
+            } else if visible {
+                publish(
+                    &self.app,
+                    json!({"generation":generation,"taskId":task_id,"event":frame}),
+                );
+            }
+        } else if visible {
+            // Hidden sessions (background tasks, spares) report progress through
+            // task:status; their stream is not serialized at all.
+            publish(
+                &self.app,
+                json!({"generation":generation,"taskId":task_id,"event":frame}),
+            );
+        }
+    }
+
+    /// The session ended. Unless it was stopped on purpose, say so.
+    fn ended(&self, reason: &str) {
+        if let Ok(mut bridge) = self.app.state::<Mutex<ExtensionUiBridge>>().lock() {
+            bridge.clear(self.generation);
+        }
+        if self.alive.swap(false, Ordering::AcqRel) {
+            let task_id = self.task_id();
+            if let Some(task_id) = &task_id {
+                let _ = self.app.emit(
+                    "task:status",
+                    json!({"taskId":task_id,"state":"disconnected"}),
+                );
+            }
+            let _ = self.app.emit(
+                "pi:status",
+                json!({"generation":self.generation,"taskId":task_id,"state":"disconnected", "detail":reason}),
+            );
+        }
+    }
+}
+
+async fn write_line(stdin: &mut ChildStdin, line: &str) -> Result<(), String> {
+    stdin
+        .write_all(line.as_bytes())
+        .await
+        .map_err(|e| e.to_string())?;
+    stdin.write_all(b"\n").await.map_err(|e| e.to_string())?;
+    stdin.flush().await.map_err(|e| e.to_string())
+}
+
+/// Reads stdout into frames for the actor. A separate task, so the actor's
+/// `select!` never cancels a half-read line.
+async fn read_frames(
+    stdout: ChildStdout,
+    frames: mpsc::UnboundedSender<Result<Option<Value>, String>>,
+) {
+    let mut reader = BufReader::new(stdout);
+    loop {
+        let frame = read_frame(&mut reader).await;
+        let more = matches!(frame, Ok(Some(_)));
+        if frames.send(frame).is_err() || !more {
+            return;
+        }
+    }
+}
+
+/// Drains bytes, not unbounded lines. Diagnostics never become RPC records.
+async fn drain_stderr(mut stderr: ChildStderr) {
+    let mut buffer = [0; 4096];
+    while let Ok(n) = stderr.read(&mut buffer).await {
+        if n == 0 {
+            break;
+        }
+        eprintln!("Pi stderr: {}", String::from_utf8_lossy(&buffer[..n]));
+    }
+}
+
+/// The session's actor: owns the process and its stdin, writes requests in the
+/// order they are sent, and routes each response to its waiter.
+async fn run<R: tauri::Runtime>(
+    mut child: Child,
+    mut stdin: ChildStdin,
+    mut commands: mpsc::UnboundedReceiver<Command>,
+    mut frames: mpsc::UnboundedReceiver<Result<Option<Value>, String>>,
+    shared: Arc<Shared<R>>,
+) {
+    let mut pending = Pending::default();
+    let reason = loop {
+        tokio::select! {
+            command = commands.recv() => match command {
+                Some(Command::Request { id, line, reply }) => {
+                    pending.insert(id, reply);
+                    if let Err(error) = write_line(&mut stdin, &line).await {
+                        break error;
+                    }
+                }
+                Some(Command::Line(line)) => {
+                    if let Err(error) = write_line(&mut stdin, &line).await {
+                        break error;
+                    }
+                }
+                Some(Command::Forget(id)) => pending.forget(&id),
+                Some(Command::Stop) | None => break "Pi stopped".to_string(),
+            },
+            frame = frames.recv() => match frame {
+                Some(Ok(Some(frame))) => {
+                    if frame["type"] == "response" {
+                        pending.resolve(frame);
+                    } else if shared.alive.load(Ordering::Acquire) {
+                        shared.event(frame);
+                    }
+                }
+                Some(Ok(None)) | None => break "Pi process exited".to_string(),
+                Some(Err(error)) => break error,
+            },
+        }
+    };
+    pending.close(&reason);
+    shared.ended(&reason);
+    let _ = child.kill().await;
+}
+
+/// One Pi RPC process, run by its own actor on the async runtime. All methods
+/// take `&self`, so callers share it as `Arc<Pi>` and talk to it without
+/// holding any application-wide lock.
+pub struct Pi<R: tauri::Runtime = tauri::Wry> {
+    shared: Arc<Shared<R>>,
+    commands: mpsc::UnboundedSender<Command>,
     sequence: AtomicU64,
     stopped: AtomicBool,
+    pid: Option<u32>,
 }
 
 impl<R: tauri::Runtime> Pi<R> {
@@ -328,6 +516,11 @@ impl<R: tauri::Runtime> Pi<R> {
                     std::env::join_paths(paths).map_err(|e| e.to_string())?,
                 );
             }
+        }
+        // Node's on-disk compile cache, next to Pion's other data, so later starts
+        // skip compiling modules a previous start already compiled.
+        if let Some(data) = extension.parent() {
+            command.env("NODE_COMPILE_CACHE", data.join("node-compile-cache"));
         }
         command
             .args(["--mode", "rpc"])
@@ -360,156 +553,45 @@ impl<R: tauri::Runtime> Pi<R> {
             use std::os::unix::process::CommandExt;
             command.process_group(0);
         }
-        let mut child = command
-            .spawn()
+        let mut command = tokio::process::Command::from(command);
+        command.kill_on_drop(true);
+        // Spawning needs the async runtime's reactor; callers are plain threads.
+        let mut child = tauri::async_runtime::block_on(async move { command.spawn() })
             .map_err(|e| format!("Cannot start Pi: {e}. Set its absolute executable path."))?;
-        let stdin = Arc::new(Mutex::new(child.stdin.take().ok_or("No Pi stdin")?));
+        let pid = child.id();
+        let stdin = child.stdin.take().ok_or("No Pi stdin")?;
+        let stdout = child.stdout.take().ok_or("No Pi stdout")?;
+        let stderr = child.stderr.take().ok_or("No Pi stderr")?;
+        let (commands, receiver) = mpsc::unbounded_channel();
         app.state::<Mutex<ExtensionUiBridge>>()
             .lock()
             .map_err(|e| e.to_string())?
-            .activate(generation, stdin.clone());
-        let stdout = child.stdout.take().ok_or("No Pi stdout")?;
-        let stderr = child.stderr.take().ok_or("No Pi stderr")?;
-        let alive = Arc::new(AtomicBool::new(true));
-        let working = Arc::new(AtomicBool::new(false));
-        let visible = Arc::new(AtomicBool::new(!spare));
-        let task_id = Arc::new(Mutex::new(task_id));
-        let reader_working = working.clone();
-        let reader_visible = visible.clone();
-        let reader_task_id = task_id.clone();
-        let pending = Arc::new(Mutex::new(Pending::default()));
-        let reader_pending = pending.clone();
-        let reader_alive = alive.clone();
-        let reader_app = app.clone();
-        std::thread::spawn(move || {
-            let mut reader = BufReader::new(stdout);
-            let reason = loop {
-                match read_frame(&mut reader) {
-                    Ok(Some(frame)) => {
-                        if !reader_alive.load(Ordering::Acquire) {
-                            return;
-                        }
-                        let event_task_id = reader_task_id
-                            .lock()
-                            .ok()
-                            .and_then(|task_id| task_id.clone());
-                        if frame["type"] == "agent_start" {
-                            reader_working.store(true, Ordering::Release);
-                            if let Some(task_id) = &event_task_id {
-                                let _ = reader_app.emit(
-                                    "task:status",
-                                    json!({"taskId":task_id,"state":"working"}),
-                                );
-                            }
-                        } else if frame["type"] == "agent_settled" {
-                            reader_working.store(false, Ordering::Release);
-                            if let Some(task_id) = &event_task_id {
-                                let unread = !reader_visible.load(Ordering::Acquire);
-                                if unread {
-                                    let _ = reader_app
-                                        .state::<Arc<crate::tasks::UnreadState>>()
-                                        .set(task_id, true);
-                                }
-                                let _ = reader_app.emit(
-                                    "task:status",
-                                    json!({"taskId":task_id,"state":"idle","unread":unread}),
-                                );
-                            }
-                        }
-                        if frame["type"] == "response" {
-                            if let Ok(mut pending) = reader_pending.lock() {
-                                pending.resolve(frame);
-                            }
-                        } else if frame["type"] == "extension_ui_request" {
-                            let tracked = reader_app
-                                .state::<Mutex<ExtensionUiBridge>>()
-                                .lock()
-                                .map_err(|e| e.to_string())
-                                .and_then(|mut bridge| {
-                                    if reader_visible.load(Ordering::Acquire) {
-                                        bridge.track(generation, &frame)
-                                    } else {
-                                        bridge.cancel(generation, &frame)
-                                    }
-                                });
-                            if let Err(error) = tracked {
-                                publish(
-                                    &reader_app,
-                                    json!({"generation":generation,"taskId":event_task_id,"event":{"type":"desktop_extension_ui_error", "error":error}}),
-                                );
-                            } else if reader_visible.load(Ordering::Acquire) {
-                                publish(
-                                    &reader_app,
-                                    json!({"generation":generation,"taskId":event_task_id,"event":frame}),
-                                );
-                            }
-                        } else if reader_visible.load(Ordering::Acquire) {
-                            // Hidden sessions (background tasks, spares) report progress
-                            // through task:status; their stream is not serialized at all.
-                            publish(
-                                &reader_app,
-                                json!({"generation":generation,"taskId":event_task_id,"event":frame}),
-                            );
-                        }
-                    }
-                    Ok(None) => break "Pi process exited".to_string(),
-                    Err(error) => break error,
-                }
-            };
-            if let Ok(mut bridge) = reader_app.state::<Mutex<ExtensionUiBridge>>().lock() {
-                bridge.clear(generation);
-            }
-            if let Ok(mut pending) = reader_pending.lock() {
-                pending.close(&reason);
-            }
-            if reader_alive.swap(false, Ordering::AcqRel) {
-                let event_task_id = reader_task_id
-                    .lock()
-                    .ok()
-                    .and_then(|task_id| task_id.clone());
-                if let Some(task_id) = &event_task_id {
-                    let _ = reader_app.emit(
-                        "task:status",
-                        json!({"taskId":task_id,"state":"disconnected"}),
-                    );
-                }
-                let _ = reader_app.emit(
-                    "pi:status",
-                    json!({"generation":generation,"taskId":event_task_id,"state":"disconnected", "detail":reason}),
-                );
-            }
-        });
-        let stderr_alive = alive.clone();
-        std::thread::spawn(move || {
-            // Drain bytes, not unbounded lines. Diagnostics never become RPC records.
-            let mut reader = stderr;
-            let mut buffer = [0; 4096];
-            while let Ok(n) = reader.read(&mut buffer) {
-                if n == 0 || !stderr_alive.load(Ordering::Acquire) {
-                    break;
-                }
-                eprintln!("Pi stderr: {}", String::from_utf8_lossy(&buffer[..n]));
-            }
-        });
-        Ok(Self {
+            .activate(generation, LineWriter(commands.clone()));
+        let shared = Arc::new(Shared {
             app,
-            child: Mutex::new(child),
-            stdin,
-            pending,
-            alive,
-            working,
-            visible,
-            task_id,
+            alive: AtomicBool::new(true),
+            working: AtomicBool::new(false),
+            visible: AtomicBool::new(!spare),
+            task_id: Mutex::new(task_id),
             generation,
+        });
+        let (frames, frame_receiver) = mpsc::unbounded_channel();
+        tauri::async_runtime::spawn(drain_stderr(stderr));
+        tauri::async_runtime::spawn(read_frames(stdout, frames));
+        tauri::async_runtime::spawn(run(child, stdin, receiver, frame_receiver, shared.clone()));
+        Ok(Self {
+            shared,
+            commands,
             sequence: AtomicU64::new(0),
             stopped: AtomicBool::new(false),
+            pid,
         })
     }
 
     /// Sends one RPC and waits for its response. Safe to call from several threads
-    /// at once; responses are matched by id.
+    /// at once; the actor matches responses by id.
     pub fn request(&self, mut request: Value) -> Result<Value, String> {
-        if !self.alive.load(Ordering::Acquire) {
+        if !self.shared.alive.load(Ordering::Acquire) {
             return Err("Pi is disconnected; reconnect it".into());
         }
         let id = format!("pion-{}", self.sequence.fetch_add(1, Ordering::AcqRel) + 1);
@@ -518,55 +600,19 @@ impl<R: tauri::Runtime> Pi<R> {
             .ok_or("Missing Pi command")?
             .to_string();
         request["id"] = json!(id);
-        let encoded = serde_json::to_string(&request).map_err(|e| e.to_string())?;
-        if encoded.len() > MAX_REQUEST {
+        let line = serde_json::to_string(&request).map_err(|e| e.to_string())?;
+        if line.len() > MAX_REQUEST {
             return Err("Pi request too large".into());
         }
-        let responses = self
-            .pending
-            .lock()
-            .map_err(|e| e.to_string())?
-            .register(&id)?;
-        let written = self
-            .stdin
-            .lock()
-            .map_err(|e| e.to_string())
-            .and_then(|mut stdin| {
-                writeln!(stdin, "{encoded}").map_err(|e| e.to_string())?;
-                stdin.flush().map_err(|e| e.to_string())
-            });
-        if let Err(error) = written {
-            self.forget(&id);
-            return Err(error);
-        }
-        let mut deadline = Instant::now() + REQUEST_TIMEOUT;
-        let response = loop {
-            match responses.recv_timeout(Duration::from_millis(250)) {
-                Ok(response) => break response,
-                Err(mpsc::RecvTimeoutError::Disconnected) => {
-                    self.stop();
-                    return Err("Pi disconnected".into());
-                }
-                Err(mpsc::RecvTimeoutError::Timeout) => {
-                    let waiting_for_ui = self
-                        .app
-                        .state::<Mutex<ExtensionUiBridge>>()
-                        .lock()
-                        .map_err(|e| e.to_string())?
-                        .has_pending(self.generation);
-                    if waiting_for_ui {
-                        deadline = Instant::now() + REQUEST_TIMEOUT;
-                    } else if Instant::now() >= deadline {
-                        self.forget(&id);
-                        self.stop();
-                        return Err(
-                            "Pi request timed out/disconnected; stopped Pi. No request was replayed."
-                                .into(),
-                        );
-                    }
-                }
-            }
-        };
+        let (reply, response) = oneshot::channel();
+        self.commands
+            .send(Command::Request {
+                id: id.clone(),
+                line,
+                reply,
+            })
+            .map_err(|_| "Pi is disconnected; reconnect it".to_string())?;
+        let response = tauri::async_runtime::block_on(self.wait(&id, response))?;
         if let Some(error) = response["transportError"].as_str() {
             return Err(error.into());
         }
@@ -583,57 +629,88 @@ impl<R: tauri::Runtime> Pi<R> {
         Ok(response["data"].clone())
     }
 
-    fn forget(&self, id: &str) {
-        if let Ok(mut pending) = self.pending.lock() {
-            pending.forget(id);
+    /// Waits for a response. A pending extension dialog pauses the timeout: the
+    /// request cannot finish before the user answers it.
+    async fn wait(
+        &self,
+        id: &str,
+        mut response: oneshot::Receiver<Value>,
+    ) -> Result<Value, String> {
+        let mut deadline = Instant::now() + REQUEST_TIMEOUT;
+        loop {
+            match tokio::time::timeout(Duration::from_millis(250), &mut response).await {
+                Ok(Ok(value)) => return Ok(value),
+                Ok(Err(_)) => {
+                    self.stop();
+                    return Err("Pi disconnected".into());
+                }
+                Err(_) => {
+                    let waiting_for_ui = self
+                        .shared
+                        .app
+                        .state::<Mutex<ExtensionUiBridge>>()
+                        .lock()
+                        .map_err(|e| e.to_string())?
+                        .has_pending(self.shared.generation);
+                    if waiting_for_ui {
+                        deadline = Instant::now() + REQUEST_TIMEOUT;
+                    } else if Instant::now() >= deadline {
+                        let _ = self.commands.send(Command::Forget(id.to_string()));
+                        self.stop();
+                        return Err(
+                            "Pi request timed out/disconnected; stopped Pi. No request was replayed."
+                                .into(),
+                        );
+                    }
+                }
+            }
         }
     }
 
     pub fn is_working(&self) -> bool {
-        self.working.load(Ordering::Acquire)
+        self.shared.working.load(Ordering::Acquire)
     }
 
     pub fn is_alive(&self) -> bool {
-        self.alive.load(Ordering::Acquire)
+        self.shared.alive.load(Ordering::Acquire)
     }
 
     pub fn set_visible(&self, visible: bool) {
-        let previous = self.visible.swap(visible, Ordering::AcqRel);
+        let previous = self.shared.visible.swap(visible, Ordering::AcqRel);
         if previous && !visible {
-            if let Ok(mut bridge) = self.app.state::<Mutex<ExtensionUiBridge>>().lock() {
-                bridge.cancel_pending(self.generation);
+            if let Ok(mut bridge) = self.shared.app.state::<Mutex<ExtensionUiBridge>>().lock() {
+                bridge.cancel_pending(self.shared.generation);
             }
         }
     }
 
     pub fn generation(&self) -> u64 {
-        self.generation
+        self.shared.generation
     }
 
     pub fn set_task_id(&self, task_id: Option<String>) {
-        if let Ok(mut current) = self.task_id.lock() {
+        if let Ok(mut current) = self.shared.task_id.lock() {
             *current = task_id;
         }
     }
 
+    /// Stops the process at once; the actor then reaps it and fails waiting requests.
     pub fn stop(&self) {
         if self.stopped.swap(true, Ordering::AcqRel) {
             return;
         }
-        self.alive.store(false, Ordering::Release);
-        if let Ok(mut bridge) = self.app.state::<Mutex<ExtensionUiBridge>>().lock() {
-            bridge.clear(self.generation);
+        self.shared.alive.store(false, Ordering::Release);
+        if let Ok(mut bridge) = self.shared.app.state::<Mutex<ExtensionUiBridge>>().lock() {
+            bridge.clear(self.shared.generation);
         }
-        let Ok(mut child) = self.child.lock() else {
-            return;
-        };
         #[cfg(unix)]
-        // Each child was started in a new process group owned by this adapter.
-        unsafe {
-            libc::kill(-(child.id() as i32), libc::SIGKILL);
+        if let Some(pid) = self.pid {
+            // Each child was started in a new process group owned by this adapter.
+            unsafe {
+                libc::kill(-(pid as i32), libc::SIGKILL);
+            }
         }
-        let _ = child.kill();
-        let _ = child.wait();
+        let _ = self.commands.send(Command::Stop);
     }
 }
 
@@ -649,33 +726,45 @@ mod tests {
 
     #[test]
     fn framing_handles_unicode_crlf_and_rejects_bad_records() {
-        let input = "{\"text\":\"a\u{2028}b\u{2029}c\"}\r\n{\"type\":\"agent_start\"}\n";
-        let mut reader = BufReader::new(input.as_bytes());
-        assert_eq!(
-            read_frame(&mut reader).unwrap().unwrap()["text"],
-            "a\u{2028}b\u{2029}c"
-        );
-        assert_eq!(
-            read_frame(&mut reader).unwrap().unwrap()["type"],
-            "agent_start"
-        );
-        assert!(read_frame(&mut reader).unwrap().is_none());
-        assert!(read_frame(&mut BufReader::new(b"{}".as_slice())).is_err());
-        assert!(read_frame(&mut BufReader::new(b"oops\n".as_slice())).is_err());
-        assert!(read_frame(&mut BufReader::new(vec![b'x'; MAX_FRAME + 1].as_slice())).is_err());
+        tauri::async_runtime::block_on(async {
+            let input = "{\"text\":\"a\u{2028}b\u{2029}c\"}\r\n{\"type\":\"agent_start\"}\n";
+            let mut reader = BufReader::new(input.as_bytes());
+            assert_eq!(
+                read_frame(&mut reader).await.unwrap().unwrap()["text"],
+                "a\u{2028}b\u{2029}c"
+            );
+            assert_eq!(
+                read_frame(&mut reader).await.unwrap().unwrap()["type"],
+                "agent_start"
+            );
+            assert!(read_frame(&mut reader).await.unwrap().is_none());
+            assert!(read_frame(&mut BufReader::new(b"{}".as_slice()))
+                .await
+                .is_err());
+            assert!(read_frame(&mut BufReader::new(b"oops\n".as_slice()))
+                .await
+                .is_err());
+            let huge = vec![b'x'; MAX_FRAME + 1];
+            assert!(read_frame(&mut BufReader::new(huge.as_slice()))
+                .await
+                .is_err());
+        });
     }
 
     #[test]
     fn responses_reach_their_own_waiter_in_any_order() {
         let mut pending = Pending::default();
-        let first = pending.register("pion-1").unwrap();
-        let second = pending.register("pion-2").unwrap();
+        let (reply, mut first) = oneshot::channel();
+        pending.insert("pion-1".into(), reply);
+        let (reply, mut second) = oneshot::channel();
+        pending.insert("pion-2".into(), reply);
         pending.resolve(json!({"type":"response","id":"pion-2","data":2}));
         pending.resolve(json!({"type":"response","id":"pion-1","data":1}));
         assert_eq!(first.try_recv().unwrap()["data"], 1);
         assert_eq!(second.try_recv().unwrap()["data"], 2);
         // A late answer to an abandoned request goes nowhere.
-        let abandoned = pending.register("pion-3").unwrap();
+        let (reply, mut abandoned) = oneshot::channel();
+        pending.insert("pion-3".into(), reply);
         pending.forget("pion-3");
         pending.resolve(json!({"type":"response","id":"pion-3"}));
         assert!(abandoned.try_recv().is_err());
@@ -684,13 +773,19 @@ mod tests {
     #[test]
     fn closing_fails_waiters_and_refuses_new_requests() {
         let mut pending = Pending::default();
-        let waiting = pending.register("pion-1").unwrap();
+        let (reply, mut waiting) = oneshot::channel();
+        pending.insert("pion-1".into(), reply);
         pending.close("Pi process exited");
         assert_eq!(
             waiting.try_recv().unwrap()["transportError"],
             "Pi process exited"
         );
-        assert_eq!(pending.register("pion-2").unwrap_err(), "Pi process exited");
+        let (reply, mut late) = oneshot::channel();
+        pending.insert("pion-2".into(), reply);
+        assert_eq!(
+            late.try_recv().unwrap()["transportError"],
+            "Pi process exited"
+        );
     }
 
     /// Runs the real transport against a fake Pi that answers "slow" late and
@@ -759,7 +854,13 @@ require("node:readline").createInterface({ input: process.stdin }).on("line", (l
         std::fs::write(&file, format!("{header}\n{message}\n")).unwrap();
         let app = tauri::test::mock_app();
         app.manage(Mutex::new(ExtensionUiBridge::default()));
-        let extension = Path::new(env!("CARGO_MANIFEST_DIR")).join("src/pion-core-extension.js");
+        // Inside the temp dir, so Node's compile cache lands there too.
+        let extension = dir.join("pion-core-extension.js");
+        std::fs::copy(
+            Path::new(env!("CARGO_MANIFEST_DIR")).join("src/pion-core-extension.js"),
+            &extension,
+        )
+        .unwrap();
         let spare = Pi::start(
             app.handle().clone(),
             &executable,
@@ -781,6 +882,10 @@ require("node:readline").createInterface({ input: process.stdin }).on("line", (l
         let messages = spare.request(json!({"type":"get_messages"})).unwrap();
         assert_eq!(messages["messages"][0]["content"], "hello from the file");
         eprintln!("switch_session took {bound:?}");
+        assert!(
+            dir.join("node-compile-cache").is_dir(),
+            "compile cache in use"
+        );
         let _ = std::fs::remove_dir_all(dir);
     }
 
