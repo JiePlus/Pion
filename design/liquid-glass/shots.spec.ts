@@ -30,7 +30,11 @@ const seed = () => {
           provider: "openai",
           model: "gpt-test",
           content: [
-            { type: "thinking", thinking: "先检查现有设置页结构。" },
+            {
+              type: "thinking",
+              thinking:
+                "The user is asking a simple identity question in Chinese. I am pi, a coding agent assistant running in the project directory, so I should answer briefly and list what I can do.",
+            },
             { type: "text", text: "我先查看当前的设置页实现。" },
             {
               type: "toolCall",

@@ -1,4 +1,4 @@
-import { StatusDot } from "../primitives/StatusDot.tsx";
+import { Icon } from "../primitives/Icon.tsx";
 import { componentClass } from "../componentClass.ts";
 import { t } from "../../core/i18n.ts";
 import type { ContentBlock, Message, Tool, ViewMode } from "./ChatMessage.tsx";
@@ -41,27 +41,31 @@ export function ToolCall({
             ? "Interrupted"
             : "Completed",
   );
+  const state = tool?.status ?? "pending";
+  const head = (
+    <>
+      <StatusIcon state={state} />
+      <span className={componentClass(styles, "tool-name")}>{block.name ?? "tool"}</span>
+      <code className={componentClass(styles, "tool-preview")}>{String(preview)}</code>
+      <small className={componentClass(styles, "tool-status")}>{status}</small>
+    </>
+  );
   if (viewMode === "summary")
     return (
       <div
-        className={`${componentClass(styles, "tool-call")} ${componentClass(styles, "tool-call-summary")} ${componentClass(styles, tool?.status ?? "pending")}`}
+        className={`${componentClass(styles, "tool-call")} ${componentClass(styles, "tool-call-summary")} ${componentClass(styles, state)}`}
       >
-        <StatusDot />
-        <span className={componentClass(styles, "tool-name")}>{block.name ?? "tool"}</span>
-        <span className={componentClass(styles, "tool-preview")}>{String(preview)}</span>
-        <small>{status}</small>
+        {head}
       </div>
     );
   return (
     <details
-      className={`${componentClass(styles, "tool-call")} ${componentClass(styles, tool?.status ?? "pending")}`}
+      className={`${componentClass(styles, "tool-call")} ${componentClass(styles, state)}`}
       open={viewMode === "verbose" ? true : undefined}
     >
       <summary>
-        <StatusDot />
-        <span className={componentClass(styles, "tool-name")}>{block.name ?? "tool"}</span>
-        <span className={componentClass(styles, "tool-preview")}>{String(preview)}</span>
-        <small>{status}</small>
+        {head}
+        <Icon className={componentClass(styles, "tool-chevron")} name="chevron-right" size={14} />
       </summary>
       <div className={componentClass(styles, "tool-details")}>
         <h4>{t("Input")}</h4>
@@ -78,5 +82,19 @@ export function ToolCall({
           )}
       </div>
     </details>
+  );
+}
+
+// State reads from the icon first: spinning while running, a check when done, a warning on
+// failure, a hollow ring while pending or after an interruption.
+function StatusIcon({ state }: { state: string }) {
+  return (
+    <span
+      className={`${componentClass(styles, "tool-icon")} ${componentClass(styles, state)}`}
+      aria-hidden="true"
+    >
+      {state === "completed" && <Icon name="check" size={13} />}
+      {state === "failed" && <Icon name="alert" size={13} />}
+    </span>
   );
 }
