@@ -32,6 +32,7 @@ import { usePiSetup } from "./usePiSetup.ts";
 import { usePackageSkills } from "./usePackageSkills.ts";
 import { useSessionActions } from "./useSessionActions.ts";
 import { useCoreCommands } from "./useCoreCommands.ts";
+import { useDevReload } from "./useDevReload.ts";
 import type { SessionStats } from "../layout/Topbar/Topbar.tsx";
 import type { Page } from "../layout/types.ts";
 import { useTheme } from "../theme/useTheme.ts";
@@ -527,6 +528,7 @@ export function useShellController(runtime: Runtime, boot: Boot) {
       return !current;
     });
   }
+  useDevReload(runtime, installed, setInstalled);
   const { busy, setBusy, locked, perform, run, action } = useCoreCommands({
     runtime,
     installed,

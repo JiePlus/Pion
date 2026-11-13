@@ -598,6 +598,14 @@ const zh = {
   Enable: "启用",
   Reload: "重新加载",
   Uninstall: "卸载",
+  Unlink: "取消链接",
+  "Link for development": "以开发模式链接",
+  Development: "开发",
+  "A linked folder reloads whenever its files change. Changing permissions needs a new review.":
+    "链接的文件夹在文件变化时会自动重新加载。更改权限需要重新审核。",
+  "Development link: Pion reloads this plugin whenever files in {path} change. Changing its permissions or access needs a new review.":
+    "开发链接：{path} 中的文件变化时，Pion 会自动重新加载此插件。更改权限或访问范围需要重新审核。",
+  "Development reload failed: {error}": "开发模式重新加载失败：{error}",
   loading: "加载中",
   active: "已启用",
   disabled: "已禁用",

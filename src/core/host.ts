@@ -8,6 +8,8 @@ export interface Installed {
   bundle: Bundle;
   digest: string;
   enabled: boolean;
+  /** Linked development folder; Pion reloads the plugin when its files change. */
+  dev?: string;
 }
 export interface Project {
   id: string;

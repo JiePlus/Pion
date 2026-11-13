@@ -41,6 +41,9 @@ pub struct Installed {
     pub bundle: Bundle,
     pub digest: String,
     pub enabled: bool,
+    /// Development link: the folder Pion re-reads when its files change.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub dev: Option<String>,
 }
 
 pub struct Plugins {
@@ -265,6 +268,21 @@ pub fn validate(bundle: &Bundle) -> Result<String, String> {
     Ok(id.into())
 }
 
+fn read_folder(root: &Path) -> Result<Bundle, String> {
+    let manifest: Value =
+        serde_json::from_str(&bounded_read(&within(root, "plugin.json")?, 64 * 1024)?)
+            .map_err(|e| e.to_string())?;
+    let source = bounded_read(&within(root, string(&manifest, "main")?)?, LIMIT)?;
+    Ok(Bundle { manifest, source })
+}
+
+/// Reads and validates a linked development folder.
+pub fn read_dev(root: &Path) -> Result<Bundle, String> {
+    let bundle = read_folder(root)?;
+    validate(&bundle)?;
+    Ok(bundle)
+}
+
 fn digest(bundle: &Bundle) -> String {
     format!(
         "{:x}",
@@ -311,14 +329,15 @@ impl Plugins {
         })
     }
 
-    pub fn review(&mut self, path: &str) -> Result<Installed, String> {
+    /// Reviews a folder or ZIP. With `dev`, the folder stays linked so later edits
+    /// reload without a new review, as long as permissions and access stay the same.
+    pub fn review(&mut self, path: &str, dev: bool) -> Result<Installed, String> {
         let root = Path::new(path).canonicalize().map_err(|e| e.to_string())?;
+        if dev && !root.is_dir() {
+            return Err("Development mode needs a plugin folder, not a ZIP".into());
+        }
         let bundle = if root.is_dir() {
-            let manifest: Value =
-                serde_json::from_str(&bounded_read(&within(&root, "plugin.json")?, 64 * 1024)?)
-                    .map_err(|e| e.to_string())?;
-            let source = bounded_read(&within(&root, string(&manifest, "main")?)?, LIMIT)?;
-            Bundle { manifest, source }
+            read_folder(&root)?
         } else {
             let file = fs::File::open(&root).map_err(|e| e.to_string())?;
             if file.metadata().map_err(|e| e.to_string())?.len() > 4 * LIMIT {
@@ -354,6 +373,7 @@ impl Plugins {
             digest: digest(&bundle),
             bundle,
             enabled: true,
+            dev: dev.then(|| root.to_string_lossy().into_owned()),
         };
         self.pending = Some(record.clone());
         Ok(record)
@@ -393,6 +413,51 @@ impl Plugins {
             .map_err(|e| e.to_string())?;
         self.installed.remove(id);
         Ok(Value::Null)
+    }
+
+    pub fn dev_path(&self, id: &str) -> Result<PathBuf, String> {
+        let record = self.installed.get(id).ok_or("Unknown plugin")?;
+        record
+            .dev
+            .as_ref()
+            .map(PathBuf::from)
+            .ok_or_else(|| "Not a development plugin".into())
+    }
+
+    /// Applies a fresh read of a linked folder. Returns the new record when the code
+    /// changed, `None` when it did not. A change to the plugin id, permissions or
+    /// access is refused: those need a new review.
+    pub fn dev_update(
+        &mut self,
+        id: &str,
+        path: &Path,
+        bundle: Bundle,
+    ) -> Result<Option<Installed>, String> {
+        let record = self.installed.get(id).ok_or("Unknown plugin")?;
+        if record.dev.as_deref().map(Path::new) != Some(path) {
+            return Err("Development link changed".into());
+        }
+        if bundle.manifest["id"] != record.bundle.manifest["id"] {
+            return Err("Plugin id changed; link the folder again".into());
+        }
+        for key in ["permissions", "access"] {
+            if bundle.manifest.get(key) != record.bundle.manifest.get(key) {
+                return Err("Permissions changed; link the folder again to review them".into());
+            }
+        }
+        let digest = digest(&bundle);
+        if digest == record.digest {
+            return Ok(None);
+        }
+        let mut next = record.clone();
+        next.bundle = bundle;
+        next.digest = digest;
+        atomic_write(
+            &self.root.join("plugins").join(format!("{id}.json")),
+            &serde_json::to_vec(&next).map_err(|e| e.to_string())?,
+        )?;
+        self.installed.insert(id.into(), next.clone());
+        Ok(Some(next))
     }
 
     pub fn require(&self, id: &str, permission: &str) -> Result<(), String> {
@@ -566,6 +631,49 @@ mod tests {
         assert!(validate(&bundle).is_err());
     }
     #[test]
+    fn dev_link_reloads_code_but_not_permissions() {
+        let root = std::env::temp_dir().join(format!("pion-dev-test-{}", std::process::id()));
+        let folder = root.join("source");
+        fs::create_dir_all(&folder).unwrap();
+        let manifest = include_str!("../../examples/hello-plugin/plugin.json");
+        fs::write(folder.join("plugin.json"), manifest).unwrap();
+        fs::write(folder.join("index.js"), "function activate() {}").unwrap();
+        let mut plugins = Plugins::open(root.join("app")).unwrap();
+        let zip = root.join("hello.zip");
+        fs::write(&zip, "not a folder").unwrap();
+        assert!(plugins.review(zip.to_str().unwrap(), true).is_err());
+        let review = plugins.review(folder.to_str().unwrap(), true).unwrap();
+        plugins.approve(&review.digest).unwrap();
+        let path = plugins.dev_path("hello-plugin").unwrap();
+        let unchanged = read_dev(&path).unwrap();
+        assert!(plugins
+            .dev_update("hello-plugin", &path, unchanged)
+            .unwrap()
+            .is_none());
+        fs::write(folder.join("index.js"), "function activate() { /* v2 */ }").unwrap();
+        let changed = read_dev(&path).unwrap();
+        let next = plugins
+            .dev_update("hello-plugin", &path, changed)
+            .unwrap()
+            .unwrap();
+        assert!(next.bundle.source.contains("v2"));
+        let reopened = Plugins::open(root.join("app")).unwrap();
+        assert!(reopened.installed["hello-plugin"]
+            .bundle
+            .source
+            .contains("v2"));
+        let mut widened: Value = serde_json::from_str(manifest).unwrap();
+        widened["permissions"] = json!(["storage", "pi.sendMessage"]);
+        fs::write(folder.join("plugin.json"), widened.to_string()).unwrap();
+        let widened = read_dev(&path).unwrap();
+        assert!(plugins.dev_update("hello-plugin", &path, widened).is_err());
+        assert!(plugins.installed["hello-plugin"]
+            .bundle
+            .source
+            .contains("v2"));
+        fs::remove_dir_all(root).unwrap();
+    }
+    #[test]
     fn install_snapshot_authorization_storage_and_zip() {
         use std::io::Write;
         let root = std::env::temp_dir().join(format!("pion-plugins-test-{}", std::process::id()));
@@ -578,7 +686,7 @@ mod tests {
         fs::write(folder.join("index.js"), source).unwrap();
         let data = root.join("app");
         let mut plugins = Plugins::open(data.clone()).unwrap();
-        let review = plugins.review(folder.to_str().unwrap()).unwrap();
+        let review = plugins.review(folder.to_str().unwrap(), false).unwrap();
         assert!(plugins.require("hello-plugin", "storage").is_err());
         assert!(plugins.approve("wrong-digest").is_err());
         fs::write(folder.join("index.js"), "modified after review").unwrap();
@@ -606,7 +714,7 @@ mod tests {
         zip.start_file("index.js", options).unwrap();
         zip.write_all(source.as_bytes()).unwrap();
         zip.finish().unwrap();
-        let zip_review = reopened.review(zip_path.to_str().unwrap()).unwrap();
+        let zip_review = reopened.review(zip_path.to_str().unwrap(), false).unwrap();
         assert_eq!(zip_review.digest, review.digest);
         reopened.approve(&zip_review.digest).unwrap();
         assert_eq!(

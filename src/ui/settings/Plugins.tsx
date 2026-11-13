@@ -98,6 +98,18 @@ export function Plugins({
           <button type="submit" disabled={busy || !path || !native}>
             {t("Review installation")}
           </button>
+          <button
+            type="button"
+            disabled={busy || !path || !native}
+            onClick={() => action("core.review", { path, dev: true })}
+          >
+            {t("Link for development")}
+          </button>
+          <p className="muted">
+            {t(
+              "A linked folder reloads whenever its files change. Changing permissions needs a new review.",
+            )}
+          </p>
         </form>
       </Card>
       <Card
@@ -117,7 +129,16 @@ export function Plugins({
               <div>
                 <h2>
                   {localized(m.name, m.nameI18n)} <small>{m.version}</small>
+                  {record.dev && (
+                    <>
+                      {" "}
+                      <small className={componentClass(managementStyles, "builtin-badge")}>
+                        {t("Development")}
+                      </small>
+                    </>
+                  )}
                 </h2>
+                {record.dev && <p className="muted">{record.dev}</p>}
                 <p>
                   {m.id} ·{" "}
                   <span className={state?.state === "crashed" ? "error" : ""}>
@@ -155,7 +176,7 @@ export function Plugins({
                   disabled={busy}
                   onClick={() => action("core.plugin", { id: m.id, action: "remove" })}
                 >
-                  {t("Uninstall")}
+                  {t(record.dev ? "Unlink" : "Uninstall")}
                 </button>
               </div>
             </article>

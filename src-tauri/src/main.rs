@@ -314,7 +314,19 @@ fn handle(app: &tauri::AppHandle, request: Value) -> Result<Value, String> {
             }
             Ok(states)
         }
-        "review" => Ok(json!(state.plugins.review(field(&request, "path")?)?)),
+        "review" => Ok(json!(state.plugins.review(
+            field(&request, "path")?,
+            request["dev"].as_bool().unwrap_or(false),
+        )?)),
+        "dev.poll" => {
+            let id = field(&request, "id")?;
+            let path = state.plugins.dev_path(id)?;
+            // Reading the folder must not hold the shared state.
+            drop(state);
+            let bundle = plugins::read_dev(&path)?;
+            let mut state = managed.lock().map_err(|e| e.to_string())?;
+            Ok(json!(state.plugins.dev_update(id, &path, bundle)?))
+        }
         "approve" => state.plugins.approve(field(&request, "digest")?),
         "enable" => state.plugins.enable(
             field(&request, "id")?,

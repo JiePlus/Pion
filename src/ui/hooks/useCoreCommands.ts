@@ -61,7 +61,9 @@ export function useCoreCommands({
         return null;
       }),
       runtime.commands.register("core", "core.review", async (args) => {
-        setReview(await host<Installed>({ op: "review", path: args }));
+        const { path, dev = false } =
+          typeof args === "string" ? { path: args } : (args as { path: string; dev?: boolean });
+        setReview(await host<Installed>({ op: "review", path, dev }));
         return null;
       }),
       runtime.commands.register("core", "core.review.cancel", async () => {
