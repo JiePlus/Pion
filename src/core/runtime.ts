@@ -3,7 +3,7 @@ import { i18n } from "./i18n.ts";
 import { host, hostEvents } from "./host.ts";
 import { Commands, Events } from "./registry.ts";
 import { sandbox } from "./sandbox.ts";
-import { object, parseManifest, text, validateView } from "./validation.ts";
+import { DESKTOP_VERSION, object, parseManifest, text, validateView } from "./validation.ts";
 
 export interface PanelView extends Panel {
   owner: string;
@@ -176,7 +176,11 @@ export class Runtime {
             name: "app:localeChanged",
             payload: { locale: i18n.getLocale() },
           });
-          instance.port.send({ kind: "event", name: "app:ready", payload: { version: "0.1.0" } });
+          instance.port.send({
+            kind: "event",
+            name: "app:ready",
+            payload: { version: DESKTOP_VERSION },
+          });
           this.events.emit("plugin:loaded", { id });
           this.changed();
           break;

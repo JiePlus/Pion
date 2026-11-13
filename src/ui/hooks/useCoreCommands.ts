@@ -84,13 +84,19 @@ export function useCoreCommands({
         const record = installed.find((r) => r.bundle.manifest.id === id);
         if (!record) throw new Error(t("Plugin unavailable"));
         runtime.unload(id);
+        try {
+          if (action === "remove") await host({ op: "remove", id });
+          else await host({ op: "enable", id, enabled: action !== "disable" });
+        } catch (error) {
+          // The host kept its previous record, so put the runtime back to match it.
+          runtime.load(record.bundle, record.enabled);
+          throw error;
+        }
         if (action === "remove") {
-          await host({ op: "remove", id });
           runtime.forget(id);
           setInstalled((records) => records.filter((r) => r.bundle.manifest.id !== id));
         } else {
           const enabled = action !== "disable";
-          await host({ op: "enable", id, enabled });
           setInstalled((records) => records.map((r) => (r === record ? { ...r, enabled } : r)));
           runtime.load(record.bundle, enabled);
         }

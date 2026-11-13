@@ -1,7 +1,9 @@
 import { locations, permissions } from "./api.ts";
 import type { Manifest, View } from "./api.ts";
+import pkg from "../../package.json" with { type: "json" };
 
-export const DESKTOP_VERSION = "0.1.0";
+// The release script bumps package.json, Cargo.toml and tauri.conf.json together.
+export const DESKTOP_VERSION: string = pkg.version;
 export function object(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value))
     throw new Error("Expected object");

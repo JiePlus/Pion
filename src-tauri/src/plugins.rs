@@ -206,7 +206,7 @@ pub fn validate(bundle: &Bundle) -> Result<String, String> {
         return Err("Invalid plugin identity/API version".into());
     }
     version(string(m, "version")?)?;
-    if version(string(m, "minDesktopVersion")?)? > vec![0, 1, 0] {
+    if version(string(m, "minDesktopVersion")?)? > version(env!("CARGO_PKG_VERSION"))? {
         return Err("Plugin requires a newer Desktop".into());
     }
     let main = string(m, "main")?;
@@ -480,6 +480,22 @@ mod tests {
         assert!(validate(&bundle).is_err());
         bundle.manifest["permissions"] = json!([]);
         bundle.manifest["main"] = json!("../escape.js");
+        assert!(validate(&bundle).is_err());
+    }
+    #[test]
+    fn min_desktop_version_follows_the_running_app() {
+        let mut bundle = Bundle {
+            manifest: serde_json::from_str(include_str!("../../plugins/agent-chat/plugin.json"))
+                .unwrap(),
+            source: "function activate() {}".into(),
+        };
+        let current = env!("CARGO_PKG_VERSION");
+        bundle.manifest["minDesktopVersion"] = json!(current);
+        assert!(validate(&bundle).is_ok());
+        let mut next = version(current).unwrap();
+        next[2] += 1;
+        bundle.manifest["minDesktopVersion"] =
+            json!(format!("{}.{}.{}", next[0], next[1], next[2]));
         assert!(validate(&bundle).is_err());
     }
     #[test]

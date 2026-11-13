@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import { plainExtensionText } from "../src/core/extension-ui.ts";
 import { Commands, Events } from "../src/core/registry.ts";
-import { parseManifest, validateView } from "../src/core/validation.ts";
+import { DESKTOP_VERSION, parseManifest, validateView } from "../src/core/validation.ts";
 import { resolveLocale, translate } from "../src/core/i18n.ts";
 
 const manifest = JSON.parse(
@@ -12,6 +12,9 @@ const manifest = JSON.parse(
 const gitManifest = JSON.parse(
   readFileSync(new URL("../plugins/git-diff-plugin/plugin.json", import.meta.url), "utf8"),
 );
+const packageVersion: string = JSON.parse(
+  readFileSync(new URL("../package.json", import.meta.url), "utf8"),
+).version;
 const sdkTypes = readFileSync(new URL("../sdk/index.d.ts", import.meta.url), "utf8");
 const pluginDocs = readFileSync(new URL("../PLUGIN_API.md", import.meta.url), "utf8");
 test("SDK and docs cover the workspace.git permission and row view", () => {
@@ -29,6 +32,13 @@ test("manifest enforces API, ownership, permissions and paths", () => {
   assert.throws(() => parseManifest({ ...manifest, main: "../escape.js" }));
   assert.throws(() => parseManifest({ ...manifest, apiVersion: "2" }));
   assert.throws(() => parseManifest({ ...manifest, minDesktopVersion: "0.2.0" }));
+  // The check follows the running Desktop version, not a fixed 0.1.0.
+  assert.equal(DESKTOP_VERSION, packageVersion);
+  assert.doesNotThrow(() => parseManifest({ ...manifest, minDesktopVersion: packageVersion }));
+  const [major, minor, patch] = packageVersion.split(".").map(Number);
+  assert.throws(() =>
+    parseManifest({ ...manifest, minDesktopVersion: `${major}.${minor}.${patch + 1}` }),
+  );
   assert.throws(() =>
     parseManifest({
       ...manifest,
