@@ -1,6 +1,6 @@
 [package]
 name = "pion"
-version = "0.1.3"
+version = "0.1.4"
 description = "A small plugin-first desktop shell for Pi"
 edition = "2021"
 license = "MIT"
