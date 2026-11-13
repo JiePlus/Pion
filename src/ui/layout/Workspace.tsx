@@ -1,9 +1,10 @@
+import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { componentClass } from "../componentClass.ts";
 import type { PanelView, Runtime } from "../../core/runtime.ts";
 import type { Project } from "../../core/host.ts";
 import { t } from "../../core/i18n.ts";
-import { CoreChat, hasChatSnapshot } from "../chat/CoreChat.tsx";
+import { CoreChat } from "../chat/CoreChat.tsx";
 import { TaskStart } from "../chat/TaskStart.tsx";
 import { TaskGlance } from "../chat/TaskGlance.tsx";
 import type { useShellController } from "../hooks/useShellController.ts";
@@ -12,6 +13,12 @@ import { ReviewPane } from "../review/ReviewPane.tsx";
 import type { GitReviewState } from "../hooks/useGitReview.ts";
 import { SlotResizer } from "./Slot/SlotResizer.tsx";
 import styles from "./Shell.module.css";
+
+/** Task chats kept mounted, the visible one included, so switching back is instant. */
+const RESIDENT_VIEWS = 3;
+// Extension statuses and widgets belong to the visible task; hidden chats get none.
+const NO_STATUSES = new Map<string, string>();
+const NO_WIDGETS = new Map<string, { lines: string[]; placement: "aboveEditor" | "belowEditor" }>();
 
 export function Workspace({
   controller,
@@ -81,6 +88,16 @@ export function Workspace({
     tasksState,
     setTaskBrowserOpen,
   } = controller;
+  const [recent, setRecent] = useState<string[]>([]);
+  useEffect(() => {
+    if (task) setRecent((ids) => [task.id, ...ids.filter((id) => id !== task.id)]);
+  }, [task?.id]);
+  const views = task
+    ? [
+        task.id,
+        ...recent.filter((id) => id !== task.id && catalog.tasks.some((item) => item.id === id)),
+      ].slice(0, RESIDENT_VIEWS)
+    : [];
   const backgroundTasks = catalog.tasks.filter(
     (item) =>
       item.projectId === task?.projectId &&
@@ -128,39 +145,46 @@ export function Workspace({
                 inert={busy || opening || sessionBusy || !connected}
                 aria-busy={busy || opening || sessionBusy}
               >
-                {(!opening || hasChatSnapshot(task.id)) && (
-                  <CoreChat
-                    key={task.id}
-                    taskId={task.id}
-                    connected={connected && !opening}
-                    initialPrompt={
-                      initialPrompt?.taskId === task.id ? initialPrompt.text : undefined
-                    }
-                    onInitialSent={() => {
-                      setInitialPrompt(null);
-                      updateNewText("");
-                      setNewAttachments([]);
-                    }}
-                    onWorkingChange={setWorking}
-                    onExtensionTitle={setExtensionTitle}
-                    extensionStatuses={extensionStatuses}
-                    extensionWidgets={extensionWidgets}
-                    externalDraft={extensionDraft}
-                    onExternalDraftApplied={() => setExtensionDraft(null)}
-                    viewMode={viewMode}
-                    usage={{
-                      area: usageArea,
-                      button: usageButton,
-                      open: usageOpen,
-                      stats: usageStats,
-                      loading: usageLoading,
-                      error: usageError,
-                      onToggle: () =>
-                        showUsage().catch((error) => runtime.notice("Pi", String(error))),
-                    }}
-                    onManagePackages={() => action("core.navigate", "packages")}
-                  />
-                )}
+                {/* Mounted while the task opens, so its last transcript shows at once. Recent
+                    tasks stay mounted but hidden, so switching back re-renders nothing. */}
+                {views.map((id) => (
+                  <div key={id} style={{ display: id === task.id ? "contents" : "none" }}>
+                    <CoreChat
+                      key={id}
+                      taskId={id}
+                      active={id === task.id}
+                      connected={id === task.id && connected && !opening}
+                      initialPrompt={initialPrompt?.taskId === id ? initialPrompt.text : undefined}
+                      onInitialSent={() => {
+                        setInitialPrompt(null);
+                        updateNewText("");
+                        setNewAttachments([]);
+                      }}
+                      onWorkingChange={setWorking}
+                      onExtensionTitle={setExtensionTitle}
+                      extensionStatuses={id === task.id ? extensionStatuses : NO_STATUSES}
+                      extensionWidgets={id === task.id ? extensionWidgets : NO_WIDGETS}
+                      externalDraft={id === task.id ? extensionDraft : null}
+                      onExternalDraftApplied={() => setExtensionDraft(null)}
+                      viewMode={viewMode}
+                      usage={
+                        id !== task.id
+                          ? undefined
+                          : {
+                              area: usageArea,
+                              button: usageButton,
+                              open: usageOpen,
+                              stats: usageStats,
+                              loading: usageLoading,
+                              error: usageError,
+                              onToggle: () =>
+                                showUsage().catch((error) => runtime.notice("Pi", String(error))),
+                            }
+                      }
+                      onManagePackages={() => action("core.navigate", "packages")}
+                    />
+                  </div>
+                ))}
               </div>
             </>
           ) : (

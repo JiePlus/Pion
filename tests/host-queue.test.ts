@@ -23,6 +23,9 @@ test("Core requests share one lane; each plugin has its own", () => {
   assert.equal(laneOf({ op: "pi_setup.status" }), "setup");
   assert.equal(laneOf({ op: "pi_setup.check_update" }), "setup");
   assert.equal(laneOf({ op: "pi_setup.install" }), "core");
+  assert.equal(laneOf({ op: "task.transcript", id: "t" }), "transcript");
+  // Git summary stays behind task.open, so it never reads the previous workspace.
+  assert.equal(laneOf({ op: "git.summary" }), "core");
 });
 
 test("a stuck plugin call blocks neither Core nor other plugins", async () => {

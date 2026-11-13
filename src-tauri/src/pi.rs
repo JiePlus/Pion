@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use std::io::{BufRead, BufReader, Read, Write};
 use std::path::Path;
 use std::process::{Child, ChildStdin, Stdio};
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{mpsc, Arc, Mutex};
 use std::time::{Duration, Instant};
 use tauri::{Emitter, Manager};
@@ -218,28 +218,95 @@ impl ExtensionUiBridge {
     }
 }
 
+/// Where Pi events go: the main window's own channel once it has registered one,
+/// otherwise a broadcast `pi:event`. Only the visible session's events are sent.
+#[derive(Default)]
+pub struct EventSink(Mutex<Option<tauri::ipc::Channel<Value>>>);
+
+impl EventSink {
+    pub fn set(&self, channel: tauri::ipc::Channel<Value>) {
+        if let Ok(mut current) = self.0.lock() {
+            *current = Some(channel);
+        }
+    }
+}
+
+fn publish<R: tauri::Runtime>(app: &tauri::AppHandle<R>, payload: Value) {
+    if let Some(sink) = app.try_state::<EventSink>() {
+        if let Ok(channel) = sink.0.lock() {
+            if let Some(channel) = channel.as_ref() {
+                let _ = channel.send(payload);
+                return;
+            }
+        }
+    }
+    let _ = app.emit("pi:event", payload);
+}
+
 pub enum SessionTarget<'a> {
     Directory(&'a Path),
     File(&'a Path),
+    /// No session yet: a warm spare that later binds to one with `switch_session`.
+    Ephemeral,
 }
 
-pub struct Pi {
-    app: tauri::AppHandle,
-    child: Child,
+/// Requests waiting for their response, keyed by request id. Pi may answer
+/// concurrent requests in any order; each response goes to its own waiter.
+#[derive(Default)]
+struct Pending {
+    waiters: HashMap<String, mpsc::Sender<Value>>,
+    closed: Option<String>,
+}
+
+impl Pending {
+    fn register(&mut self, id: &str) -> Result<mpsc::Receiver<Value>, String> {
+        if let Some(reason) = &self.closed {
+            return Err(reason.clone());
+        }
+        let (sender, receiver) = mpsc::channel();
+        self.waiters.insert(id.to_string(), sender);
+        Ok(receiver)
+    }
+
+    /// Hands a response to its waiter. Late responses to abandoned requests are dropped.
+    fn resolve(&mut self, frame: Value) {
+        if let Some(sender) = frame["id"].as_str().and_then(|id| self.waiters.remove(id)) {
+            let _ = sender.send(frame);
+        }
+    }
+
+    fn forget(&mut self, id: &str) {
+        self.waiters.remove(id);
+    }
+
+    /// The transport ended: fail every waiting request and refuse new ones.
+    fn close(&mut self, reason: &str) {
+        self.closed = Some(reason.to_string());
+        for (_, sender) in self.waiters.drain() {
+            let _ = sender.send(json!({ "transportError": reason }));
+        }
+    }
+}
+
+/// One Pi RPC process. All methods take `&self`, so callers share it as `Arc<Pi>`
+/// and talk to it without holding any application-wide lock.
+pub struct Pi<R: tauri::Runtime = tauri::Wry> {
+    app: tauri::AppHandle<R>,
+    child: Mutex<Child>,
     stdin: Arc<Mutex<ChildStdin>>,
-    responses: mpsc::Receiver<Value>,
+    pending: Arc<Mutex<Pending>>,
     alive: Arc<AtomicBool>,
     working: Arc<AtomicBool>,
     visible: Arc<AtomicBool>,
     task_id: Arc<Mutex<Option<String>>>,
     generation: u64,
-    sequence: u64,
-    stopped: bool,
+    sequence: AtomicU64,
+    stopped: AtomicBool,
 }
 
-impl Pi {
+impl<R: tauri::Runtime> Pi<R> {
     pub fn start(
-        app: tauri::AppHandle,
+        app: tauri::AppHandle<R>,
         executable: &str,
         cwd: &Path,
         extension: &Path,
@@ -270,6 +337,8 @@ impl Pi {
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped());
+        // A spare stays hidden until it is bound to a task.
+        let spare = matches!(session, Some(SessionTarget::Ephemeral));
         match session {
             Some(SessionTarget::Directory(directory)) => {
                 std::fs::create_dir_all(directory).map_err(|e| e.to_string())?;
@@ -280,6 +349,9 @@ impl Pi {
             }
             Some(SessionTarget::File(file)) => {
                 command.arg("--session").arg(file);
+            }
+            Some(SessionTarget::Ephemeral) => {
+                command.arg("--no-session");
             }
             None => {}
         }
@@ -300,12 +372,13 @@ impl Pi {
         let stderr = child.stderr.take().ok_or("No Pi stderr")?;
         let alive = Arc::new(AtomicBool::new(true));
         let working = Arc::new(AtomicBool::new(false));
-        let visible = Arc::new(AtomicBool::new(true));
+        let visible = Arc::new(AtomicBool::new(!spare));
         let task_id = Arc::new(Mutex::new(task_id));
         let reader_working = working.clone();
         let reader_visible = visible.clone();
         let reader_task_id = task_id.clone();
-        let (sender, responses) = mpsc::channel();
+        let pending = Arc::new(Mutex::new(Pending::default()));
+        let reader_pending = pending.clone();
         let reader_alive = alive.clone();
         let reader_app = app.clone();
         std::thread::spawn(move || {
@@ -344,7 +417,9 @@ impl Pi {
                             }
                         }
                         if frame["type"] == "response" {
-                            let _ = sender.send(frame);
+                            if let Ok(mut pending) = reader_pending.lock() {
+                                pending.resolve(frame);
+                            }
                         } else if frame["type"] == "extension_ui_request" {
                             let tracked = reader_app
                                 .state::<Mutex<ExtensionUiBridge>>()
@@ -358,19 +433,21 @@ impl Pi {
                                     }
                                 });
                             if let Err(error) = tracked {
-                                let _ = reader_app.emit(
-                                    "pi:event",
+                                publish(
+                                    &reader_app,
                                     json!({"generation":generation,"taskId":event_task_id,"event":{"type":"desktop_extension_ui_error", "error":error}}),
                                 );
                             } else if reader_visible.load(Ordering::Acquire) {
-                                let _ = reader_app.emit(
-                                    "pi:event",
+                                publish(
+                                    &reader_app,
                                     json!({"generation":generation,"taskId":event_task_id,"event":frame}),
                                 );
                             }
-                        } else {
-                            let _ = reader_app.emit(
-                                "pi:event",
+                        } else if reader_visible.load(Ordering::Acquire) {
+                            // Hidden sessions (background tasks, spares) report progress
+                            // through task:status; their stream is not serialized at all.
+                            publish(
+                                &reader_app,
                                 json!({"generation":generation,"taskId":event_task_id,"event":frame}),
                             );
                         }
@@ -382,7 +459,9 @@ impl Pi {
             if let Ok(mut bridge) = reader_app.state::<Mutex<ExtensionUiBridge>>().lock() {
                 bridge.clear(generation);
             }
-            let _ = sender.send(json!({"transportError":reason}));
+            if let Ok(mut pending) = reader_pending.lock() {
+                pending.close(&reason);
+            }
             if reader_alive.swap(false, Ordering::AcqRel) {
                 let event_task_id = reader_task_id
                     .lock()
@@ -414,25 +493,26 @@ impl Pi {
         });
         Ok(Self {
             app,
-            child,
+            child: Mutex::new(child),
             stdin,
-            responses,
+            pending,
             alive,
             working,
             visible,
             task_id,
             generation,
-            sequence: 0,
-            stopped: false,
+            sequence: AtomicU64::new(0),
+            stopped: AtomicBool::new(false),
         })
     }
 
-    pub fn request(&mut self, mut request: Value) -> Result<Value, String> {
+    /// Sends one RPC and waits for its response. Safe to call from several threads
+    /// at once; responses are matched by id.
+    pub fn request(&self, mut request: Value) -> Result<Value, String> {
         if !self.alive.load(Ordering::Acquire) {
             return Err("Pi is disconnected; reconnect it".into());
         }
-        self.sequence += 1;
-        let id = format!("pion-{}", self.sequence);
+        let id = format!("pion-{}", self.sequence.fetch_add(1, Ordering::AcqRel) + 1);
         let command = request["type"]
             .as_str()
             .ok_or("Missing Pi command")?
@@ -442,14 +522,26 @@ impl Pi {
         if encoded.len() > MAX_REQUEST {
             return Err("Pi request too large".into());
         }
-        {
-            let mut stdin = self.stdin.lock().map_err(|e| e.to_string())?;
-            writeln!(stdin, "{encoded}").map_err(|e| e.to_string())?;
-            stdin.flush().map_err(|e| e.to_string())?;
+        let responses = self
+            .pending
+            .lock()
+            .map_err(|e| e.to_string())?
+            .register(&id)?;
+        let written = self
+            .stdin
+            .lock()
+            .map_err(|e| e.to_string())
+            .and_then(|mut stdin| {
+                writeln!(stdin, "{encoded}").map_err(|e| e.to_string())?;
+                stdin.flush().map_err(|e| e.to_string())
+            });
+        if let Err(error) = written {
+            self.forget(&id);
+            return Err(error);
         }
         let mut deadline = Instant::now() + REQUEST_TIMEOUT;
         let response = loop {
-            match self.responses.recv_timeout(Duration::from_millis(250)) {
+            match responses.recv_timeout(Duration::from_millis(250)) {
                 Ok(response) => break response,
                 Err(mpsc::RecvTimeoutError::Disconnected) => {
                     self.stop();
@@ -465,6 +557,7 @@ impl Pi {
                     if waiting_for_ui {
                         deadline = Instant::now() + REQUEST_TIMEOUT;
                     } else if Instant::now() >= deadline {
+                        self.forget(&id);
                         self.stop();
                         return Err(
                             "Pi request timed out/disconnected; stopped Pi. No request was replayed."
@@ -488,6 +581,12 @@ impl Pi {
                 .into());
         }
         Ok(response["data"].clone())
+    }
+
+    fn forget(&self, id: &str) {
+        if let Ok(mut pending) = self.pending.lock() {
+            pending.forget(id);
+        }
     }
 
     pub fn is_working(&self) -> bool {
@@ -517,26 +616,28 @@ impl Pi {
         }
     }
 
-    pub fn stop(&mut self) {
-        if self.stopped {
+    pub fn stop(&self) {
+        if self.stopped.swap(true, Ordering::AcqRel) {
             return;
         }
-        self.stopped = true;
         self.alive.store(false, Ordering::Release);
         if let Ok(mut bridge) = self.app.state::<Mutex<ExtensionUiBridge>>().lock() {
             bridge.clear(self.generation);
         }
+        let Ok(mut child) = self.child.lock() else {
+            return;
+        };
         #[cfg(unix)]
         // Each child was started in a new process group owned by this adapter.
         unsafe {
-            libc::kill(-(self.child.id() as i32), libc::SIGKILL);
+            libc::kill(-(child.id() as i32), libc::SIGKILL);
         }
-        let _ = self.child.kill();
-        let _ = self.child.wait();
+        let _ = child.kill();
+        let _ = child.wait();
     }
 }
 
-impl Drop for Pi {
+impl<R: tauri::Runtime> Drop for Pi<R> {
     fn drop(&mut self) {
         self.stop();
     }
@@ -562,6 +663,125 @@ mod tests {
         assert!(read_frame(&mut BufReader::new(b"{}".as_slice())).is_err());
         assert!(read_frame(&mut BufReader::new(b"oops\n".as_slice())).is_err());
         assert!(read_frame(&mut BufReader::new(vec![b'x'; MAX_FRAME + 1].as_slice())).is_err());
+    }
+
+    #[test]
+    fn responses_reach_their_own_waiter_in_any_order() {
+        let mut pending = Pending::default();
+        let first = pending.register("pion-1").unwrap();
+        let second = pending.register("pion-2").unwrap();
+        pending.resolve(json!({"type":"response","id":"pion-2","data":2}));
+        pending.resolve(json!({"type":"response","id":"pion-1","data":1}));
+        assert_eq!(first.try_recv().unwrap()["data"], 1);
+        assert_eq!(second.try_recv().unwrap()["data"], 2);
+        // A late answer to an abandoned request goes nowhere.
+        let abandoned = pending.register("pion-3").unwrap();
+        pending.forget("pion-3");
+        pending.resolve(json!({"type":"response","id":"pion-3"}));
+        assert!(abandoned.try_recv().is_err());
+    }
+
+    #[test]
+    fn closing_fails_waiters_and_refuses_new_requests() {
+        let mut pending = Pending::default();
+        let waiting = pending.register("pion-1").unwrap();
+        pending.close("Pi process exited");
+        assert_eq!(
+            waiting.try_recv().unwrap()["transportError"],
+            "Pi process exited"
+        );
+        assert_eq!(pending.register("pion-2").unwrap_err(), "Pi process exited");
+    }
+
+    /// Runs the real transport against a fake Pi that answers "slow" late and
+    /// everything else at once, so responses arrive out of order.
+    #[cfg(unix)]
+    #[test]
+    fn concurrent_requests_do_not_wait_for_each_other() {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = std::env::temp_dir().join(format!("pion-fake-pi-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let fake = dir.join("pi");
+        std::fs::write(
+            &fake,
+            r#"#!/usr/bin/env node
+require("node:readline").createInterface({ input: process.stdin }).on("line", (line) => {
+  const { id, type } = JSON.parse(line);
+  const reply = () =>
+    process.stdout.write(JSON.stringify({ type: "response", id, command: type, success: true, data: { echo: type } }) + "\n");
+  type === "slow" ? setTimeout(reply, 600) : reply();
+});
+"#,
+        )
+        .unwrap();
+        std::fs::set_permissions(&fake, std::fs::Permissions::from_mode(0o755)).unwrap();
+        let app = tauri::test::mock_app();
+        app.manage(Mutex::new(ExtensionUiBridge::default()));
+        let pi = Arc::new(
+            Pi::start(
+                app.handle().clone(),
+                fake.to_str().unwrap(),
+                &dir,
+                &dir.join("extension.js"),
+                1,
+                None,
+                Some(SessionTarget::Ephemeral),
+            )
+            .unwrap(),
+        );
+        let slow = {
+            let pi = pi.clone();
+            std::thread::spawn(move || pi.request(json!({"type":"slow"})))
+        };
+        std::thread::sleep(Duration::from_millis(100));
+        let started = Instant::now();
+        assert_eq!(pi.request(json!({"type":"fast"})).unwrap()["echo"], "fast");
+        assert!(started.elapsed() < Duration::from_millis(400));
+        assert_eq!(slow.join().unwrap().unwrap()["echo"], "slow");
+        pi.stop();
+        assert!(pi.request(json!({"type":"fast"})).is_err());
+        let _ = std::fs::remove_dir_all(dir);
+    }
+
+    /// A warm spare from the real Pi binds to an existing session with switch_session.
+    /// Opt-in: `PI_EXECUTABLE=/path/to/pi cargo test spare_binds -- --ignored`.
+    #[test]
+    #[ignore]
+    fn spare_binds_to_an_existing_session() {
+        let Ok(executable) = std::env::var("PI_EXECUTABLE") else {
+            return;
+        };
+        let dir = std::env::temp_dir().join(format!("pion-spare-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let file = dir.join("session.jsonl");
+        let header = json!({"type":"session","version":3,"id":"spare-test","timestamp":"2026-01-01T00:00:00.000Z","cwd":dir});
+        let message = json!({"type":"message","id":"m1","parentId":null,"timestamp":"2026-01-01T00:00:00.000Z","message":{"role":"user","content":"hello from the file","timestamp":0}});
+        std::fs::write(&file, format!("{header}\n{message}\n")).unwrap();
+        let app = tauri::test::mock_app();
+        app.manage(Mutex::new(ExtensionUiBridge::default()));
+        let extension = Path::new(env!("CARGO_MANIFEST_DIR")).join("src/pion-core-extension.js");
+        let spare = Pi::start(
+            app.handle().clone(),
+            &executable,
+            &dir,
+            &extension,
+            1,
+            None,
+            Some(SessionTarget::Ephemeral),
+        )
+        .unwrap();
+        assert!(spare.request(json!({"type":"get_state"})).is_ok());
+        let started = Instant::now();
+        spare
+            .request(json!({"type":"switch_session","sessionPath":file}))
+            .unwrap();
+        let bound = started.elapsed();
+        let state = spare.request(json!({"type":"get_state"})).unwrap();
+        assert_eq!(state["sessionFile"], json!(file));
+        let messages = spare.request(json!({"type":"get_messages"})).unwrap();
+        assert_eq!(messages["messages"][0]["content"], "hello from the file");
+        eprintln!("switch_session took {bound:?}");
+        let _ = std::fs::remove_dir_all(dir);
     }
 
     #[test]

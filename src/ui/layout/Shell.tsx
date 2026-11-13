@@ -32,7 +32,11 @@ import styles from "./Shell.module.css";
 export function Shell({ runtime, boot }: { runtime: Runtime; boot: Boot }) {
   const controller = useShellController(runtime, boot);
   const [builtins, setBuiltins] = useState<BuiltinStates>(boot.builtins ?? {});
-  const review = useGitReview(controller.task?.id ?? null, builtinEnabled(builtins, "git-review"));
+  const review = useGitReview(
+    controller.task?.id ?? null,
+    builtinEnabled(builtins, "git-review"),
+    controller.connected,
+  );
   async function toggleBuiltin(id: string, enabled: boolean) {
     setBuiltins(await host<BuiltinStates>({ op: "builtin.set", id, enabled }));
   }

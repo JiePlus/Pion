@@ -1,4 +1,4 @@
-import { invoke, isTauri } from "@tauri-apps/api/core";
+import { Channel, invoke, isTauri } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import type { Bundle, Json } from "./api.ts";
 import { createHostQueue } from "./host-queue.ts";
@@ -74,13 +74,17 @@ export function respondExtensionUi(request: Record<string, unknown>): Promise<vo
 }
 export async function connectEvents(): Promise<() => void> {
   if (!native) return () => {};
-  const pi = await listen<{ generation: number; taskId?: string | null; event: unknown }>(
-    "pi:event",
-    (event) => {
-      if (event.payload.generation === generation && (event.payload.taskId ?? null) === activeTask)
-        hostEvents.emit("pi:event", event.payload.event);
-    },
-  );
+  type PiEventPayload = { generation: number; taskId?: string | null; event: unknown };
+  const deliver = (payload: PiEventPayload) => {
+    if (payload.generation === generation && (payload.taskId ?? null) === activeTask)
+      hostEvents.emit("pi:event", payload.event);
+  };
+  // Pi events arrive on this window's own channel; the broadcast listener below only
+  // serves a host that has no channel registered.
+  const channel = new Channel<PiEventPayload>();
+  channel.onmessage = deliver;
+  await invoke("pi_events", { channel });
+  const pi = await listen<PiEventPayload>("pi:event", (event) => deliver(event.payload));
   const status = await listen<{
     generation: number;
     taskId?: string | null;

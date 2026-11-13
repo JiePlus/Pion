@@ -27,7 +27,7 @@ import type { PiSkill, PiSkills } from "../settings/Skills.tsx";
 import type { LegacySession } from "../settings/Settings.tsx";
 import { useLayout } from "./useLayout.ts";
 import { usePanels } from "./usePanels.ts";
-import { useTasks } from "./useTasks.ts";
+import { readLastTask, useTasks } from "./useTasks.ts";
 import { usePiSetup } from "./usePiSetup.ts";
 import { usePackageSkills } from "./usePackageSkills.ts";
 import { useSessionActions } from "./useSessionActions.ts";
@@ -57,6 +57,11 @@ export function useShellController(runtime: Runtime, boot: Boot) {
   useSyncExternalStore(runtime.subscribe, runtime.snapshot);
   const locale = useSyncExternalStore(i18n.subscribe, i18n.getLocale);
   const [page, setPage] = useState<Page>("workspace");
+  // Set while the last session's task is waiting to be reopened at startup.
+  const [restoreTaskId, setRestoreTaskId] = useState(() => {
+    const id = readLastTask();
+    return boot.catalog.tasks.some((item) => item.id === id) ? id : null;
+  });
   const [installed, setInstalled] = useState(boot.plugins);
   const [review, setReview] = useState<Installed | null>(null);
   const [path, setPath] = useState("");
@@ -369,24 +374,25 @@ export function useShellController(runtime: Runtime, boot: Boot) {
   useEffect(() => {
     let live = true;
     async function prepare() {
-      if (page !== "workspace" || task || !projectId || (native && !setupStatus?.modelReady))
+      if (
+        restoreTaskId ||
+        page !== "workspace" ||
+        task ||
+        !projectId ||
+        (native && !setupStatus?.modelReady)
+      )
         return;
       setPreparing(true);
       setDraftModels([]);
       setDraftLevels([]);
       try {
         await host({ op: "task.prepare", projectId, executable });
-        const state = await host<PiState>({ op: "pi", command: "get_state", args: {} });
-        const available = await host<{ models: PiModel[] }>({
-          op: "pi",
-          command: "get_models",
-          args: {},
-        });
-        const thinking = await host<{ levels: string[] }>({
-          op: "pi",
-          command: "get_thinking_levels",
-          args: {},
-        });
+        const read = await host<{
+          get_state: PiState;
+          get_models: { models: PiModel[] };
+          get_thinking_levels: { levels: string[] };
+        }>({ op: "pi.read", commands: ["get_state", "get_models", "get_thinking_levels"] });
+        const { get_state: state, get_models: available, get_thinking_levels: thinking } = read;
         if (!live) return;
         const activeModel = state.model ? `${state.model.provider}/${state.model.id}` : "";
         const savedModel =
@@ -421,7 +427,7 @@ export function useShellController(runtime: Runtime, boot: Boot) {
     return () => {
       live = false;
     };
-  }, [executable, page, projectId, runtime, setupStatus?.modelReady, task]);
+  }, [executable, page, projectId, runtime, setupStatus?.modelReady, task, restoreTaskId]);
   const fetchUsageRef = useRef<() => Promise<void>>(async () => {});
   useEffect(
     () =>
@@ -541,6 +547,14 @@ export function useShellController(runtime: Runtime, boot: Boot) {
     refreshSetup,
     updatePanel,
   });
+  // Reopen the task that was open when Pion last closed, once setup allows it. Until
+  // then the new-task page does not prepare a Pi of its own.
+  useEffect(() => {
+    if (!restoreTaskId || (native && !setupStatus?.modelReady)) return;
+    const saved = catalog.tasks.find((item) => item.id === restoreTaskId);
+    setRestoreTaskId(null);
+    if (saved && !task) perform(() => openTask({ task: saved }));
+  }, [restoreTaskId, setupStatus?.modelReady]);
   useEffect(() => {
     const key = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {

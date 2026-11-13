@@ -14,7 +14,9 @@ function savedOpen(): boolean {
 
 // Review pane visibility, the topbar change summary, and a revision that tells
 // the pane to reload after each Pi turn.
-export function useGitReview(taskId: string | null, enabled = true) {
+// `connected` is whether the task's Pi is ready. Waiting for it keeps the summary (git
+// status) behind the chat's own read in the Core lane, which is queued first.
+export function useGitReview(taskId: string | null, enabled = true, connected = true) {
   const [open, setOpenState] = useState(savedOpen);
   const [summary, setSummary] = useState<GitSummary | null>(null);
   const [revision, setRevision] = useState(0);
@@ -25,6 +27,7 @@ export function useGitReview(taskId: string | null, enabled = true) {
       setSummary(null);
       return;
     }
+    if (!connected) return;
     const id = ++request.current;
     try {
       const value = await host<GitSummary>({ op: "git.summary" });
@@ -32,7 +35,7 @@ export function useGitReview(taskId: string | null, enabled = true) {
     } catch {
       if (id === request.current) setSummary(null);
     }
-  }, [taskId, enabled]);
+  }, [taskId, enabled, connected]);
 
   useEffect(() => {
     void refresh();

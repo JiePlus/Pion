@@ -256,7 +256,6 @@ pub fn diff(root: &Path, path: &str, staged: bool) -> Result<Value, String> {
     }))
 }
 
-
 // ---------------------------------------------------------------------------
 // Review pane (Core): scoped diffs, file/hunk staging, commit, push, pull
 // requests and branches. These are host operations, not plugin API. The host
@@ -364,7 +363,10 @@ fn exec(
         }
     }
     let stdout = drain(child.stdout.take().ok_or("stdout is unavailable")?, limit);
-    let stderr = drain(child.stderr.take().ok_or("stderr is unavailable")?, MAX_REPORT * 4);
+    let stderr = drain(
+        child.stderr.take().ok_or("stderr is unavailable")?,
+        MAX_REPORT * 4,
+    );
     let started = Instant::now();
     let status = loop {
         match child.try_wait().map_err(|error| error.to_string())? {
@@ -404,7 +406,13 @@ fn exec(
 
 fn git(root: &Path, args: &[&str]) -> Result<Exec, String> {
     let label = format!("git {}", args.first().copied().unwrap_or(""));
-    exec(git_command(root, args), &label, None, LOCAL_TIMEOUT, MAX_REVIEW_BYTES)
+    exec(
+        git_command(root, args),
+        &label,
+        None,
+        LOCAL_TIMEOUT,
+        MAX_REVIEW_BYTES,
+    )
 }
 
 fn git_with(
@@ -414,7 +422,13 @@ fn git_with(
     timeout: Duration,
 ) -> Result<Exec, String> {
     let label = format!("git {}", args.first().copied().unwrap_or(""));
-    exec(git_command(root, args), &label, input, timeout, MAX_REVIEW_BYTES)
+    exec(
+        git_command(root, args),
+        &label,
+        input,
+        timeout,
+        MAX_REVIEW_BYTES,
+    )
 }
 
 fn report(exec: Exec) -> String {
@@ -522,9 +536,17 @@ fn has_head(root: &Path) -> bool {
 }
 
 fn has_upstream(root: &Path) -> bool {
-    run(root, &["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}"])
-        .map(|output| output.status.success())
-        .unwrap_or(false)
+    run(
+        root,
+        &[
+            "rev-parse",
+            "--abbrev-ref",
+            "--symbolic-full-name",
+            "@{upstream}",
+        ],
+    )
+    .map(|output| output.status.success())
+    .unwrap_or(false)
 }
 
 fn remotes(root: &Path) -> Vec<String> {
@@ -553,8 +575,14 @@ fn summary(root: &Path) -> Result<Value, String> {
     let (mut additions, mut deletions, mut files) = (0u64, 0u64, 0u64);
     for line in numstat.iter().flat_map(|text| text.lines()) {
         let mut parts = line.split('\t');
-        additions += parts.next().and_then(|v| v.parse::<u64>().ok()).unwrap_or(0);
-        deletions += parts.next().and_then(|v| v.parse::<u64>().ok()).unwrap_or(0);
+        additions += parts
+            .next()
+            .and_then(|v| v.parse::<u64>().ok())
+            .unwrap_or(0);
+        deletions += parts
+            .next()
+            .and_then(|v| v.parse::<u64>().ok())
+            .unwrap_or(0);
         files += 1;
     }
     let untracked = git(root, &["ls-files", "--others", "--exclude-standard", "-z"])?
@@ -578,7 +606,15 @@ fn summary(root: &Path) -> Result<Value, String> {
 /// branch when known, otherwise a conventional main branch.
 fn base_ref(root: &Path) -> Option<String> {
     let current = branch_info(root).name;
-    if let Ok(output) = run(root, &["symbolic-ref", "--quiet", "--short", "refs/remotes/origin/HEAD"]) {
+    if let Ok(output) = run(
+        root,
+        &[
+            "symbolic-ref",
+            "--quiet",
+            "--short",
+            "refs/remotes/origin/HEAD",
+        ],
+    ) {
         let name = String::from_utf8_lossy(&output.stdout).trim().to_string();
         if output.status.success() && !name.is_empty() {
             return Some(name);
@@ -805,12 +841,7 @@ fn hunk(root: &Path, action: &str, path: &str, wanted: &str) -> Result<Value, St
     done(git_with(root, apply, Some(&patch), LOCAL_TIMEOUT)?)
 }
 
-fn commit(
-    root: &Path,
-    message: &str,
-    include_unstaged: bool,
-    then: &str,
-) -> Result<Value, String> {
+fn commit(root: &Path, message: &str, include_unstaged: bool, then: &str) -> Result<Value, String> {
     let message = message.trim();
     if message.is_empty() || message.len() > MAX_MESSAGE || message.contains('\0') {
         return Err(format!("Commit message must be 1 to {MAX_MESSAGE} bytes"));
@@ -833,8 +864,9 @@ fn commit(
         result["pushed"] = json!(true);
     }
     if then == "pr" {
-        let url = create_pr(root)
-            .map_err(|error| format!("Committed and pushed {hash}, but the pull request failed: {error}"))?;
+        let url = create_pr(root).map_err(|error| {
+            format!("Committed and pushed {hash}, but the pull request failed: {error}")
+        })?;
         result["prUrl"] = json!(url);
     }
     Ok(result)
@@ -1085,7 +1117,10 @@ mod tests {
         let review = call(&dir, "git.review", &json!({ "scope": "unstaged" }), None).unwrap();
         assert_eq!(review["unstaged"], json!(2));
         let diff = review["diff"].as_str().unwrap().to_string();
-        assert!(diff.contains("+line two") && diff.contains("+fresh"), "{diff}");
+        assert!(
+            diff.contains("+line two") && diff.contains("+fresh"),
+            "{diff}"
+        );
 
         // Stage only the first hunk of a.txt.
         let file_diff = diff.split("diff --git a/new.txt").next().unwrap();
@@ -1178,7 +1213,13 @@ mod tests {
         call(&dir, "git.commit", &json!({ "message": "init" }), None).unwrap();
         git(&dir, &["branch", "-M", "main"]);
 
-        call(&dir, "git.createBranch", &json!({ "name": "feature/x" }), None).unwrap();
+        call(
+            &dir,
+            "git.createBranch",
+            &json!({ "name": "feature/x" }),
+            None,
+        )
+        .unwrap();
         fs::write(dir.join("b.txt"), "feature\n").unwrap();
         call(&dir, "git.stage", &json!({ "paths": ["b.txt"] }), None).unwrap();
         call(&dir, "git.commit", &json!({ "message": "feature" }), None).unwrap();
@@ -1193,12 +1234,24 @@ mod tests {
             .iter()
             .any(|b| b["name"] == json!("feature/x") && b["current"] == json!(true)));
         assert!(call(&dir, "git.checkout", &json!({ "branch": "--orphan" }), None).is_err());
-        assert!(call(&dir, "git.createBranch", &json!({ "name": "bad name" }), None).is_err());
+        assert!(call(
+            &dir,
+            "git.createBranch",
+            &json!({ "name": "bad name" }),
+            None
+        )
+        .is_err());
 
         fs::write(dir.join("a.txt"), "changed\n").unwrap();
         fs::write(dir.join("scratch.txt"), "tmp\n").unwrap();
         fs::write(dir.join("keep.txt"), "keep\n").unwrap();
-        call(&dir, "git.revert", &json!({ "paths": ["a.txt", "scratch.txt"] }), None).unwrap();
+        call(
+            &dir,
+            "git.revert",
+            &json!({ "paths": ["a.txt", "scratch.txt"] }),
+            None,
+        )
+        .unwrap();
         assert_eq!(fs::read_to_string(dir.join("a.txt")).unwrap(), "one\n");
         assert!(!dir.join("scratch.txt").exists() && dir.join("keep.txt").exists());
         assert!(call(&dir, "git.revert", &json!({ "paths": ["."] }), None).is_err());
@@ -1208,7 +1261,10 @@ mod tests {
         let plain = std::env::temp_dir().join(format!("pion-git-init-{}", std::process::id()));
         let _ = fs::remove_dir_all(&plain);
         fs::create_dir_all(&plain).unwrap();
-        assert_eq!(call(&plain, "git.summary", &json!({}), None).unwrap()["repo"], json!(false));
+        assert_eq!(
+            call(&plain, "git.summary", &json!({}), None).unwrap()["repo"],
+            json!(false)
+        );
         assert!(call(&plain, "git.review", &json!({}), None).is_err());
         // A developer's own init.defaultBranch wins over "main".
         let configured = StdCommand::new("git")
@@ -1228,7 +1284,13 @@ mod tests {
         let listed = call(&plain, "git.branches", &json!({}), None).unwrap();
         assert_eq!(listed["branches"][0]["name"], json!(initial));
         assert_eq!(listed["branches"][0]["unborn"], json!(true));
-        call(&plain, "git.createBranch", &json!({ "name": "topic" }), None).unwrap();
+        call(
+            &plain,
+            "git.createBranch",
+            &json!({ "name": "topic" }),
+            None,
+        )
+        .unwrap();
         let listed = call(&plain, "git.branches", &json!({}), None).unwrap();
         assert_eq!(listed["branches"][0]["name"], json!("topic"));
         assert_eq!(listed["branches"][0]["current"], json!(true));

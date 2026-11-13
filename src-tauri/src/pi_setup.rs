@@ -375,9 +375,9 @@ fn probe_candidates(paths: Vec<PathBuf>, timeout: Duration) -> Value {
         .into_iter()
         .map(|path| {
             thread::spawn(move || {
-                version_with_timeout(&path, timeout).ok().map(
-                    |installed| json!({"executable": path, "version": installed}),
-                )
+                version_with_timeout(&path, timeout)
+                    .ok()
+                    .map(|installed| json!({"executable": path, "version": installed}))
             })
         })
         .collect();
@@ -560,9 +560,7 @@ mod tests {
                 "bin/pi"
             })
         );
-        let ready = |installed: &str, npm: bool| {
-            json!({"installation":"ready","installedVersion":installed,"npmManaged":npm})
-        };
+        let ready = |installed: &str, npm: bool| json!({"installation":"ready","installedVersion":installed,"npmManaged":npm});
         assert!(can_update(&ready("0.87.0", true), "0.88.0"));
         assert!(!can_update(&ready("0.88.0", true), "0.88.0"));
         assert!(!can_update(&ready("0.87.0", false), "0.88.0"));

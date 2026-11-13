@@ -9,6 +9,9 @@ export function laneOf(request: Record<string, unknown>): string {
   // Pi setup checks start processes and can take seconds; a background check at
   // startup must not delay connecting the workspace's Pi.
   if (request.op === "pi_setup.status" || request.op === "pi_setup.check_update") return "setup";
+  // A cached transcript is shown while the task's Pi starts, so it must not wait
+  // behind task.open in the Core lane.
+  if (request.op === "task.transcript") return "transcript";
   return "core";
 }
 

@@ -180,7 +180,7 @@ test("sending locks immediately and ignores duplicate submissions", async ({ pag
   await page.goto("/");
   await page.getByRole("textbox", { name: "Describe your task" }).fill("Start chat");
   await page.getByRole("button", { name: "Start task" }).click();
-  await expect(page.locator(".core-chat")).toContainText("Reply for Start chat");
+  await expect(page.locator(".core-chat:visible")).toContainText("Reply for Start chat");
   await page.evaluate(() => {
     localStorage.setItem("fixture.delaySend", "yes");
     localStorage.setItem("fixture.piRequestCount", "0");
@@ -209,7 +209,7 @@ test("stream snapshots retain thinking and tool results, settle once and respect
   await page.goto("/");
   await page.getByRole("textbox", { name: "Describe your task" }).fill("Streaming test");
   await page.getByRole("button", { name: "Start task" }).click();
-  await expect(page.locator(".core-chat")).toContainText("Reply for Streaming test");
+  await expect(page.locator(".core-chat:visible")).toContainText("Reply for Streaming test");
   await page.evaluate(() => {
     const emit = (window as any).fixturePiEvent;
     emit({ type: "agent_start" });
@@ -318,4 +318,116 @@ test("stream snapshots retain thinking and tool results, settle once and respect
   });
   await expect(page.locator(".tool-call.interrupted")).toContainText("Interrupted");
   await expect(page.getByRole("alert")).toHaveText("Pi response failed.");
+});
+
+test("a task shows its saved transcript while its Pi starts, then Pi's own", async ({ page }) => {
+  await taskFixture(page);
+  await page.goto("/");
+  await page.evaluate(() => {
+    localStorage.setItem(
+      "fixture.catalog",
+      JSON.stringify({
+        projects: [{ id: "p1", name: "Pion", path: "/projects/Pion" }],
+        tasks: [{ id: "1", projectId: "p1", title: "Saved task" }],
+      }),
+    );
+    localStorage.setItem(
+      "fixture.histories",
+      JSON.stringify({
+        "1": [
+          { role: "user", content: "Saved question" },
+          { role: "assistant", content: [{ type: "text", text: "Fresh answer from Pi" }] },
+        ],
+      }),
+    );
+    localStorage.setItem(
+      "fixture.cachedTranscript",
+      JSON.stringify([
+        { role: "user", content: "Saved question" },
+        { role: "assistant", content: [{ type: "text", text: "Saved answer from cache" }] },
+      ]),
+    );
+    localStorage.setItem("fixture.openDelay", "yes");
+  });
+  await page.reload();
+  await page.locator(".task-list").getByRole("button", { name: "Saved task" }).click();
+  // task.open is still pending: the saved copy is visible, never the empty state.
+  await expect(page.getByText("Saved answer from cache")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "What would you like to work on?" })).toHaveCount(
+    0,
+  );
+  // Once Pi answers, its transcript replaces the saved one.
+  await expect(page.getByText("Fresh answer from Pi")).toBeVisible();
+  await expect(page.getByText("Saved answer from cache")).toHaveCount(0);
+});
+
+test("Pion reopens the task that was open when it last closed", async ({ page }) => {
+  await taskFixture(page);
+  await page.goto("/");
+  await page.evaluate(() => {
+    localStorage.setItem(
+      "fixture.catalog",
+      JSON.stringify({
+        projects: [{ id: "p1", name: "Pion", path: "/projects/Pion" }],
+        tasks: [
+          { id: "1", projectId: "p1", title: "First task" },
+          { id: "2", projectId: "p1", title: "Second task" },
+        ],
+      }),
+    );
+    localStorage.setItem(
+      "fixture.histories",
+      JSON.stringify({
+        "1": [{ role: "user", content: "First question" }],
+        "2": [{ role: "user", content: "Second question" }],
+      }),
+    );
+    localStorage.setItem("fixture.keepLastTask", "yes");
+  });
+  await page.reload();
+  await page.locator(".task-list").getByRole("button", { name: "Second task" }).click();
+  await expect(page.getByText("Second question")).toBeVisible();
+  await page.reload();
+  // No click: the last task opens by itself.
+  await expect(page.getByText("Second question")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "What would you like to work on?" })).toHaveCount(
+    0,
+  );
+});
+
+test("long transcripts render their latest page and load earlier ones on request", async ({
+  page,
+}) => {
+  await taskFixture(page);
+  await page.goto("/");
+  await page.evaluate(() => {
+    localStorage.setItem(
+      "fixture.catalog",
+      JSON.stringify({
+        projects: [{ id: "p1", name: "Pion", path: "/projects/Pion" }],
+        tasks: [{ id: "1", projectId: "p1", title: "Long task" }],
+      }),
+    );
+    localStorage.setItem(
+      "fixture.histories",
+      JSON.stringify({
+        "1": Array.from({ length: 400 }, (_, index) => ({
+          role: index % 2 ? "assistant" : "user",
+          content: index % 2 ? [{ type: "text", text: `Message ${index}` }] : `Message ${index}`,
+        })),
+      }),
+    );
+  });
+  await page.reload();
+  await page.locator(".task-list").getByRole("button", { name: "Long task" }).click();
+  await expect(page.getByText("Message 399", { exact: true })).toBeVisible();
+  await expect(page.locator(".chat-message")).toHaveCount(150);
+  await expect(page.getByText("Message 249", { exact: true })).toHaveCount(0);
+  const earlier = page.getByRole("button", { name: "Show 150 earlier messages" });
+  await earlier.click();
+  await expect(page.locator(".chat-message")).toHaveCount(300);
+  await expect(page.getByText("Message 399", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Show 100 earlier messages" }).click();
+  await expect(page.locator(".chat-message")).toHaveCount(400);
+  await expect(page.getByRole("button", { name: /earlier messages/ })).toHaveCount(0);
 });

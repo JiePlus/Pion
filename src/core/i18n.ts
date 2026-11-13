@@ -211,6 +211,7 @@ const zh = {
   "Opening task…": "正在打开任务…",
   "Describe your task": "描述你的任务",
   "What would you like to work on?": "今天想做什么？",
+  "Show {count} earlier messages": "显示更早的 {count} 条消息",
   "Start a local Pi task in one of your projects.":
     "在当前项目中启动 Pi 任务，调度模型、自动化工具与工程技能。",
   Suggestions: "任务建议",

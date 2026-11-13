@@ -7,6 +7,8 @@ export async function taskFixture(page: Page) {
     ({ manifest, source }) => {
       if (!localStorage.getItem("pion.locale") && navigator.language.startsWith("en"))
         localStorage.setItem("pion.locale", "en");
+      // Most tests reload and expect the new-task page; reopening the last task is opt-in.
+      if (!localStorage.getItem("fixture.keepLastTask")) localStorage.removeItem("pion.lastTask");
       const callbacks = new Map<number, (event: unknown) => void>();
       const listeners = new Map<string, number>();
       let sequence = 0;
@@ -287,8 +289,19 @@ export async function taskFixture(page: Page) {
               localStorage.setItem("fixture.appRelaunched", "yes");
               return null;
             }
+            // The fixture keeps delivering Pi events as broadcasts; the channel is unused.
+            if (command === "pi_events") return null;
             if (command !== "desktop") throw new Error("Unexpected native command");
             const request = args.request;
+            if (request.op === "pi.read") {
+              // One host call for several reads; answer each as the matching "pi" command.
+              const results: Record<string, unknown> = {};
+              for (const name of request.commands)
+                results[name] = await this.invoke("desktop", {
+                  request: { op: "pi", command: name, args: {} },
+                });
+              return results;
+            }
             if (request.op === "extension_ui.response") {
               if (localStorage.getItem("fixture.delayExtensionResponse"))
                 await new Promise((resolve) => setTimeout(resolve, 150));
@@ -825,7 +838,14 @@ export async function taskFixture(page: Page) {
                   working: false,
                 });
                 return null;
+              case "task.transcript":
+                // The host's saved copy of the last transcript Pi returned for this task.
+                return localStorage.getItem("fixture.cachedTranscript")
+                  ? { messages: JSON.parse(localStorage.getItem("fixture.cachedTranscript")!) }
+                  : null;
               case "task.open":
+                if (localStorage.getItem("fixture.openDelay"))
+                  await new Promise((resolve) => setTimeout(resolve, 800));
                 if (localStorage.getItem("fixture.failOpen"))
                   throw new Error("Cannot start Pi: test failure");
                 active = request.id;

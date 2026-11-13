@@ -30,6 +30,17 @@ interface TaskOptions {
   onProjectAdded: () => void;
 }
 
+const LAST_TASK = "pion.lastTask";
+
+/** The task that was open when Pion last ran, if any. */
+export function readLastTask(): string | null {
+  try {
+    return localStorage.getItem(LAST_TASK);
+  } catch {
+    return null;
+  }
+}
+
 export function useTasks(options: TaskOptions) {
   const initialCatalog = options.catalog;
   const [catalog, setCatalog] = useState(initialCatalog);
@@ -97,6 +108,11 @@ export function useTasks(options: TaskOptions) {
       }
       setCatalog(opened.catalog);
       setTask(opened.catalog.tasks.find((item) => item.id === next.id) ?? next);
+      try {
+        localStorage.setItem(LAST_TASK, next.id);
+      } catch {
+        // Startup then shows the new-task page instead of this task.
+      }
     } catch (error) {
       setTask(previous);
       setProjectId(previousProjectId);

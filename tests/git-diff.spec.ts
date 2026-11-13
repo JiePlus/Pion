@@ -9,7 +9,7 @@ const record = { bundle: { manifest, source }, digest: "git-diff-fixture", enabl
 async function startTask(page: import("@playwright/test").Page) {
   await page.getByRole("textbox", { name: "Describe your task" }).fill("Git diff task");
   await page.getByRole("button", { name: "Start task" }).click();
-  await expect(page.locator(".core-chat")).toContainText("Reply for Git diff task");
+  await expect(page.locator(".core-chat:visible")).toContainText("Reply for Git diff task");
 }
 
 test("baseline task screen without the Git/Diff plugin", async ({ page }, testInfo) => {

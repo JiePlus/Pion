@@ -6,7 +6,7 @@ import { taskFixture } from "./task-fixture";
 async function startTask(page: Page) {
   await page.getByRole("textbox", { name: "Describe your task" }).fill("Review task");
   await page.getByRole("button", { name: "Start task" }).click();
-  await expect(page.locator(".core-chat")).toContainText("Reply for Review task");
+  await expect(page.locator(".core-chat:visible")).toContainText("Reply for Review task");
 }
 
 async function openReview(page: Page) {
@@ -142,7 +142,7 @@ test("Git review is listed as a built-in plugin and can be switched off", async 
   await page.getByRole("button", { name: "Plugins" }).first().click();
   await expect(page.locator(".plugin-card", { hasText: "git-review" })).toContainText("disabled");
   await page.getByText("Review task").first().click();
-  await expect(page.locator(".core-chat")).toContainText("Reply for Review task");
+  await expect(page.locator(".core-chat:visible")).toContainText("Reply for Review task");
   await expect(page.getByRole("button", { name: "Review changes" })).toHaveCount(0);
   await expect(pane).toHaveCount(0);
 });
