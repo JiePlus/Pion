@@ -2,6 +2,7 @@ import type { Locale, LocalizedText } from "./api.ts";
 
 // English source strings are the fallback; application copy lives here, plugin copy stays in plugins.
 const zh = {
+  "Built-in": "内置",
   Review: "审阅",
   "Review changes": "审阅更改",
   "Close review": "关闭审阅",

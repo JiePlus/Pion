@@ -7,8 +7,12 @@ import { native } from "../../core/host.ts";
 import type { Installed } from "../../core/host.ts";
 import { localized, t } from "../../core/i18n.ts";
 import type { Runtime } from "../../core/runtime.ts";
+import { builtinEnabled, builtinFeatures } from "../../core/builtins.ts";
+import type { BuiltinStates } from "../../core/builtins.ts";
 
 interface PluginsProps {
+  builtins: BuiltinStates;
+  onToggleBuiltin: (id: string, enabled: boolean) => void;
   installed: Installed[];
   runtime: Runtime;
   path: string;
@@ -17,7 +21,16 @@ interface PluginsProps {
   action: (id: string, args?: Json) => void;
 }
 
-export function Plugins({ installed, runtime, path, setPath, busy, action }: PluginsProps) {
+export function Plugins({
+  builtins,
+  onToggleBuiltin,
+  installed,
+  runtime,
+  path,
+  setPath,
+  busy,
+  action,
+}: PluginsProps) {
   return (
     <main className={componentClass(managementStyles, "management")}>
       <PageHero
@@ -26,13 +39,46 @@ export function Plugins({ installed, runtime, path, setPath, busy, action }: Plu
         description={t(
           "Install a local plugin, review its permissions, and make this space yours.",
         )}
-        stat={{ value: installed.length, caption: "installed", tone: "blue" }}
+        stat={{
+          value: installed.length + builtinFeatures.length,
+          caption: "installed",
+          tone: "blue",
+        }}
         actions={
           <button type="button" onClick={() => action("core.navigate", "panels")}>
             {t("Manage extension panels")}
           </button>
         }
       />
+      <Card span={12} icon="layers" title={t("Built-in")} headingId="builtin-plugins-heading">
+        {builtinFeatures.map((feature) => {
+          const enabled = builtinEnabled(builtins, feature.id);
+          return (
+            <article className={componentClass(managementStyles, "plugin-card")} key={feature.id}>
+              <div>
+                <h2>
+                  {localized(feature.name, feature.nameI18n)}{" "}
+                  <small className={componentClass(managementStyles, "builtin-badge")}>
+                    {t("Built-in")}
+                  </small>
+                </h2>
+                <p>
+                  {feature.id} · {t(enabled ? "active" : "disabled")}
+                </p>
+                <p>{localized(feature.description, feature.descriptionI18n)}</p>
+              </div>
+              <div className={componentClass(managementStyles, "card-actions")}>
+                <button
+                  disabled={busy || !native}
+                  onClick={() => onToggleBuiltin(feature.id, !enabled)}
+                >
+                  {t(enabled ? "Disable" : "Enable")}
+                </button>
+              </div>
+            </article>
+          );
+        })}
+      </Card>
       <Card span={5} icon="puzzle" eyebrow="Review & install">
         <form
           className={componentClass(managementStyles, "install-form")}

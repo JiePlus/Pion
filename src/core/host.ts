@@ -27,6 +27,8 @@ export interface Boot {
   plugins: Installed[];
   catalog: Catalog;
   settings: { executable: string; workspace: string };
+  /** Built-in feature switches; missing ids are enabled. */
+  builtins?: Record<string, boolean>;
 }
 export interface PiSetupStatus {
   installation: "missing" | "broken" | "ready";
@@ -120,6 +122,7 @@ async function preview(request: Record<string, unknown>): Promise<unknown> {
         plugins: installed,
         catalog: { projects: [], tasks: [] },
         settings: { executable: "pi", workspace: "" },
+        builtins: {},
       };
     case "review": {
       throw new Error("Local installation requires the desktop app");

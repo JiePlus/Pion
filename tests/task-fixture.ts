@@ -296,6 +296,12 @@ export async function taskFixture(page: Page) {
               localStorage.setItem("fixture.extensionResponse", JSON.stringify(request));
               return null;
             }
+            if (request.op === "builtin.set") {
+              const states = { "git-review": true, ...read("fixture.builtins", {}) };
+              states[request.id] = request.enabled;
+              localStorage.setItem("fixture.builtins", JSON.stringify(states));
+              return states;
+            }
             if (typeof request.op === "string" && request.op.startsWith("git.")) {
               const calls = read("fixture.gitCalls", []);
               localStorage.setItem("fixture.gitCalls", JSON.stringify([...calls, request]));
@@ -423,6 +429,7 @@ export async function taskFixture(page: Page) {
               case "boot":
                 return {
                   plugins: records,
+                  builtins: read("fixture.builtins", {}),
                   catalog,
                   settings: { executable: "pi", workspace: "/projects/Pion" },
                 };

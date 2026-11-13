@@ -112,3 +112,23 @@ test("a project without Git offers to initialize a repository", async ({ page })
   await pane.getByRole("button", { name: "Initialize repository" }).click();
   await expect(pane.getByRole("radio", { name: "Unstaged 2" })).toBeVisible();
 });
+
+test("Git review is listed as a built-in plugin and can be switched off", async ({ page }) => {
+  const pane = await openReview(page);
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await page.getByRole("button", { name: "Plugins" }).first().click();
+  const card = page.locator(".plugin-card", { hasText: "git-review" });
+  await expect(card).toContainText("Built-in");
+  await expect(card).toContainText("Git review");
+  await expect(card.getByRole("button", { name: "Uninstall" })).toHaveCount(0);
+  await card.getByRole("button", { name: "Disable" }).click();
+  await expect(card.getByRole("button", { name: "Enable" })).toBeVisible();
+  await page.reload();
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await page.getByRole("button", { name: "Plugins" }).first().click();
+  await expect(page.locator(".plugin-card", { hasText: "git-review" })).toContainText("disabled");
+  await page.getByText("Review task").first().click();
+  await expect(page.locator(".core-chat")).toContainText("Reply for Review task");
+  await expect(page.getByRole("button", { name: "Review changes" })).toHaveCount(0);
+  await expect(pane).toHaveCount(0);
+});

@@ -1027,13 +1027,15 @@ test("project picker selection and plugin lifecycle remain available inside sett
   await page.getByRole("textbox", { name: "Local plugin folder or ZIP" }).fill("/plugin");
   await page.getByRole("button", { name: "Review installation" }).click();
   await page.getByRole("button", { name: "Approve & enable" }).click();
-  await page.getByRole("button", { name: "Disable", exact: true }).click();
+  // The built-in Git review card sits above installed plugins; act on the installed one.
+  const card = page.locator(".plugin-card", { hasText: "agent-chat" });
+  await card.getByRole("button", { name: "Disable", exact: true }).click();
   await expect(page.getByText("agent-chat · disabled")).toBeVisible();
-  await page.getByRole("button", { name: "Enable", exact: true }).click();
+  await card.getByRole("button", { name: "Enable", exact: true }).click();
   await expect(page.getByText("agent-chat · active")).toBeVisible();
-  await page.getByRole("button", { name: "Reload", exact: true }).click();
+  await card.getByRole("button", { name: "Reload", exact: true }).click();
   await expect(page.getByText("agent-chat · active")).toBeVisible();
-  await page.getByRole("button", { name: "Uninstall", exact: true }).click();
+  await card.getByRole("button", { name: "Uninstall", exact: true }).click();
   await expect(page.getByText("No plugins installed yet.")).toBeVisible();
   await page.getByRole("button", { name: "New task", exact: true }).click();
   await page.screenshot({ path: "test-results/new-task.png", fullPage: true });

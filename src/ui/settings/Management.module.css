@@ -270,6 +270,13 @@
   font-size: 10px;
 }
 
+.plugin-card h2 .builtin-badge {
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--pion-color-surface);
+  color: var(--pion-color-brand-strong);
+}
+
 .plugin-card p {
   margin-bottom: 0;
   color: var(--pion-color-muted);

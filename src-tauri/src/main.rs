@@ -210,6 +210,26 @@ fn field<'a>(value: &'a Value, key: &str) -> Result<&'a str, String> {
         .ok_or_else(|| format!("Missing string {key}"))
 }
 
+/// Built-in Pion features that ship inside the app and can be switched off in
+/// Settings → Plugins. Enabled unless `builtins.json` says otherwise.
+const BUILTINS: &[&str] = &["git-review"];
+
+fn builtin_states(root: &std::path::Path) -> Value {
+    let saved = workspace::bounded_read(&root.join("builtins.json"), 64 * 1024)
+        .ok()
+        .and_then(|text| serde_json::from_str::<Value>(&text).ok())
+        .unwrap_or_default();
+    let states: serde_json::Map<String, Value> = BUILTINS
+        .iter()
+        .map(|id| (id.to_string(), json!(saved[*id].as_bool().unwrap_or(true))))
+        .collect();
+    Value::Object(states)
+}
+
+fn builtin_enabled(root: &std::path::Path, id: &str) -> bool {
+    builtin_states(root)[id].as_bool().unwrap_or(false)
+}
+
 fn configured_executable(root: &std::path::Path) -> String {
     workspace::bounded_read(&root.join("settings.json"), 64 * 1024)
         .ok()
@@ -271,7 +291,28 @@ fn handle(app: &tauri::AppHandle, request: Value) -> Result<Value, String> {
                     }
                 }
             }
-            Ok(json!({"plugins":state.plugins.list(), "settings":settings, "catalog":catalog}))
+            Ok(json!({
+                "plugins": state.plugins.list(),
+                "settings": settings,
+                "catalog": catalog,
+                "builtins": builtin_states(&state.root),
+            }))
+        }
+        "builtin.set" => {
+            let id = field(&request, "id")?;
+            if !BUILTINS.contains(&id) {
+                return Err("Unknown built-in".into());
+            }
+            let mut states = builtin_states(&state.root);
+            states[id] = json!(request["enabled"].as_bool().ok_or("Missing enabled")?);
+            atomic_write(
+                &state.root.join("builtins.json"),
+                &serde_json::to_vec(&states).map_err(|e| e.to_string())?,
+            )?;
+            if id == "git-review" && states[id] == json!(false) {
+                state.turn_snapshots.clear();
+            }
+            Ok(states)
         }
         "review" => Ok(json!(state.plugins.review(field(&request, "path")?)?)),
         "approve" => state.plugins.approve(field(&request, "digest")?),
@@ -1119,7 +1160,7 @@ fn handle(app: &tauri::AppHandle, request: Value) -> Result<Value, String> {
                 .map(pi::Pi::generation)
                 .ok_or("No task is open")?;
             let task_id = state.active_task.clone();
-            if command == "prompt" {
+            if command == "prompt" && builtin_enabled(&state.root, "git-review") {
                 // Remember the worktree before Pi starts so the review pane can show this turn.
                 if let (Some(id), Some(root)) = (task_id.clone(), state.workspace.clone()) {
                     match git::snapshot(&root) {
@@ -1238,6 +1279,9 @@ fn handle(app: &tauri::AppHandle, request: Value) -> Result<Value, String> {
             }
         }
         op if op.starts_with("git.") => {
+            if !builtin_enabled(&state.root, "git-review") {
+                return Err("Git review is disabled in Settings → Plugins".into());
+            }
             let root = state
                 .workspace
                 .clone()

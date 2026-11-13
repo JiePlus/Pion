@@ -1,7 +1,7 @@
 import managementStyles from "../settings/Management.module.css";
 import { componentClass } from "../componentClass.ts";
 import { t, translate } from "../../core/i18n.ts";
-import { native } from "../../core/host.ts";
+import { host, native } from "../../core/host.ts";
 import type { Boot } from "../../core/host.ts";
 import { Runtime } from "../../core/runtime.ts";
 import type { PanelView } from "../../core/runtime.ts";
@@ -25,11 +25,17 @@ import { Panel } from "../primitives/Panel.tsx";
 import { GlassFilter } from "../primitives/Glass.tsx";
 import { useState } from "react";
 import { useGitReview } from "../hooks/useGitReview.ts";
+import { builtinEnabled } from "../../core/builtins.ts";
+import type { BuiltinStates } from "../../core/builtins.ts";
 import styles from "./Shell.module.css";
 
 export function Shell({ runtime, boot }: { runtime: Runtime; boot: Boot }) {
   const controller = useShellController(runtime, boot);
-  const review = useGitReview(controller.task?.id ?? null);
+  const [builtins, setBuiltins] = useState<BuiltinStates>(boot.builtins ?? {});
+  const review = useGitReview(controller.task?.id ?? null, builtinEnabled(builtins, "git-review"));
+  async function toggleBuiltin(id: string, enabled: boolean) {
+    setBuiltins(await host<BuiltinStates>({ op: "builtin.set", id, enabled }));
+  }
   const appUpdate = useAppUpdate((title, message) => runtime.notice(title, message));
   const [addProviderRequest, setAddProviderRequest] = useState(0);
   const {
@@ -193,6 +199,10 @@ export function Shell({ runtime, boot }: { runtime: Runtime; boot: Boot }) {
         )}
         {page === "plugins" && (
           <Plugins
+            builtins={builtins}
+            onToggleBuiltin={(id, enabled) =>
+              toggleBuiltin(id, enabled).catch((error) => runtime.notice("Pion", String(error)))
+            }
             installed={installed}
             runtime={runtime}
             path={path}

@@ -14,14 +14,14 @@ function savedOpen(): boolean {
 
 // Review pane visibility, the topbar change summary, and a revision that tells
 // the pane to reload after each Pi turn.
-export function useGitReview(taskId: string | null) {
+export function useGitReview(taskId: string | null, enabled = true) {
   const [open, setOpenState] = useState(savedOpen);
   const [summary, setSummary] = useState<GitSummary | null>(null);
   const [revision, setRevision] = useState(0);
   const request = useRef(0);
 
   const refresh = useCallback(async () => {
-    if (!native || !taskId) {
+    if (!native || !taskId || !enabled) {
       setSummary(null);
       return;
     }
@@ -32,7 +32,7 @@ export function useGitReview(taskId: string | null) {
     } catch {
       if (id === request.current) setSummary(null);
     }
-  }, [taskId]);
+  }, [taskId, enabled]);
 
   useEffect(() => {
     void refresh();
@@ -65,7 +65,7 @@ export function useGitReview(taskId: string | null) {
     }
   }, []);
 
-  return { open, setOpen, summary, refresh, revision };
+  return { open: open && enabled, setOpen, summary, refresh, revision };
 }
 
 export type GitReviewState = ReturnType<typeof useGitReview>;
