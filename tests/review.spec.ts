@@ -111,6 +111,20 @@ test("a project without Git offers to initialize a repository", async ({ page })
   await expect(pane).toContainText("This project is not a Git repository.");
   await pane.getByRole("button", { name: "Initialize repository" }).click();
   await expect(pane.getByRole("radio", { name: "Unstaged 2" })).toBeVisible();
+
+  // Before the first commit the current branch is still listed, marked as uncommitted.
+  await pane.getByRole("button", { name: /main/ }).click();
+  const current = page.getByRole("menuitemradio", { name: "main" });
+  await expect(current).toBeVisible();
+  await expect(current).toHaveAttribute("aria-description", "No commits yet");
+  await expect(page.getByRole("menu", { name: "Branches" })).toContainText(
+    "Branches are saved with the first commit",
+  );
+  await page.getByRole("textbox", { name: "New branch name" }).fill("topic");
+  await page.getByRole("button", { name: "Create", exact: true }).click();
+  await expect(pane.getByRole("button", { name: /topic/ })).toBeVisible();
+  await pane.getByRole("button", { name: /topic/ }).click();
+  await expect(page.getByRole("menuitemradio", { name: "topic" })).toBeVisible();
 });
 
 test("Git review is listed as a built-in plugin and can be switched off", async ({ page }) => {

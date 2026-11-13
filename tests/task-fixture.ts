@@ -330,6 +330,7 @@ export async function taskFixture(page: Page) {
               switch (request.op) {
                 case "git.init":
                   localStorage.removeItem("fixture.gitNotRepo");
+                  localStorage.setItem("fixture.gitUnborn", "yes");
                   return { ok: true, output: "" };
                 case "git.summary":
                   return {
@@ -356,6 +357,7 @@ export async function taskFixture(page: Page) {
                     unstaged: unstagedCount,
                     base: request.scope === "branch" ? "origin/main" : null,
                     turnAvailable: repo.turn,
+                    unborn: !!localStorage.getItem("fixture.gitUnborn"),
                     diff: diffs[request.scope] ?? "",
                     truncated: false,
                   };
@@ -408,6 +410,10 @@ export async function taskFixture(page: Page) {
                   return result;
                 }
                 case "git.branches":
+                  if (localStorage.getItem("fixture.gitUnborn"))
+                    return {
+                      branches: [{ name: repo.branch, current: true, upstream: "", unborn: true }],
+                    };
                   return {
                     branches: [
                       { name: repo.branch, current: true, upstream: `origin/${repo.branch}` },

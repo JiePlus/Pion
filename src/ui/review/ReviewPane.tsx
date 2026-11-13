@@ -435,7 +435,7 @@ export function ReviewPane({
                   <MenuItem
                     key={branch.name}
                     label={branch.name}
-                    description={branch.upstream || undefined}
+                    description={branch.unborn ? t("No commits yet") : branch.upstream || undefined}
                     checked={branch.current}
                     disabled={branch.current}
                     onSelect={() => {
@@ -448,6 +448,13 @@ export function ReviewPane({
                     }}
                   />
                 ))}
+                {review.unborn && (
+                  <p className={componentClass(styles, "menu-note")}>
+                    {t(
+                      "Branches are saved with the first commit. Until then, a new branch replaces the current one.",
+                    )}
+                  </p>
+                )}
                 <MenuSeparator />
                 <form
                   className={componentClass(styles, "new-branch")}

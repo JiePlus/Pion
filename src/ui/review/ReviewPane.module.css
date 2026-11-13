@@ -97,6 +97,14 @@
   overflow: auto;
 }
 
+.menu-note {
+  max-width: 260px;
+  margin: 4px 8px;
+  color: var(--pion-color-muted);
+  font-size: 11.5px;
+  line-height: 1.45;
+}
+
 .new-branch {
   display: flex;
   gap: 6px;

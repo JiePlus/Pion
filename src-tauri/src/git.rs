@@ -52,11 +52,18 @@ fn is_repo(root: &Path) -> Result<bool, String> {
     Ok(String::from_utf8_lossy(&output.stdout).trim() == "true")
 }
 
+/// The checked-out branch, read from HEAD's symbolic ref so it also works
+/// before the first commit (an "unborn" branch has no ref under refs/heads).
+fn current_branch(root: &Path) -> Option<String> {
+    let output = run(root, &["symbolic-ref", "--quiet", "--short", "HEAD"]).ok()?;
+    let name = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    (output.status.success() && !name.is_empty()).then_some(name)
+}
+
 fn branch_info(root: &Path) -> Branch {
-    let name = run(root, &["rev-parse", "--abbrev-ref", "HEAD"])
-        .map(|output| String::from_utf8_lossy(&output.stdout).trim().to_string())
-        .unwrap_or_default();
-    let detached = name.is_empty() || name == "HEAD";
+    let current = current_branch(root);
+    let detached = current.is_none();
+    let name = current.unwrap_or_else(|| "HEAD".to_string());
     let (mut ahead, mut behind) = (0, 0);
     if !detached {
         if let Ok(output) = run(
@@ -427,7 +434,16 @@ fn done(exec: Exec) -> Result<Value, String> {
 /// when the active task's latest prompt was sent, if any.
 pub fn call(root: &Path, op: &str, args: &Value, turn: Option<&str>) -> Result<Value, String> {
     if op == "git.init" {
-        return done(git(root, &["init"])?);
+        // Respect init.defaultBranch when the user set one; otherwise start on "main".
+        let configured = run(root, &["config", "--get", "init.defaultBranch"])
+            .map(|output| output.status.success())
+            .unwrap_or(false);
+        let args: &[&str] = if configured {
+            &["init"]
+        } else {
+            &["init", "--initial-branch=main"]
+        };
+        return done(git(root, args)?);
     }
     if op == "git.summary" {
         return summary(root);
@@ -702,6 +718,7 @@ fn review(root: &Path, scope: &str, turn: Option<&str>) -> Result<Value, String>
         "unstaged": unstaged,
         "base": base,
         "turnAvailable": turn.is_some(),
+        "unborn": !has_head(root),
         "diff": diff,
         "truncated": truncated,
     }))
@@ -932,6 +949,16 @@ fn branches(root: &Path) -> Result<Value, String> {
         })
         .take(MAX_BRANCHES)
         .collect();
+    let mut list = list;
+    // Before its first commit the current branch exists only as HEAD; list it anyway.
+    if let Some(current) = current_branch(root) {
+        if !list.iter().any(|branch| branch["name"] == json!(current)) {
+            list.insert(
+                0,
+                json!({ "name": current, "current": true, "upstream": "", "unborn": true }),
+            );
+        }
+    }
     Ok(json!({ "branches": list }))
 }
 
@@ -1183,8 +1210,31 @@ mod tests {
         fs::create_dir_all(&plain).unwrap();
         assert_eq!(call(&plain, "git.summary", &json!({}), None).unwrap()["repo"], json!(false));
         assert!(call(&plain, "git.review", &json!({}), None).is_err());
+        // A developer's own init.defaultBranch wins over "main".
+        let configured = StdCommand::new("git")
+            .args(["config", "--get", "init.defaultBranch"])
+            .current_dir(&plain)
+            .output()
+            .ok()
+            .filter(|output| output.status.success())
+            .map(|output| String::from_utf8_lossy(&output.stdout).trim().to_string());
+        let initial = configured.unwrap_or_else(|| "main".to_string());
         call(&plain, "git.init", &json!({}), None).unwrap();
-        assert_eq!(call(&plain, "git.summary", &json!({}), None).unwrap()["repo"], json!(true));
+        let summary = call(&plain, "git.summary", &json!({}), None).unwrap();
+        assert_eq!(summary["repo"], json!(true));
+        // Before the first commit the branch is "main", not a detached HEAD, and it is listed.
+        assert_eq!(summary["branch"], json!(initial));
+        assert_eq!(summary["detached"], json!(false));
+        let listed = call(&plain, "git.branches", &json!({}), None).unwrap();
+        assert_eq!(listed["branches"][0]["name"], json!(initial));
+        assert_eq!(listed["branches"][0]["unborn"], json!(true));
+        call(&plain, "git.createBranch", &json!({ "name": "topic" }), None).unwrap();
+        let listed = call(&plain, "git.branches", &json!({}), None).unwrap();
+        assert_eq!(listed["branches"][0]["name"], json!("topic"));
+        assert_eq!(listed["branches"][0]["current"], json!(true));
+        let review = call(&plain, "git.review", &json!({ "scope": "unstaged" }), None).unwrap();
+        assert_eq!(review["branch"], json!("topic"));
+        assert_eq!(review["unborn"], json!(true));
         fs::remove_dir_all(&plain).unwrap();
     }
 }

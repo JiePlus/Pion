@@ -30,6 +30,8 @@ export interface GitReview {
   unstaged: number;
   base: string | null;
   turnAvailable: boolean;
+  /** No commit yet: the current branch exists only as HEAD until the first commit. */
+  unborn?: boolean;
   diff: string;
   truncated: boolean;
 }
@@ -38,6 +40,8 @@ export interface GitBranch {
   name: string;
   current: boolean;
   upstream: string;
+  /** The current branch before its first commit. */
+  unborn?: boolean;
 }
 
 export interface CommitResult {

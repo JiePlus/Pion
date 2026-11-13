@@ -2,6 +2,9 @@ import type { Locale, LocalizedText } from "./api.ts";
 
 // English source strings are the fallback; application copy lives here, plugin copy stays in plugins.
 const zh = {
+  "No commits yet": "尚无提交",
+  "Branches are saved with the first commit. Until then, a new branch replaces the current one.":
+    "分支在第一次提交后才会真正保存。在此之前，新建分支会替换当前分支。",
   "Built-in": "内置",
   Review: "审阅",
   "Review changes": "审阅更改",
