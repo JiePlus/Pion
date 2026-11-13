@@ -126,15 +126,39 @@
   margin: 14px 0;
   overflow: hidden;
   border: 1px solid var(--pion-color-line);
-  border-radius: 10px;
-  background: var(--pion-color-surface-raised);
+  border-radius: 14px;
+  background: var(--pion-color-surface-muted);
 }
 
+/* Header bar: what the code is on the left, the one action on the right. */
 .code-toolbar {
   display: flex;
-  justify-content: flex-end;
-  padding: 4px 7px;
+  min-height: 34px;
+  align-items: center;
+  gap: 7px;
+  padding: 0 6px 0 12px;
   border-bottom: 1px solid var(--pion-color-line);
+  color: var(--pion-color-faint);
+}
+
+.code-language {
+  flex: 1;
+  color: var(--pion-color-muted);
+  font-family: var(--pion-font-mono);
+  font-size: 11.5px;
+}
+
+.code-toolbar .copy-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border-radius: 8px;
+}
+
+.code-toolbar .copy-button:hover:not(:disabled) {
+  border-color: transparent;
+  background: var(--pion-color-surface-hover);
+  color: var(--pion-color-ink);
 }
 
 .code-block pre,
@@ -192,12 +216,41 @@
   font-size: 12px;
 }
 
+/* A quiet one-line row: the label never wraps, the preview takes what is left. */
 .thinking-block summary {
   display: flex;
+  width: fit-content;
+  max-width: 100%;
+  min-width: 0;
   align-items: center;
-  gap: 9px;
-  padding: 5px 0;
+  gap: 7px;
+  margin-left: -8px;
+  padding: 4px 10px 4px 8px;
+  border-radius: var(--pion-size-radius-pill);
   cursor: pointer;
+  list-style: none;
+  transition: background var(--pion-duration-fast) ease;
+}
+
+.thinking-block summary:hover {
+  background: var(--pion-color-surface-hover);
+}
+
+.thinking-block summary > svg {
+  flex: none;
+  color: var(--pion-color-faint);
+  transition: transform var(--pion-duration-med) var(--pion-ease-spring-soft);
+}
+
+.thinking-block[open] summary > svg {
+  transform: rotate(90deg);
+}
+
+.thinking-label {
+  flex: none;
+  color: rgb(var(--pion-rgb-purple));
+  font-weight: 600;
+  white-space: nowrap;
 }
 
 .thinking-block summary::-webkit-details-marker,
@@ -205,35 +258,38 @@
   display: none;
 }
 
-.thinking-block summary::before,
-.tool-call summary::after {
-  content: "›";
-  color: var(--pion-color-muted);
+.tool-chevron {
+  flex: none;
+  color: var(--pion-color-faint);
+  transition: transform var(--pion-duration-med) var(--pion-ease-spring-soft);
 }
 
-.thinking-block[open] summary::before,
-.tool-call[open] summary::after {
+.tool-call[open] .tool-chevron {
   transform: rotate(90deg);
 }
 
 .thinking-preview,
 .tool-preview {
   min-width: 0;
+  flex: 1 1 auto;
   overflow: hidden;
-  color: var(--pion-color-muted);
+  color: var(--pion-color-faint);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .thinking-block[open] .thinking-preview {
-  visibility: hidden;
+  display: none;
 }
 
 .thinking-block > .message-markdown {
   max-height: 300px;
-  padding: 7px 0 7px 13px;
+  margin: 4px 0 0 6px;
+  padding: 4px 0 4px 14px;
   overflow: auto;
-  border-left: 2px solid var(--pion-color-line);
+  border-left: 2px solid rgb(var(--pion-rgb-purple) / 30%);
+  color: var(--pion-color-muted);
+  line-height: 1.7;
 }
 
 .thinking-summary {
@@ -242,55 +298,115 @@
   font-size: 11px;
 }
 
+/* Tool card: state is carried by the icon and a single-hue tint, never by colour alone. */
 .tool-call {
-  margin: 12px 0;
+  margin: 10px 0;
   overflow: hidden;
   border: 1px solid var(--pion-color-line);
-  border-radius: 10px;
-  background: var(--pion-color-surface-raised);
-  font-size: 12px;
+  border-radius: 14px;
+  background: var(--pion-color-surface-muted);
+  font-size: 12.5px;
+  transition:
+    border-color var(--pion-duration-med) ease,
+    background var(--pion-duration-med) ease;
+}
+
+.tool-call.running {
+  border-color: rgb(var(--pion-rgb-blue) / 30%);
+}
+
+.tool-call.failed {
+  border-color: rgb(var(--pion-rgb-red) / 32%);
+  background: rgb(var(--pion-rgb-red) / 5%);
 }
 
 .tool-call summary,
 .tool-call-summary {
   display: flex;
   min-width: 0;
+  min-height: 40px;
   align-items: center;
-  gap: 8px;
-  padding: 12px 14px;
+  gap: 10px;
+  padding: 0 12px;
 }
 
 .tool-call summary {
   cursor: pointer;
+  list-style: none;
 }
 
-.tool-name,
-.tool-call :global(.dot),
-.tool-call summary small,
-.tool-call-summary small {
-  flex-shrink: 0;
+.tool-call summary:hover {
+  background: var(--pion-color-surface-hover);
 }
 
-.tool-call summary small,
-.tool-call-summary small {
-  margin-left: auto;
-  color: var(--pion-color-muted);
+.tool-icon {
+  display: grid;
+  width: 16px;
+  height: 16px;
+  flex: none;
+  place-items: center;
+}
+
+.tool-icon.completed {
+  color: rgb(var(--pion-rgb-green));
+}
+
+.tool-icon.failed {
+  color: var(--pion-color-danger);
+}
+
+.tool-icon.running::before {
+  width: 12px;
+  height: 12px;
+  border: 2px solid rgb(var(--pion-rgb-blue) / 25%);
+  border-top-color: rgb(var(--pion-rgb-blue));
+  border-radius: 50%;
+  content: "";
+  animation: tool-spin 0.8s linear infinite;
+}
+
+.tool-icon.pending::before,
+.tool-icon.interrupted::before {
+  width: 9px;
+  height: 9px;
+  border: 1.5px solid var(--pion-color-faint);
+  border-radius: 50%;
+  content: "";
+}
+
+@keyframes tool-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.tool-name {
+  flex: none;
+  color: var(--pion-color-ink);
+  font-weight: 600;
+}
+
+.tool-call .tool-preview {
+  background: none;
+  font-family: var(--pion-font-mono);
   font-size: 12px;
 }
 
-.tool-call.failed :global(.dot) {
-  background: var(--pion-color-danger);
+.tool-status {
+  flex: none;
+  margin-left: auto;
+  color: var(--pion-color-faint);
+  font-size: 12px;
 }
 
-.tool-call.pending :global(.dot),
-.tool-call.interrupted :global(.dot) {
-  background: var(--pion-color-faint);
+.tool-call.failed .tool-status {
+  color: var(--pion-color-danger);
+  font-weight: 600;
 }
 
 .tool-details {
-  padding: 10px 12px;
+  padding: 10px 12px 2px;
   border-top: 1px solid var(--pion-color-line);
-  background: var(--pion-color-surface-muted);
 }
 
 .tool-details h4 {
@@ -341,8 +457,10 @@
   margin-top: 2px;
 }
 
-.tool-call.running :global(.dot) {
-  animation: pulse 1.4s ease-in-out infinite;
+@media (prefers-reduced-motion: reduce) {
+  .tool-icon.running::before {
+    animation: none;
+  }
 }
 
 @media (max-width: 850px) {
