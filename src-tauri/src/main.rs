@@ -1,6 +1,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod git;
+mod git_summary;
 mod images;
 mod models;
 mod net;
@@ -13,6 +14,7 @@ mod scan;
 mod sessions;
 mod skills;
 mod tasks;
+mod transcripts;
 mod workspace;
 
 use plugins::{atomic_write, Plugins};
@@ -24,12 +26,163 @@ use tauri::{Emitter, Manager};
 use tauri_plugin_dialog::DialogExt;
 
 const MAX_TASK_PROCESSES: usize = 4;
+/// Warm spare Pi processes kept at once, for the most recent project. Each costs one
+/// idle Pi process (about 120 MB).
+const MAX_SPARES: usize = 1;
+/// Pi processes Pion runs at once: tasks, the new-task draft and the spare. A spare is
+/// only started while there is room, so it never pushes memory past this.
+const MAX_PI_PROCESSES: usize = MAX_TASK_PROCESSES + 1;
+
+fn pi_processes(state: &State) -> usize {
+    state
+        .tasks
+        .values()
+        .filter(|process| process.is_alive())
+        .count()
+        + state
+            .prepared
+            .as_ref()
+            .is_some_and(|process| process.is_alive()) as usize
+        + state.spares.len()
+        + state.warming.len()
+}
+
+struct Spare {
+    root: PathBuf,
+    executable: String,
+    process: Arc<pi::Pi>,
+    since: std::time::Instant,
+}
+
+/// Background Pi processes unused this long are stopped to give their memory back.
+const IDLE_RECLAIM: std::time::Duration = std::time::Duration::from_secs(30 * 60);
+
+/// Task processes to reclaim: not the active task, not working, and unused for
+/// IDLE_RECLAIM. Reopening such a task binds a warm spare again.
+fn idle_tasks<'a>(
+    active: Option<&str>,
+    now: std::time::Instant,
+    tasks: impl Iterator<Item = (&'a str, bool, Option<std::time::Instant>)>,
+) -> Vec<String> {
+    tasks
+        .filter(|(id, working, last_used)| {
+            Some(*id) != active
+                && !working
+                && last_used.is_some_and(|last| now.duration_since(last) >= IDLE_RECLAIM)
+        })
+        .map(|(id, _, _)| id.to_string())
+        .collect()
+}
+
+/// The supervisor: once a minute, stops idle task processes and stale spares.
+fn supervise(app: tauri::AppHandle) {
+    std::thread::spawn(move || loop {
+        std::thread::sleep(std::time::Duration::from_secs(60));
+        let managed = app.state::<Mutex<State>>();
+        let Ok(mut state) = managed.lock() else {
+            continue;
+        };
+        let now = std::time::Instant::now();
+        let idle = idle_tasks(
+            state.active_task.as_deref(),
+            now,
+            state.tasks.iter().map(|(id, process)| {
+                (
+                    id.as_str(),
+                    process.is_working(),
+                    state.last_used.get(id).copied(),
+                )
+            }),
+        );
+        for id in idle {
+            if let Some(process) = state.tasks.remove(&id) {
+                process.stop();
+            }
+            state.last_used.remove(&id);
+            let _ = app.emit("task:status", json!({"taskId":id,"state":"disconnected"}));
+        }
+        state.spares.retain(|spare| {
+            spare.process.is_alive() && now.duration_since(spare.since) < IDLE_RECLAIM
+        });
+    });
+}
+
+/// Takes the warm spare for this project and Pi executable, if one is alive.
+fn take_spare(state: &mut State, root: &std::path::Path, executable: &str) -> Option<Arc<pi::Pi>> {
+    state.spares.retain(|spare| spare.process.is_alive());
+    let index = state
+        .spares
+        .iter()
+        .position(|spare| spare.root == root && spare.executable == executable)?;
+    Some(state.spares.remove(index).process)
+}
+
+/// Starts a spare Pi for `root` in the background unless one exists or is starting.
+/// The spare has no session; opening an existing task binds it with `switch_session`.
+fn warm_spare(app: &tauri::AppHandle, root: PathBuf, executable: String) {
+    let app = app.clone();
+    std::thread::spawn(move || {
+        let managed = app.state::<Mutex<State>>();
+        let (extension, generation) = {
+            let Ok(mut state) = managed.lock() else {
+                return;
+            };
+            state.spares.retain(|spare| spare.process.is_alive());
+            if state
+                .spares
+                .iter()
+                .any(|spare| spare.root == root && spare.executable == executable)
+                || pi_processes(&state) >= MAX_PI_PROCESSES
+                || !state.warming.insert(root.clone())
+            {
+                return;
+            }
+            state.generation += 1;
+            (state.pi_extension.clone(), state.generation)
+        };
+        let process = pi::Pi::start(
+            app.clone(),
+            &executable,
+            &root,
+            &extension,
+            generation,
+            None,
+            Some(pi::SessionTarget::Ephemeral),
+        )
+        .and_then(|process| {
+            process.request(json!({"type":"get_state"}))?;
+            Ok(process)
+        });
+        let Ok(mut state) = managed.lock() else {
+            return;
+        };
+        state.warming.remove(&root);
+        if let Ok(process) = process {
+            if state.spares.len() >= MAX_SPARES {
+                state.spares.remove(0);
+            }
+            state.spares.push(Spare {
+                root,
+                executable,
+                process: Arc::new(process),
+                since: std::time::Instant::now(),
+            });
+        }
+    });
+}
 
 struct State {
     plugins: Plugins,
     workspace: Option<PathBuf>,
-    prepared: Option<pi::Pi>,
-    tasks: HashMap<String, pi::Pi>,
+    prepared: Option<Arc<pi::Pi>>,
+    tasks: HashMap<String, Arc<pi::Pi>>,
+    /// Warm Pi processes with no session, one per recent project (oldest first), ready
+    /// to bind to a task with `switch_session` instead of starting a new process.
+    spares: Vec<Spare>,
+    /// Projects whose spare is being started.
+    warming: HashSet<PathBuf>,
+    /// When each task was last the active one; idle task processes are reclaimed.
+    last_used: HashMap<String, std::time::Instant>,
     stale_tasks: HashSet<String>,
     root: PathBuf,
     pi_extension: PathBuf,
@@ -39,20 +192,19 @@ struct State {
     auth_sequence: u64,
     generation: u64,
     active_task: Option<String>,
+    /// Worktree tree captured when each task's latest prompt was sent ("Last turn" review).
+    turn_snapshots: HashMap<String, String>,
 }
 
-fn active_process(state: &State) -> Option<&pi::Pi> {
+fn active_process(state: &State) -> Option<&Arc<pi::Pi>> {
     match state.active_task.as_deref() {
         Some(id) => state.tasks.get(id),
         None => state.prepared.as_ref(),
     }
 }
 
-fn active_process_mut(state: &mut State) -> Option<&mut pi::Pi> {
-    match state.active_task.as_deref() {
-        Some(id) => state.tasks.get_mut(id),
-        None => state.prepared.as_mut(),
-    }
+fn active_process_mut(state: &mut State) -> Option<&Arc<pi::Pi>> {
+    active_process(state)
 }
 
 fn hide_active(state: &State) {
@@ -208,6 +360,26 @@ fn field<'a>(value: &'a Value, key: &str) -> Result<&'a str, String> {
         .ok_or_else(|| format!("Missing string {key}"))
 }
 
+/// Built-in Pion features that ship inside the app and can be switched off in
+/// Settings → Plugins. Enabled unless `builtins.json` says otherwise.
+const BUILTINS: &[&str] = &["git-review"];
+
+fn builtin_states(root: &std::path::Path) -> Value {
+    let saved = workspace::bounded_read(&root.join("builtins.json"), 64 * 1024)
+        .ok()
+        .and_then(|text| serde_json::from_str::<Value>(&text).ok())
+        .unwrap_or_default();
+    let states: serde_json::Map<String, Value> = BUILTINS
+        .iter()
+        .map(|id| (id.to_string(), json!(saved[*id].as_bool().unwrap_or(true))))
+        .collect();
+    Value::Object(states)
+}
+
+fn builtin_enabled(root: &std::path::Path, id: &str) -> bool {
+    builtin_states(root)[id].as_bool().unwrap_or(false)
+}
+
 fn configured_executable(root: &std::path::Path) -> String {
     workspace::bounded_read(&root.join("settings.json"), 64 * 1024)
         .ok()
@@ -220,7 +392,7 @@ fn rollback_pi_change(
     app: &tauri::AppHandle,
     generation: u64,
     task_id: &str,
-    process: &mut pi::Pi,
+    process: &pi::Pi,
     rollback: Value,
     error: String,
 ) -> String {
@@ -269,9 +441,42 @@ fn handle(app: &tauri::AppHandle, request: Value) -> Result<Value, String> {
                     }
                 }
             }
-            Ok(json!({"plugins":state.plugins.list(), "settings":settings, "catalog":catalog}))
+            Ok(json!({
+                "plugins": state.plugins.list(),
+                "settings": settings,
+                "catalog": catalog,
+                "builtins": builtin_states(&state.root),
+            }))
         }
-        "review" => Ok(json!(state.plugins.review(field(&request, "path")?)?)),
+        "builtin.set" => {
+            let id = field(&request, "id")?;
+            if !BUILTINS.contains(&id) {
+                return Err("Unknown built-in".into());
+            }
+            let mut states = builtin_states(&state.root);
+            states[id] = json!(request["enabled"].as_bool().ok_or("Missing enabled")?);
+            atomic_write(
+                &state.root.join("builtins.json"),
+                &serde_json::to_vec(&states).map_err(|e| e.to_string())?,
+            )?;
+            if id == "git-review" && states[id] == json!(false) {
+                state.turn_snapshots.clear();
+            }
+            Ok(states)
+        }
+        "review" => Ok(json!(state.plugins.review(
+            field(&request, "path")?,
+            request["dev"].as_bool().unwrap_or(false),
+        )?)),
+        "dev.poll" => {
+            let id = field(&request, "id")?;
+            let path = state.plugins.dev_path(id)?;
+            // Reading the folder must not hold the shared state.
+            drop(state);
+            let bundle = plugins::read_dev(&path)?;
+            let mut state = managed.lock().map_err(|e| e.to_string())?;
+            Ok(json!(state.plugins.dev_update(id, &path, bundle)?))
+        }
         "approve" => state.plugins.approve(field(&request, "digest")?),
         "enable" => state.plugins.enable(
             field(&request, "id")?,
@@ -571,6 +776,15 @@ fn handle(app: &tauri::AppHandle, request: Value) -> Result<Value, String> {
         "pi_setup.status" => {
             let home = app.path().home_dir().map_err(|e| e.to_string())?;
             let executable = field(&request, "executable")?;
+            // Quick: only confirm that Pi runs and the remembered model is signed in.
+            // The model list then comes from the workspace's own Pi process.
+            let quick = request["quick"].as_bool().unwrap_or(false);
+            state.generation += 1;
+            let generation = state.generation;
+            let data_root = state.root.clone();
+            let extension = state.pi_extension.clone();
+            // These checks start Pi and other processes; do not hold the shared state.
+            drop(state);
             let mut result = pi_setup::inspect(executable, &home);
             if result["installation"] != "ready" {
                 return Ok(result);
@@ -579,45 +793,50 @@ fn handle(app: &tauri::AppHandle, request: Value) -> Result<Value, String> {
                 .as_str()
                 .ok_or("Missing Pi executable")?
                 .to_string();
-            state.generation += 1;
+            let preferred = request["model"]
+                .as_object()
+                .filter(|model| model["provider"].is_string() && model["id"].is_string())
+                .map(|model| json!({"provider":model["provider"],"id":model["id"]}));
+            let signed_in = |model: &Value| {
+                let (Some(provider), Some(id)) = (model["provider"].as_str(), model["id"].as_str())
+                else {
+                    return false;
+                };
+                pi_setup::check_model(std::path::Path::new(&path), provider, id).unwrap_or(false)
+            };
+            if quick {
+                result["modelReady"] = json!(preferred.as_ref().is_some_and(signed_in));
+                result["selectedModel"] = json!(preferred);
+                return Ok(result);
+            }
             let probe = pi::Pi::start(
                 app.clone(),
                 &path,
-                &state.root,
-                &state.pi_extension,
-                state.generation,
+                &data_root,
+                &extension,
+                generation,
                 None,
                 None,
             );
             match probe {
-                Ok(mut process) => {
+                Ok(process) => {
                     process.set_visible(false);
                     let pi_state = process.request(json!({"type":"get_state"}));
                     let models = process.request(json!({"type":"get_available_models"}));
                     match (pi_state, models) {
                         (Ok(pi_state), Ok(models)) => {
-                            let preferred = request["model"].as_object();
-                            let selected = preferred
-                                .filter(|model| model["provider"].is_string() && model["id"].is_string())
-                                .map(|model| json!({"provider":model["provider"],"id":model["id"]}))
-                                .or_else(|| pi_state["model"].as_object().map(|model| json!({"provider":model["provider"],"id":model["id"]})));
+                            let selected = preferred.clone().or_else(|| {
+                                let model = pi_state["model"].as_object()?;
+                                Some(json!({"provider":model["provider"],"id":model["id"]}))
+                            });
                             result["models"] = models["models"].clone();
                             result["modelReady"] = json!(selected.as_ref().is_some_and(|model| {
-                                let Some(provider) = model["provider"].as_str() else {
-                                    return false;
-                                };
-                                let Some(id) = model["id"].as_str() else {
-                                    return false;
-                                };
-                                if !models["models"].as_array().is_some_and(|items| {
+                                models["models"].as_array().is_some_and(|items| {
                                     items.iter().any(|item| {
-                                        item["provider"] == provider && item["id"] == id
+                                        item["provider"] == model["provider"]
+                                            && item["id"] == model["id"]
                                     })
-                                }) {
-                                    return false;
-                                }
-                                pi_setup::check_model(std::path::Path::new(&path), provider, id)
-                                    .unwrap_or(false)
+                                }) && signed_in(model)
                             }));
                             result["selectedModel"] = json!(selected);
                         }
@@ -638,7 +857,9 @@ fn handle(app: &tauri::AppHandle, request: Value) -> Result<Value, String> {
         }
         "pi_setup.check_update" => {
             let home = app.path().home_dir().map_err(|e| e.to_string())?;
-            let mut result = pi_setup::inspect(field(&request, "executable")?, &home);
+            // npm and the release check can take seconds; do not hold the shared state.
+            drop(state);
+            let mut result = pi_setup::inspect_with_npm(field(&request, "executable")?, &home);
             let latest = pi_setup::latest_version()?;
             result["canUpdate"] = json!(pi_setup::can_update(&result, &latest));
             result["latestVersion"] = json!(latest);
@@ -648,24 +869,32 @@ fn handle(app: &tauri::AppHandle, request: Value) -> Result<Value, String> {
             let action = field(&request, "op")?;
             let executable = field(&request, "executable")?;
             let home = app.path().home_dir().map_err(|e| e.to_string())?;
-            if action == "pi_setup.update" {
-                if !pi_setup::update_available(executable, &home) {
-                    return Err("No newer Pion-verified npm Pi version is available".into());
+            let latest = if action == "pi_setup.update" {
+                Some(pi_setup::latest_version()?)
+            } else {
+                None
+            };
+            if let Some(latest) = latest.as_deref() {
+                if !pi_setup::can_update(&pi_setup::inspect_with_npm(executable, &home), latest) {
+                    return Err("Pi is already up to date".into());
                 }
-                if state.tasks.values_mut().any(pi_process_busy)
-                    || state.prepared.as_mut().is_some_and(pi_process_busy)
+                if state.tasks.values().any(|process| pi_process_busy(process))
+                    || state
+                        .prepared
+                        .as_ref()
+                        .is_some_and(|process| pi_process_busy(process))
                 {
                     return Err("Wait for running Pi tasks to finish before updating".into());
                 }
                 state.prepared = None;
                 state.tasks.clear();
+                state.spares.clear();
                 state.active_task = None;
                 let _ = app.emit("pi:status", json!({"generation":state.generation,"taskId":Value::Null,"active":true,"state":"disconnected","detail":"Pi update"}));
             }
-            let path = if action == "pi_setup.install" {
-                pi_setup::install(executable, &home)?
-            } else {
-                pi_setup::update(executable, &home)?
+            let path = match latest.as_deref() {
+                Some(latest) => pi_setup::update(executable, &home, latest)?,
+                None => pi_setup::install(executable, &home)?,
             };
             let settings_path = state.root.join("settings.json");
             let mut settings: Value = if settings_path.exists() {
@@ -689,6 +918,8 @@ fn handle(app: &tauri::AppHandle, request: Value) -> Result<Value, String> {
             atomic_write(&state.root.join("settings.json"), &serde_json::to_vec(
                 &json!({"workspace":state.workspace.as_ref().map(|p| p.to_string_lossy()).unwrap_or_default(),"executable":executable})
             ).map_err(|e| e.to_string())?)?;
+            // Spares were started with the previous executable.
+            state.spares.retain(|spare| spare.executable == executable);
             Ok(Value::Null)
         }
         "task.create" => {
@@ -728,7 +959,7 @@ fn handle(app: &tauri::AppHandle, request: Value) -> Result<Value, String> {
                 None,
                 None,
             )
-            .and_then(|mut process| {
+            .and_then(|process| {
                 process.request(json!({"type":"get_state"}))?;
                 Ok(process)
             });
@@ -740,13 +971,21 @@ fn handle(app: &tauri::AppHandle, request: Value) -> Result<Value, String> {
                 }
             };
             state.workspace = Some(root.clone());
-            state.prepared = Some(process);
+            // This process doubles as the project's spare: opening an existing task
+            // binds it instead of starting another one.
+            state.prepared = Some(Arc::new(process));
             let _ = app.emit("workspace:opened", workspace::describe(&root));
             let _ = app.emit("pi:status", json!({"generation":state.generation,"taskId":Value::Null,"active":true,"state":"connected", "detail":"Pi RPC connected"}));
             Ok(Value::Null)
         }
         "task.open" => {
             let id = field(&request, "id")?;
+            // The task being left was in use until now; the opened one is in use from now.
+            let now = std::time::Instant::now();
+            if let Some(previous) = state.active_task.clone() {
+                state.last_used.insert(previous, now);
+            }
+            state.last_used.insert(id.to_string(), now);
             if state.stale_tasks.contains(id)
                 && state
                     .tasks
@@ -788,6 +1027,7 @@ fn handle(app: &tauri::AppHandle, request: Value) -> Result<Value, String> {
                 );
                 let mut result = mark_task_read(app, &state.root, id)?;
                 result["reused"] = json!(true);
+                warm_spare(app, root, field(&request, "executable")?.to_string());
                 return Ok(result);
             }
             state.tasks.remove(id);
@@ -824,16 +1064,46 @@ fn handle(app: &tauri::AppHandle, request: Value) -> Result<Value, String> {
                 .as_deref()
                 .map(pi::SessionTarget::File)
                 .unwrap_or(pi::SessionTarget::Directory(&session_dir));
-            let result = pi::Pi::start(
-                app.clone(),
-                executable,
-                &root,
-                &state.pi_extension,
-                generation,
-                Some(id.to_string()),
-                Some(target),
-            )
-            .and_then(|mut process| {
+            // Starting Pi takes a moment, so release the shared state meanwhile. The task
+            // is marked active first: Pi calls that arrive now find no process for it
+            // instead of reaching the previous, hidden task.
+            let previous_active = state.active_task.replace(id.to_string());
+            let extension = state.pi_extension.clone();
+            // An existing session can bind to the project's warm spare instead of
+            // starting a new Pi process.
+            let spare = session_file.as_ref().and_then(|_| {
+                take_spare(&mut state, &root, executable).or_else(|| {
+                    // The new-task draft's process is idle and about to be dropped.
+                    (state.workspace.as_ref() == Some(&root))
+                        .then(|| state.prepared.take())
+                        .flatten()
+                        .filter(|process| process.is_alive())
+                })
+            });
+            drop(state);
+            let bound = spare.and_then(|spare| {
+                spare.set_task_id(Some(id.to_string()));
+                spare.set_visible(true);
+                let file = session_file.as_deref()?;
+                spare
+                    .request(json!({"type":"switch_session", "sessionPath":file}))
+                    .ok()?;
+                Some(spare)
+            });
+            let process = match bound {
+                Some(process) => Ok(process),
+                None => pi::Pi::start(
+                    app.clone(),
+                    executable,
+                    &root,
+                    &extension,
+                    generation,
+                    Some(id.to_string()),
+                    Some(target),
+                )
+                .map(Arc::new),
+            };
+            let result = process.and_then(|process| {
                 let pi_state = process.request(json!({"type":"get_state"}))?;
                 if let Some(title) = pending_title {
                     process.request(json!({"type":"set_session_name", "name":title}))?;
@@ -850,9 +1120,15 @@ fn handle(app: &tauri::AppHandle, request: Value) -> Result<Value, String> {
                 }
                 Ok((process, pi_state))
             });
+            let mut state = managed.lock().map_err(|e| e.to_string())?;
+            if state.active_task.as_deref() != Some(id) {
+                // Another task or workspace became active meanwhile; drop this process.
+                return Err("Opening the task was interrupted".into());
+            }
             let (process, pi_state) = match result {
                 Ok(result) => result,
                 Err(error) => {
+                    state.active_task = previous_active;
                     if !reactivate(app, &state) {
                         let _ = app.emit("pi:status", json!({"generation":generation,"taskId":id,"active":true,"state":"disconnected", "detail":"Pi connection failed"}));
                     }
@@ -870,6 +1146,7 @@ fn handle(app: &tauri::AppHandle, request: Value) -> Result<Value, String> {
             };
             if let Err(error) = attached {
                 drop(process);
+                state.active_task = previous_active;
                 if !reactivate(app, &state) {
                     let _ = app.emit("pi:status", json!({"generation":generation,"taskId":id,"active":true,"state":"disconnected", "detail":"Pi connection failed"}));
                 }
@@ -877,6 +1154,8 @@ fn handle(app: &tauri::AppHandle, request: Value) -> Result<Value, String> {
             }
             state.prepared = None;
             state.workspace = Some(root.clone());
+            // A bound spare keeps the generation it started with; events carry it.
+            let generation = process.generation();
             state.tasks.insert(id.into(), process);
             state.stale_tasks.remove(id);
             state.active_task = Some(id.into());
@@ -884,11 +1163,12 @@ fn handle(app: &tauri::AppHandle, request: Value) -> Result<Value, String> {
             let _ = app.emit("pi:status", json!({"generation":generation,"taskId":id,"active":true,"state":"connected", "detail":"Pi RPC connected","working":false}));
             let mut result = mark_task_read(app, &state.root, id)?;
             result["reused"] = json!(false);
+            warm_spare(app, root, executable.to_string());
             Ok(result)
         }
         "disconnect" => {
             let generation = active_process(&state)
-                .map(pi::Pi::generation)
+                .map(|process| process.generation())
                 .unwrap_or(state.generation);
             let task_id = state.active_task.take();
             if let Some(id) = task_id.as_deref() {
@@ -913,7 +1193,7 @@ fn handle(app: &tauri::AppHandle, request: Value) -> Result<Value, String> {
             let title = field(&request, "title")?;
             let mut catalog = tasks::Catalog::read(&app_root)?;
             let generation = active_process(&state)
-                .map(pi::Pi::generation)
+                .map(|process| process.generation())
                 .ok_or("No task is open")?;
             let process = active_process_mut(&mut state).ok_or("No task is open")?;
             let before = process.request(json!({"type":"get_state"}))?;
@@ -1004,6 +1284,11 @@ fn handle(app: &tauri::AppHandle, request: Value) -> Result<Value, String> {
             app.state::<Arc<tasks::UnreadState>>().apply(&mut catalog)?;
             Ok(json!({"cancelled":false,"catalog":catalog,"task":task,"text":result["text"]}))
         }
+        "task.transcript" => {
+            let root = state.root.clone();
+            drop(state);
+            Ok(transcripts::load(&root, field(&request, "id")?).unwrap_or(Value::Null))
+        }
         "task.rename" => {
             ensure_idle(&mut state)?;
             let id = field(&request, "id")?;
@@ -1015,7 +1300,7 @@ fn handle(app: &tauri::AppHandle, request: Value) -> Result<Value, String> {
             let mut catalog = tasks::Catalog::read(&app_root)?;
             let task = catalog.rename(id, name)?;
             let generation = active_process(&state)
-                .map(pi::Pi::generation)
+                .map(|process| process.generation())
                 .ok_or("No task is open")?;
             let process = active_process_mut(&mut state).ok_or("No task is open")?;
             let previous = process.request(json!({"type":"get_state"}))?["sessionName"]
@@ -1052,7 +1337,8 @@ fn handle(app: &tauri::AppHandle, request: Value) -> Result<Value, String> {
             process.request(json!({"type":"export_html", "outputPath":path}))
         }
         "session.history" => {
-            let process = active_process_mut(&mut state).ok_or("No task is open")?;
+            let process = active_process(&state).cloned().ok_or("No task is open")?;
+            drop(state);
             let entries = process.request(json!({"type":"get_entries"}))?;
             let summary = history_summary(&entries)?;
             let forks = process.request(json!({"type":"get_fork_messages"}))?;
@@ -1068,6 +1354,51 @@ fn handle(app: &tauri::AppHandle, request: Value) -> Result<Value, String> {
                 })
                 .collect();
             Ok(json!({"items":summary["items"],"leafId":summary["leafId"],"forks":fork_items}))
+        }
+        "pi.read" => {
+            // Several read-only queries in one host call, so showing a task costs one
+            // round trip instead of one per query.
+            let commands = request["commands"].as_array().ok_or("Missing commands")?;
+            if commands.is_empty() || commands.len() > 8 {
+                return Err("Invalid Pi read".into());
+            }
+            let generation = active_process(&state)
+                .map(|process| process.generation())
+                .ok_or("No task is open")?;
+            let task_id = state.active_task.clone();
+            let process = active_process(&state).cloned().ok_or("No task is open")?;
+            let data_root = state.root.clone();
+            // Talk to this task's Pi without holding the shared state.
+            drop(state);
+            let mut result = serde_json::Map::new();
+            for command in commands {
+                let command = command.as_str().ok_or("Invalid Pi read")?;
+                let rpc = match command {
+                    "get_state" => "get_state",
+                    "get_messages" => "get_messages",
+                    "get_models" => "get_available_models",
+                    "get_thinking_levels" => "get_available_thinking_levels",
+                    "get_commands" => "get_commands",
+                    _ => return Err("Unsupported Pi read".into()),
+                };
+                match process.request(json!({ "type": rpc })) {
+                    Ok(value) => {
+                        if command == "get_messages" {
+                            if let Some(id) = &task_id {
+                                transcripts::save(&data_root, id, &value);
+                            }
+                        }
+                        result.insert(command.to_string(), value);
+                    }
+                    Err(error) => {
+                        if !process.is_alive() {
+                            let _ = app.emit("pi:status", json!({"generation":generation,"taskId":task_id,"state":"disconnected","detail":"Pi transport stopped; reopen the task"}));
+                        }
+                        return Err(error);
+                    }
+                }
+            }
+            Ok(Value::Object(result))
         }
         "pi" => {
             let command = field(&request, "command")?;
@@ -1113,16 +1444,31 @@ fn handle(app: &tauri::AppHandle, request: Value) -> Result<Value, String> {
                 "set_steering_mode" | "set_follow_up_mode" => queue_mode_rpc(command, args)?,
                 _ => return Err("Unknown core Pi command".into()),
             };
-            let generation = active_process(&state)
-                .map(pi::Pi::generation)
-                .ok_or("No task is open")?;
+            let process = active_process(&state).cloned().ok_or("No task is open")?;
+            let generation = process.generation();
             let task_id = state.active_task.clone();
-            let process = active_process_mut(&mut state).ok_or("No task is open")?;
+            let snapshot_root = if command == "prompt" && builtin_enabled(&state.root, "git-review")
+            {
+                state.workspace.clone()
+            } else {
+                None
+            };
+            // Talk to this task's Pi without holding the shared state.
+            drop(state);
+            if let (Some(id), Some(root)) = (task_id.clone(), snapshot_root) {
+                // Remember the worktree before Pi starts so the review pane can show this turn.
+                let tree = git::snapshot(&root).ok();
+                let mut state = managed.lock().map_err(|e| e.to_string())?;
+                match tree {
+                    Some(tree) => state.turn_snapshots.insert(id, tree),
+                    None => state.turn_snapshots.remove(&id),
+                };
+            }
             if command == "abort" {
                 process.request(json!({"type":"clear_queue"}))?;
             }
             let result = process.request(rpc);
-            if !active_process(&state).is_some_and(pi::Pi::is_alive) {
+            if !process.is_alive() {
                 let _ = app.emit("pi:status", json!({"generation":generation,"taskId":task_id,"state":"disconnected","detail":"Pi transport stopped; reopen the task"}));
             }
             result
@@ -1138,14 +1484,17 @@ fn handle(app: &tauri::AppHandle, request: Value) -> Result<Value, String> {
                         .plugins
                         .storage(id, field(args, "key")?, Some(args["value"].clone()))
                 }
+                // Read-only and network calls check permissions under the lock, then
+                // release it so a slow call does not block Core or other plugins.
                 "workspace.get" | "workspace.readFile" => {
                     state.plugins.require(id, "workspace.read")?;
-                    let root = state.workspace.as_ref().ok_or("No workspace is open")?;
+                    let root = state.workspace.clone().ok_or("No workspace is open")?;
+                    drop(state);
                     if method == "workspace.get" {
-                        Ok(workspace::describe(root))
+                        Ok(workspace::describe(&root))
                     } else {
                         Ok(json!(workspace::bounded_read(
-                            &workspace::within(root, field(args, "path")?)?,
+                            &workspace::within(&root, field(args, "path")?)?,
                             1024 * 1024
                         )?))
                     }
@@ -1169,14 +1518,16 @@ fn handle(app: &tauri::AppHandle, request: Value) -> Result<Value, String> {
                 }
                 "workspace.gitStatus" => {
                     state.plugins.require(id, "workspace.git")?;
-                    let root = state.workspace.as_ref().ok_or("No workspace is open")?;
-                    git::status(root)
+                    let root = state.workspace.clone().ok_or("No workspace is open")?;
+                    drop(state);
+                    git::status(&root)
                 }
                 "workspace.gitDiff" => {
                     state.plugins.require(id, "workspace.git")?;
-                    let root = state.workspace.as_ref().ok_or("No workspace is open")?;
+                    let root = state.workspace.clone().ok_or("No workspace is open")?;
+                    drop(state);
                     git::diff(
-                        root,
+                        &root,
                         field(args, "path")?,
                         args["staged"].as_bool().unwrap_or(false),
                     )
@@ -1184,6 +1535,7 @@ fn handle(app: &tauri::AppHandle, request: Value) -> Result<Value, String> {
                 "network.fetch" => {
                     state.plugins.require(id, "network.fetch")?;
                     let (_, allow) = state.plugins.allowlists(id);
+                    drop(state);
                     net::fetch(&allow, field(args, "url")?, &args["options"])
                 }
                 _ => {
@@ -1204,23 +1556,46 @@ fn handle(app: &tauri::AppHandle, request: Value) -> Result<Value, String> {
                         _ => return Err("Unknown/unsupported plugin method".into()),
                     };
                     state.plugins.require(id, permission)?;
-                    let generation = active_process(&state)
-                        .map(pi::Pi::generation)
+                    let process = active_process(&state)
+                        .cloned()
                         .ok_or("Pi is disconnected; connect a workspace first")?;
+                    let generation = process.generation();
                     let task_id = state.active_task.clone();
-                    let process = active_process_mut(&mut state)
-                        .ok_or("Pi is disconnected; connect a workspace first")?;
+                    drop(state);
                     // Clear queued follow-ups before abort so "Stop" cannot resume queued work.
                     if method == "pi.abort" {
                         process.request(json!({"type":"clear_queue"}))?;
                     }
                     let result = process.request(command);
-                    if !active_process(&state).is_some_and(pi::Pi::is_alive) {
+                    if !process.is_alive() {
                         let _ = app.emit("pi:status", json!({"generation":generation,"taskId":task_id,"state":"disconnected","detail":"Pi transport stopped; reconnect required"}));
                     }
                     result
                 }
             }
+        }
+        op if op.starts_with("git.") => {
+            if !builtin_enabled(&state.root, "git-review") {
+                return Err("Git review is disabled in Settings → Plugins".into());
+            }
+            let root = state
+                .workspace
+                .clone()
+                .ok_or("Open a task in a project to use Git")?;
+            let turn = state
+                .active_task
+                .as_ref()
+                .and_then(|id| state.turn_snapshots.get(id))
+                .cloned();
+            // Hooks and remotes can take a while; do not hold the shared state meanwhile.
+            drop(state);
+            if op == "git.summary" {
+                // In process and cached until the workspace changes; the CLI is the fallback.
+                return app
+                    .state::<git_summary::SummaryCache>()
+                    .summary(&root, || git::call(&root, op, &request, None));
+            }
+            git::call(&root, op, &request, turn.as_deref())
         }
         _ => Err("Unknown host operation".into()),
     }
@@ -1240,7 +1615,7 @@ fn ensure_idle(state: &mut State) -> Result<(), String> {
     Ok(())
 }
 
-fn pi_process_busy(process: &mut pi::Pi) -> bool {
+fn pi_process_busy(process: &pi::Pi) -> bool {
     if !process.is_alive() {
         return false;
     }
@@ -1255,6 +1630,20 @@ fn pi_process_busy(process: &mut pi::Pi) -> bool {
         }
         Err(_) => true,
     }
+}
+
+/// Registers the main window's channel for the visible session's Pi events.
+#[tauri::command]
+fn pi_events(
+    window: tauri::WebviewWindow,
+    channel: tauri::ipc::Channel<Value>,
+    sink: tauri::State<'_, pi::EventSink>,
+) -> Result<(), String> {
+    if window.label() != "main" {
+        return Err("Untrusted window".into());
+    }
+    sink.set(channel);
+    Ok(())
 }
 
 #[tauri::command]
@@ -1290,12 +1679,17 @@ fn main() {
             atomic_write(&pi_skills_helper, include_bytes!("pi-skills-bridge.mjs"))
                 .map_err(std::io::Error::other)?;
             app.manage(Mutex::new(pi::ExtensionUiBridge::default()));
+            app.manage(pi::EventSink::default());
+            app.manage(git_summary::SummaryCache::default());
             app.manage(Arc::new(unread));
             app.manage(Mutex::new(State {
                 plugins,
                 workspace: None,
                 prepared: None,
                 tasks: HashMap::new(),
+                spares: Vec::new(),
+                warming: HashSet::new(),
+                last_used: HashMap::new(),
                 stale_tasks: HashSet::new(),
                 root,
                 pi_extension,
@@ -1305,10 +1699,12 @@ fn main() {
                 auth_sequence: 0,
                 generation: 0,
                 active_task: None,
+                turn_snapshots: HashMap::new(),
             }));
+            supervise(app.handle().clone());
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![desktop])
+        .invoke_handler(tauri::generate_handler![desktop, pi_events])
         .build(tauri::generate_context!())
         .expect("Failed to build Pion")
         .run(|app, event| {
@@ -1324,6 +1720,24 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn idle_reclaim_spares_the_active_working_and_recent_tasks() {
+        let now = std::time::Instant::now() + IDLE_RECLAIM * 2;
+        let old = now - IDLE_RECLAIM;
+        let recent = now - std::time::Duration::from_secs(60);
+        let tasks = [
+            ("active", false, Some(old)),
+            ("working", true, Some(old)),
+            ("recent", false, Some(recent)),
+            ("idle", false, Some(old)),
+            ("unknown", false, None),
+        ];
+        assert_eq!(
+            idle_tasks(Some("active"), now, tasks.into_iter()),
+            vec!["idle".to_string()]
+        );
+    }
 
     #[test]
     fn flat_history_summary_handles_deep_sessions() {

@@ -134,14 +134,19 @@ self.onmessage = (event) => {
       (error) => send({ kind: "command.result", id: message.id, error: String(error) }),
     );
   } else if (message.kind === "deactivate") {
-    disposed = true;
-    commands = commands.then(async () => {
-      try {
-        if (typeof plugin.deactivate === "function") await plugin.deactivate();
-      } finally {
-        send({ kind: "deactivated" });
-      }
-    });
+    // deactivate() may still call storage; the host refuses everything else and
+    // destroys this worker after the grace period, or as soon as it reports done.
+    commands = commands
+      .then(async () => {
+        try {
+          if (typeof plugin.deactivate === "function") await plugin.deactivate();
+        } finally {
+          disposed = true;
+          send({ kind: "deactivated" });
+        }
+      })
+      // The plugin is going away; a failing deactivate() is not a crash.
+      .catch(() => {});
   }
 };
 self.addEventListener("unhandledrejection", (event) =>

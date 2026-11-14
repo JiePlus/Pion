@@ -18,7 +18,7 @@ test("desktop layouts remain composed across themes and compact sizes", async ({
 
   await page.getByRole("textbox", { name: "Describe your task" }).fill("Visual task");
   await page.getByRole("button", { name: "Start task" }).click();
-  await expect(page.locator(".core-chat")).toContainText("Reply for Visual task");
+  await expect(page.locator(".core-chat:visible")).toContainText("Reply for Visual task");
   await page.setViewportSize({ width: 1280, height: 840 });
   await page.screenshot({ path: `${prefix}-session-light.png` });
 
@@ -41,7 +41,7 @@ test("desktop layouts remain composed across themes and compact sizes", async ({
   await page.screenshot({ path: `${prefix}-settings-dark.png` });
   await page.getByRole("button", { name: "New task", exact: true }).click();
   await page.locator('.task-list button[title="Visual task"]').click();
-  await expect(page.locator(".core-chat")).toContainText("Reply for Visual task");
+  await expect(page.locator(".core-chat:visible")).toContainText("Reply for Visual task");
 
   await page.setViewportSize({ width: 1280, height: 840 });
   await page.screenshot({ path: `${prefix}-session-dark.png` });

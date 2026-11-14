@@ -10,7 +10,7 @@ Pion = Application Shell
 Plugins = Features
 ```
 
-第一批只实现 Core、Plugin Runtime、Pi RPC Adapter 和 Pi 基础任务界面。Git、Terminal、Diff、Worktree 不在 Core 中。
+第一批只实现 Core、Plugin Runtime、Pi RPC Adapter 和 Pi 基础任务界面，以及内置的 Git 审阅面板。Terminal、Worktree 不在 Core 中。
 
 ## macOS 安装
 
@@ -39,7 +39,7 @@ macOS 自带 WebKit，无需像 Linux 那样额外安装 Tauri 系统依赖。�
 
 ## 启动
 
-开发需要 Node.js 22.19+、Rust 和平台 Tauri 依赖。桌面应用启动时会检查 Pi 与模型认证；缺少 Pi 时可在初设页使用 npm 全局安装。当前通过 Pion 验证的 Pi 版本为 macOS **0.87.1**、Windows **0.87.0**；左侧 **Pi 模型** 可管理模型配置和 API Key，已有凭据不会返回给界面。
+开发需要 Node.js 22.19+、Rust 和平台 Tauri 依赖。桌面应用启动时会检查 Pi 与模型认证；缺少 Pi 时可在初设页使用 npm 全局安装。Pion 不固定 Pi 版本，安装与更新都使用 Pi 官方最新版本；左侧 **Pi 模型** 可管理模型配置和 API Key，已有凭据不会返回给界面。
 
 ```bash
 npm ci
@@ -54,7 +54,7 @@ Pi 对话是 Core 基础能力，不需要安装或授权插件。任务内直�
 
 任务顶部可查看 Pi session tree、从历史用户消息 Fork 并编辑、Clone 当前分支、同步重命名 Pion Task 与 Pi sessionName，以及导出 HTML。Fork/Clone 创建独立 Pion Task，但消息和分支仍以 Pi Session 为权威；Pion 只保存导航映射。
 
-通常使用已经配置好模型和认证的本机 `pi`。初设页仅在 Pi 或模型未就绪时自动出现，完成后返回工作区，不占用日常设置入口；也可在初设页输入现有 Pi 的绝对路径。macOS 从 Finder 启动时会查找常见 Node 安装位置，并将 Pi 所在目录加入子进程 PATH。**设置 → 通用** 可手动检查官方最新版本；一键更新仅针对 npm 全局安装，并固定到随 Pion 发布的已验证版本。运行中的任务结束后才允许更新；其他安装方式显示手动更新指南。
+通常使用已经配置好模型和认证的本机 `pi`。初设页仅在 Pi 或模型未就绪时自动出现，完成后返回工作区，不占用日常设置入口；也可在初设页输入现有 Pi 的绝对路径。macOS 从 Finder 启动时会查找常见 Node 安装位置，并将 Pi 所在目录加入子进程 PATH。**设置 → 通用** 可手动检查官方最新版本；已安装版本低于官方最新版本时可一键更新到最新版（仅限 npm 全局安装）。运行中的任务结束后才允许更新；其他安装方式显示手动更新指南。
 
 左侧 **Pi 模型** 按 Pi 官方接入方式提供入口：API Key 保存在 Pi 的 `auth.json`（Unix 文件权限设为 `0600`，界面不回显）；OAuth/订阅登录通过本机 npm 安装的 Pi SDK 在 Pion 内完成浏览器授权、设备码和所需输入；环境变量需在启动 Pion 前设置；兼容 API 的自定义接口写入 `models.json`；特殊认证或协议可通过左侧 **Pi 包** 安装 Provider 扩展。自定义接口可从服务商的 `/models` 列表获取模型，搜索、多选后批量写入 `models.json`；这是一次性导入，后续新增模型可再次获取。接口未提供模型列表时仍可手动添加。原有高级字段与认证配置保持不变，本地接口新建时写入 Pi 所需的占位密钥。已有任务需重新打开，才会刷新 Pi 的可用模型列表。
 
@@ -122,6 +122,19 @@ npm run dev
 - Rust Pi JSONL：真实 `pi --mode rpc`、串行请求/响应关联、独立事件流、超时/退出处理。
 - 无需修改 Core 的 [Hello 插件](examples/hello-plugin)，以及演示写入/联网/丰富 UI 的 [Plugin API 示例](examples/plugin-api-demo)。
 - 一方 [Git/Diff 插件](plugins/git-diff-plugin)：只读展示当前工作区分支、staged/unstaged/untracked 改动与带行号的 unified diff（参考 VS Code / GitHub Desktop 的文件行与状态徽标），通过插件审核安装后加载，仅申请 `workspace.git` 权限。
+
+## Git 审阅面板
+
+打开任务后，顶栏的分支按钮显示当前项目未提交改动的 `+增 −删` 行数，点击即在对话右侧打开 **审阅** 面板（参考 Codex 的 Review 面板，宽度可拖动调整，开关状态会记住）：
+
+- **范围**：未暂存 / 已暂存 / 分支（对比 `origin/HEAD` 指向的默认分支或 `main`/`master` 的分叉点）/ 上一轮（发送消息时记录工作区快照，对比 Pi 本轮改动；快照用临时 index 写成 tree，不影响真实暂存区）。
+- **暂存与还原**：按文件或按 diff 块暂存、取消暂存、还原；还原与删除未跟踪文件需要再点一次确认。块操作会在宿主重新生成 diff 并逐字节匹配后才用 `git apply` 应用，diff 已变化时会提示刷新。
+- **提交**：提交对话框可选择是否包含未暂存改动，以及「提交 / 提交并推送 / 提交并创建 PR」。创建 PR 使用已登录的 GitHub CLI（`gh pr create --fill`），已存在的 PR 直接返回链接。
+- **分支与远程**：分支菜单可切换或新建分支；更多菜单提供抓取、拉取（仅快进）、推送、创建拉取请求。非 Git 项目可一键初始化仓库。
+
+审阅面板以**内置插件**「Git 审阅」（`git-review`）的形式列在“设置 → 插件”中：它随应用发布、无需审核安装，可以停用或重新启用（状态保存在应用数据目录的 `builtins.json`），但不能卸载。停用后顶栏按钮和面板隐藏，宿主拒绝 `git.*` 操作，发送消息时也不再记录工作区快照。
+
+Git 命令都由宿主在当前项目目录内执行：路径必须是项目内相对路径并按字面匹配，不弹出终端或编辑器，SSH 使用 BatchMode，本地命令 20 秒、远程与提交（含 hooks）90 秒超时，执行期间不占用宿主共享状态锁。任务运行中不能提交或切换分支。
 
 ## 安装自己的插件
 

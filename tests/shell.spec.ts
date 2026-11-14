@@ -49,6 +49,34 @@ test("completed setup stays out of regular settings", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Set up Pi" })).toHaveCount(0);
 });
 
+test("a remembered Pi setup connects the workspace without waiting for the check", async ({
+  page,
+}) => {
+  await taskFixture(page);
+  await page.goto("/");
+  await expect
+    .poll(() => page.evaluate(() => localStorage.getItem("pion.setupStatus")))
+    .not.toBeNull();
+  await page.evaluate(() => {
+    localStorage.setItem("fixture.delaySetupStatus", "yes");
+    localStorage.removeItem("fixture.setupStatusFinished");
+    localStorage.removeItem("fixture.prepareStarted");
+    localStorage.removeItem("fixture.prepareBeforeSetupStatus");
+  });
+  await page.reload();
+  await expect
+    .poll(() => page.evaluate(() => localStorage.getItem("fixture.prepareStarted")))
+    .toBe("yes");
+  expect(await page.evaluate(() => localStorage.getItem("fixture.prepareBeforeSetupStatus"))).toBe(
+    "yes",
+  );
+  await expect(page.getByText("Checking Pi…")).toHaveCount(0);
+  await expect(page.getByText("Finish Pi setup before starting a task.")).toHaveCount(0);
+  await expect
+    .poll(() => page.evaluate(() => localStorage.getItem("fixture.setupStatusFinished")))
+    .toBe("yes");
+});
+
 test("new task waits for Pi detection without showing a false setup warning", async ({ page }) => {
   await taskFixture(page);
   await page.goto("/");
@@ -56,6 +84,8 @@ test("new task waits for Pi detection without showing a false setup warning", as
     localStorage.setItem("fixture.delaySetupStatus", "yes");
     localStorage.removeItem("fixture.setupStatusFinished");
     localStorage.removeItem("fixture.prepareStarted");
+    // Without a remembered setup, startup runs the full check first.
+    localStorage.removeItem("pion.setupStatus");
   });
   await page.reload();
   await expect(page.getByRole("status").filter({ hasText: "Checking Pi…" })).toBeVisible();
@@ -78,7 +108,6 @@ test("initial setup installs missing Pi and continues after model authentication
       "fixture.setupStatus",
       JSON.stringify({
         installation: "missing",
-        verifiedVersion: "0.87.1",
         canInstall: true,
         modelReady: false,
         selectedModel: { provider: "openai", id: "gpt-test" },
@@ -112,7 +141,6 @@ test("setup shows a broken path and keeps task creation gated", async ({ page })
       JSON.stringify({
         installation: "broken",
         executable: "/missing/pi",
-        verifiedVersion: "0.87.1",
         canInstall: false,
         detail: "Cannot start Pi",
       }),
@@ -126,7 +154,7 @@ test("setup shows a broken path and keeps task creation gated", async ({ page })
   await expect(page.getByRole("textbox", { name: "Describe your task" })).toHaveCount(0);
 });
 
-test("settings checks a verified Pi update before enabling one-click update", async ({ page }) => {
+test("settings checks the latest Pi release before enabling one-click update", async ({ page }) => {
   await taskFixture(page);
   await page.goto("/");
   await page.evaluate(() => {
@@ -136,7 +164,6 @@ test("settings checks a verified Pi update before enabling one-click update", as
         installation: "ready",
         executable: "pi",
         installedVersion: "0.87.0",
-        verifiedVersion: "0.87.1",
         npmManaged: true,
         canInstall: true,
         modelReady: true,
@@ -149,7 +176,6 @@ test("settings checks a verified Pi update before enabling one-click update", as
       JSON.stringify({
         installation: "ready",
         installedVersion: "0.87.0",
-        verifiedVersion: "0.87.1",
         latestVersion: "0.87.1",
         npmManaged: true,
         canUpdate: true,
@@ -176,7 +202,6 @@ test("setup waits when the chosen model has no usable authentication", async ({ 
         installation: "ready",
         executable: "pi",
         installedVersion: "0.87.1",
-        verifiedVersion: "0.87.1",
         npmManaged: true,
         canInstall: true,
         modelReady: false,
@@ -203,7 +228,7 @@ test("setup motion respects reduced motion preference", async ({ page }) => {
   await page.evaluate(() =>
     localStorage.setItem(
       "fixture.setupStatus",
-      JSON.stringify({ installation: "missing", verifiedVersion: "0.87.1", canInstall: true }),
+      JSON.stringify({ installation: "missing", canInstall: true }),
     ),
   );
   await page.reload();
@@ -226,7 +251,6 @@ test("update failures leave tasks available", async ({ page }) => {
       JSON.stringify({
         installation: "ready",
         installedVersion: "0.87.0",
-        verifiedVersion: "0.87.1",
         latestVersion: "0.87.1",
         npmManaged: true,
         canUpdate: true,
@@ -261,8 +285,8 @@ test("new task prepares chat, resumes isolated history, keeps drafts and switche
   await page.keyboard.press("Escape");
   await page.getByRole("textbox", { name: "Describe your task" }).fill("First task");
   await page.getByRole("button", { name: "Start task" }).click();
-  await expect(page.locator(".core-chat")).toContainText("Reply for First task");
-  await expect(page.locator(".core-chat")).toContainText("read");
+  await expect(page.locator(".core-chat:visible")).toContainText("Reply for First task");
+  await expect(page.locator(".core-chat:visible")).toContainText("read");
   await expect(page.getByRole("button", { name: "Model", exact: true })).toContainText(
     "Claude Test",
   );
@@ -281,11 +305,11 @@ test("new task prepares chat, resumes isolated history, keeps drafts and switche
   await page.getByRole("button", { name: "New task", exact: true }).click();
   await page.getByRole("textbox", { name: "Describe your task" }).fill("Second task");
   await page.getByRole("textbox", { name: "Describe your task" }).press("Enter");
-  await expect(page.locator(".core-chat")).toContainText("Reply for Second task");
-  await expect(page.locator(".core-chat")).not.toContainText("First task");
+  await expect(page.locator(".core-chat:visible")).toContainText("Reply for Second task");
+  await expect(page.locator(".core-chat:visible")).not.toContainText("First task");
   await page.locator(".task-list").getByRole("button", { name: "First task", exact: true }).click();
   await expect(page.getByRole("textbox", { name: /Ask Pi/ })).toHaveValue("First task draft");
-  await expect(page.locator(".core-chat")).toContainText("Reply for First task");
+  await expect(page.locator(".core-chat:visible")).toContainText("Reply for First task");
   await page.evaluate(() => localStorage.setItem("fixture.hold", "yes"));
   await page.getByRole("textbox", { name: /Ask Pi/ }).press("Shift+Enter");
   await expect(page.getByRole("textbox", { name: /Ask Pi/ })).toHaveValue("\nFirst task draft");
@@ -303,7 +327,7 @@ test("new task prepares chat, resumes isolated history, keeps drafts and switche
       message: { role: "assistant", content: "Background-only event" },
     }),
   );
-  await expect(page.locator(".core-chat")).not.toContainText("Background-only event");
+  await expect(page.locator(".core-chat:visible")).not.toContainText("Background-only event");
   const runningState = page.locator('.task-list button[title="First task"] .task-state');
   await expect(runningState).toBeVisible();
   expect(await runningState.evaluate((element) => getComputedStyle(element).animationName)).toBe(
@@ -318,7 +342,7 @@ test("new task prepares chat, resumes isolated history, keeps drafts and switche
     .locator(".task-list")
     .getByRole("button", { name: "Second task", exact: true })
     .click();
-  await expect(page.locator(".core-chat")).toContainText("Reply for Second task");
+  await expect(page.locator(".core-chat:visible")).toContainText("Reply for Second task");
   await page.screenshot({ path: "test-results/task-conversation.png", fullPage: true });
 });
 
@@ -341,7 +365,7 @@ test("connection and send failures preserve input and a task can be reopened", a
   await page.locator(".task-list").getByRole("button", { name: "Retry this task" }).click();
   await expect(page.getByRole("textbox", { name: /Ask Pi/ })).toHaveValue("Retry this task");
   await page.getByRole("textbox", { name: /Ask Pi/ }).press("Enter");
-  await expect(page.locator(".core-chat")).toContainText("Prompt rejected for test");
+  await expect(page.locator(".core-chat:visible")).toContainText("Prompt rejected for test");
   await expect(page.getByRole("textbox", { name: /Ask Pi/ })).toHaveValue("Retry this task");
 });
 
@@ -350,7 +374,7 @@ test("cached task content appears before its serial Pi refresh completes", async
   await page.goto("/");
   await page.getByRole("textbox", { name: "Describe your task" }).fill("Cached first");
   await page.getByRole("button", { name: "Start task" }).click();
-  await expect(page.locator(".core-chat")).toContainText("Reply for Cached first");
+  await expect(page.locator(".core-chat:visible")).toContainText("Reply for Cached first");
   await page.evaluate(() =>
     (window as any).fixturePiEvent({
       type: "extension_ui_request",
@@ -363,10 +387,10 @@ test("cached task content appears before its serial Pi refresh completes", async
   await page.getByRole("button", { name: "New task", exact: true }).click();
   await page.getByRole("textbox", { name: "Describe your task" }).fill("Cached second");
   await page.getByRole("button", { name: "Start task" }).click();
-  await expect(page.locator(".core-chat")).toContainText("Reply for Cached second");
+  await expect(page.locator(".core-chat:visible")).toContainText("Reply for Cached second");
   await page.evaluate(() => localStorage.setItem("fixture.refreshDelay", "yes"));
   await page.locator('.task-list button[title="Cached first"]').click();
-  await expect(page.locator(".core-chat")).toContainText("Reply for Cached first", {
+  await expect(page.locator(".core-chat:visible")).toContainText("Reply for Cached first", {
     timeout: 100,
   });
   await expect(page.locator(".extension-statuses")).toContainText("Extension cached", {
@@ -376,9 +400,11 @@ test("cached task content appears before its serial Pi refresh completes", async
   await page.locator('.task-list button[title="Cached second"]').click();
   await page.evaluate(() => localStorage.setItem("fixture.failRefresh", "yes"));
   await page.locator('.task-list button[title="Cached first"]').click();
-  await expect(page.locator(".core-chat")).toContainText("Reply for Cached first");
+  await expect(page.locator(".core-chat:visible")).toContainText("Reply for Cached first");
   await expect(
-    page.getByText("Showing cached messages. Synchronization failed.", { exact: false }),
+    page
+      .getByText("Showing cached messages. Synchronization failed.", { exact: false })
+      .filter({ visible: true }),
   ).toBeVisible();
   await page.evaluate(() => localStorage.removeItem("fixture.failRefresh"));
   await page.getByRole("button", { name: "Retry sync" }).click();
@@ -392,7 +418,7 @@ test("extension commands wait for real agent events and deep history stays usabl
   await page.goto("/");
   await page.getByRole("textbox", { name: "Describe your task" }).fill("Deep history");
   await page.getByRole("button", { name: "Start task" }).click();
-  await expect(page.locator(".core-chat")).toContainText("Reply for Deep history");
+  await expect(page.locator(".core-chat:visible")).toContainText("Reply for Deep history");
   await page.getByRole("textbox", { name: /Ask Pi/ }).fill("/info");
   await page.getByRole("textbox", { name: /Ask Pi/ }).press("Enter");
   await expect(page.getByRole("button", { name: "Stop agent" })).toHaveCount(0);
@@ -416,7 +442,7 @@ test("background completion shows an unread marker after reload until opening", 
   await page.goto("/");
   await page.getByRole("textbox", { name: "Describe your task" }).fill("Unread first");
   await page.getByRole("button", { name: "Start task" }).click();
-  await expect(page.locator(".core-chat")).toContainText("Reply for Unread first");
+  await expect(page.locator(".core-chat:visible")).toContainText("Reply for Unread first");
   await page.getByRole("button", { name: "New task", exact: true }).click();
   await page.getByRole("textbox", { name: "Describe your task" }).fill("Unread second");
   await page.getByRole("button", { name: "Start task" }).click();
@@ -761,7 +787,7 @@ test("compact composer fits a narrow window and its menu closes accessibly", asy
   await page.goto("/");
   await page.getByRole("textbox", { name: "Describe your task" }).fill("Small composer");
   await page.getByRole("button", { name: "Start task" }).click();
-  await expect(page.locator(".core-chat")).toContainText("Reply for Small composer");
+  await expect(page.locator(".core-chat:visible")).toContainText("Reply for Small composer");
   const composer = page.locator(".core-composer");
   const bounds = await composer.boundingBox();
   const add = await page.getByRole("button", { name: "Add", exact: true }).boundingBox();
@@ -1027,13 +1053,15 @@ test("project picker selection and plugin lifecycle remain available inside sett
   await page.getByRole("textbox", { name: "Local plugin folder or ZIP" }).fill("/plugin");
   await page.getByRole("button", { name: "Review installation" }).click();
   await page.getByRole("button", { name: "Approve & enable" }).click();
-  await page.getByRole("button", { name: "Disable", exact: true }).click();
+  // The built-in Git review card sits above installed plugins; act on the installed one.
+  const card = page.locator(".plugin-card", { hasText: "agent-chat" });
+  await card.getByRole("button", { name: "Disable", exact: true }).click();
   await expect(page.getByText("agent-chat · disabled")).toBeVisible();
-  await page.getByRole("button", { name: "Enable", exact: true }).click();
+  await card.getByRole("button", { name: "Enable", exact: true }).click();
   await expect(page.getByText("agent-chat · active")).toBeVisible();
-  await page.getByRole("button", { name: "Reload", exact: true }).click();
+  await card.getByRole("button", { name: "Reload", exact: true }).click();
   await expect(page.getByText("agent-chat · active")).toBeVisible();
-  await page.getByRole("button", { name: "Uninstall", exact: true }).click();
+  await card.getByRole("button", { name: "Uninstall", exact: true }).click();
   await expect(page.getByText("No plugins installed yet.")).toBeVisible();
   await page.getByRole("button", { name: "New task", exact: true }).click();
   await page.screenshot({ path: "test-results/new-task.png", fullPage: true });

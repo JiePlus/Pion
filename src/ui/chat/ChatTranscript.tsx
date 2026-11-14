@@ -1,12 +1,15 @@
 import { Icon } from "../primitives/Icon.tsx";
 import { componentClass } from "../componentClass.ts";
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { Dispatch, RefObject, SetStateAction } from "react";
 import type { Json } from "../../core/api.ts";
 import { t } from "../../core/i18n.ts";
 import { ChatMessage } from "./ChatMessage.tsx";
 import type { Message, Tool, ViewMode } from "./ChatMessage.tsx";
 import styles from "./ChatTranscript.module.css";
+
+/** Messages rendered at first, and added per "Show earlier messages". */
+export const TRANSCRIPT_PAGE = 150;
 
 interface ChatTranscriptProps {
   messages: Message[];
@@ -30,6 +33,8 @@ interface ChatTranscriptProps {
   queue: { steering: string[]; followUp: string[] };
   clearQueue: (restore: boolean) => Promise<void>;
   setError: Dispatch<SetStateAction<string>>;
+  /** Pi is connected; until then an empty transcript is still loading, not empty. */
+  connected: boolean;
 }
 
 export function ChatTranscript({
@@ -54,7 +59,23 @@ export function ChatTranscript({
   queue,
   clearQueue,
   setError,
+  connected,
 }: ChatTranscriptProps) {
+  // Long conversations render only their latest page; earlier pages load on request.
+  const [shown, setShown] = useState(TRANSCRIPT_PAGE);
+  const hidden = Math.max(0, messages.length - shown);
+  const anchor = useRef<number | null>(null);
+  function showEarlier() {
+    const node = scroll.current;
+    // Keep the message being read in place while earlier ones are added above it.
+    if (node) anchor.current = node.scrollHeight - node.scrollTop;
+    setShown((count) => count + TRANSCRIPT_PAGE);
+  }
+  useLayoutEffect(() => {
+    const node = scroll.current;
+    if (node && anchor.current !== null) node.scrollTop = node.scrollHeight - anchor.current;
+    anchor.current = null;
+  }, [shown]);
   return (
     <>
       <div className={componentClass(styles, "chat-viewport")}>
@@ -68,12 +89,23 @@ export function ChatTranscript({
           }}
         >
           <div className={componentClass(styles, "chat-messages")} ref={conversation}>
-            {!messages.length && !stream && !working && (
+            {connected && !messages.length && !stream && !working && (
               <h1>{t("What would you like to work on?")}</h1>
             )}
-            {messages.map((message, index) => (
+            {!!hidden && (
+              <button
+                type="button"
+                className={componentClass(styles, "earlier-messages")}
+                onClick={showEarlier}
+              >
+                {t("Show {count} earlier messages", {
+                  count: Math.min(hidden, TRANSCRIPT_PAGE),
+                })}
+              </button>
+            )}
+            {messages.slice(hidden).map((message, index) => (
               <ChatMessage
-                key={index}
+                key={hidden + index}
                 message={message}
                 models={models}
                 tools={toolResults}

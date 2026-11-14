@@ -1,6 +1,6 @@
 import { componentClass } from "../componentClass.ts";
 import { Icon } from "../primitives/Icon.tsx";
-import { useMemo } from "react";
+import { memo, useMemo } from "react";
 import type { ComponentProps } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -94,19 +94,47 @@ function Markdown({ text }: { text: string }) {
   );
 }
 
-export function ChatMessage({
-  message,
-  models = [],
-  tools,
-  streaming = false,
-  viewMode = "normal",
-}: {
+// Shallow equality: tool states are rebuilt each render from the same message fields.
+function sameTool(left: Tool | undefined, right: Tool | undefined): boolean {
+  if (left === right) return true;
+  if (!left || !right) return false;
+  const keys = Object.keys(left) as (keyof Tool)[];
+  return keys.length === Object.keys(right).length && keys.every((key) => left[key] === right[key]);
+}
+
+type ChatMessageProps = {
   message: Message;
   models?: Model[];
   tools: Map<string, Tool>;
   streaming?: boolean;
   viewMode?: ViewMode;
-}) {
+};
+
+// A message only re-renders when it, its display options, or the tools it calls change,
+// so streaming a reply does not re-render the whole conversation on every token.
+function sameMessage(left: ChatMessageProps, right: ChatMessageProps): boolean {
+  if (
+    left.message !== right.message ||
+    left.models !== right.models ||
+    left.streaming !== right.streaming ||
+    left.viewMode !== right.viewMode
+  )
+    return false;
+  if (left.tools === right.tools || !Array.isArray(left.message.content)) return true;
+  return left.message.content.every(
+    (block) =>
+      block.type !== "toolCall" ||
+      sameTool(left.tools.get(block.id ?? ""), right.tools.get(block.id ?? "")),
+  );
+}
+
+export const ChatMessage = memo(function ChatMessage({
+  message,
+  models = [],
+  tools,
+  streaming = false,
+  viewMode = "normal",
+}: ChatMessageProps) {
   if (message.role !== "user" && message.role !== "assistant") return null;
   const content =
     typeof message.content === "string"
@@ -174,4 +202,4 @@ export function ChatMessage({
       )}
     </article>
   );
-}
+}, sameMessage);

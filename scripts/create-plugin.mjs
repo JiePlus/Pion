@@ -27,4 +27,6 @@ for (const file of readdirSync(target)) {
     text.replaceAll("__ID__", id).replaceAll("__NAME__", name.replaceAll('"', "'")),
   );
 }
-console.log(`Created plugin "${id}" at ${target}. Review it in Settings → Plugins.`);
+console.log(
+  `Created plugin "${id}" at ${target}. Link it for development in Settings → Plugins to reload as you edit.`,
+);

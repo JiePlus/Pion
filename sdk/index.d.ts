@@ -193,4 +193,8 @@ export interface PiDesktopPluginContext {
 }
 
 export function activate(context: PiDesktopPluginContext): void | Promise<void>;
+/**
+ * Called when the plugin stops. Commands, panels and events are already gone;
+ * for up to 2 seconds only `context.storage` still works, to save state.
+ */
 export function deactivate(): void | Promise<void>;

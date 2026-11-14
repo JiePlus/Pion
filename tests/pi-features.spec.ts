@@ -36,7 +36,7 @@ async function sessionSwitch(page: import("@playwright/test").Page, name: string
 async function start(page: import("@playwright/test").Page, title = "Pi features") {
   await page.getByRole("textbox", { name: "Describe your task" }).fill(title);
   await page.getByRole("button", { name: "Start task" }).click();
-  await expect(page.locator(".core-chat")).toBeVisible();
+  await expect(page.locator(".core-chat:visible")).toBeVisible();
 }
 
 async function openTaskActions(page: import("@playwright/test").Page) {
@@ -234,7 +234,7 @@ test("images preview, remove, send, survive failure and warn for unsupported mod
   await page.getByRole("textbox", { name: /Ask Pi/ }).fill("Describe it");
   await page.getByRole("button", { name: "Send to Pi" }).click();
   await expect(page.locator(".attachment-strip img")).toHaveCount(0);
-  await expect(page.locator(".chat-message.user .message-image")).toHaveCount(1);
+  await expect(page.locator(".chat-message.user .message-image:visible")).toHaveCount(1);
 
   await page.evaluate(() => {
     localStorage.setItem("fixture.hold", "yes");
@@ -317,11 +317,11 @@ test("new task sends its first image and keeps it when the prompt fails", async 
   await page.getByRole("button", { name: "Attach images" }).click();
   await page.evaluate(() => localStorage.setItem("fixture.failSend", "yes"));
   await page.getByRole("button", { name: "Start task" }).click();
-  await expect(page.locator(".core-chat")).toContainText("Prompt rejected for test");
+  await expect(page.locator(".core-chat:visible")).toContainText("Prompt rejected for test");
   await expect(page.locator(".core-composer .attachment-strip img")).toHaveCount(1);
   await page.evaluate(() => localStorage.removeItem("fixture.failSend"));
   await page.getByRole("button", { name: "Send to Pi" }).click();
-  await expect(page.locator(".chat-message.user .message-image")).toHaveCount(1);
+  await expect(page.locator(".chat-message.user .message-image:visible")).toHaveCount(1);
   await expect
     .poll(() =>
       page.evaluate(() => JSON.parse(localStorage.getItem("fixture.lastPiRequest") ?? "{}")),
@@ -332,7 +332,7 @@ test("new task sends its first image and keeps it when the prompt fails", async 
   await page.getByRole("button", { name: "Attach images" }).click();
   await page.getByRole("textbox", { name: "Describe your task" }).fill("Describe this image");
   await page.getByRole("button", { name: "Start task" }).click();
-  await expect(page.locator(".chat-message.user .message-image")).toHaveCount(1);
+  await expect(page.locator(".chat-message.user .message-image:visible")).toHaveCount(1);
   await expect
     .poll(() =>
       page.evaluate(() => JSON.parse(localStorage.getItem("fixture.lastPiRequest") ?? "{}")),

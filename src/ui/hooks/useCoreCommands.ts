@@ -61,7 +61,9 @@ export function useCoreCommands({
         return null;
       }),
       runtime.commands.register("core", "core.review", async (args) => {
-        setReview(await host<Installed>({ op: "review", path: args }));
+        const { path, dev = false } =
+          typeof args === "string" ? { path: args } : (args as { path: string; dev?: boolean });
+        setReview(await host<Installed>({ op: "review", path, dev }));
         return null;
       }),
       runtime.commands.register("core", "core.review.cancel", async () => {
@@ -83,14 +85,21 @@ export function useCoreCommands({
         const { id, action } = args as { id: string; action: string };
         const record = installed.find((r) => r.bundle.manifest.id === id);
         if (!record) throw new Error(t("Plugin unavailable"));
-        runtime.unload(id);
+        // Let deactivate() finish its storage writes before the host disables or removes it.
+        await runtime.unload(id);
+        try {
+          if (action === "remove") await host({ op: "remove", id });
+          else await host({ op: "enable", id, enabled: action !== "disable" });
+        } catch (error) {
+          // The host kept its previous record, so put the runtime back to match it.
+          runtime.load(record.bundle, record.enabled);
+          throw error;
+        }
         if (action === "remove") {
-          await host({ op: "remove", id });
           runtime.forget(id);
           setInstalled((records) => records.filter((r) => r.bundle.manifest.id !== id));
         } else {
           const enabled = action !== "disable";
-          await host({ op: "enable", id, enabled });
           setInstalled((records) => records.map((r) => (r === record ? { ...r, enabled } : r)));
           runtime.load(record.bundle, enabled);
         }

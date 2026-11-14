@@ -98,7 +98,13 @@ interface PiDesktopPluginContext {
   commands: { register(id, handler); execute(id, args) };
   events: { on(name, listener); emit(name, payload) };
   ui: { registerPanel(id, view); updatePanel(id, view) };
-  workspace: { get(); readFile(path); writeFile(path, content); gitStatus(); gitDiff(path, staged?) };
+  workspace: {
+    get();
+    readFile(path);
+    writeFile(path, content);
+    gitStatus();
+    gitDiff(path, staged?);
+  };
   network: { fetch(url, options?) };
   pi: { prompt; abort; getState; getMessages; getModels; setModel; getCommands; onEvent };
   storage: { get(key); set(key, value) };
@@ -132,26 +138,46 @@ function deactivate() {
 }
 ```
 
+### Shutting down
+
+`deactivate()` runs when the plugin is disabled, reloaded, uninstalled or
+unlinked, and may be `async`. By then its commands, panels and event
+subscriptions are already gone. For up to 2 seconds it may still call
+`context.storage.get` and `context.storage.set`, so it can save state; every
+other API call fails. Pion destroys the worker when `deactivate()` returns or
+the 2 seconds run out, whichever comes first, and only then disables or removes
+the plugin or starts its new version.
+
+```js
+let draft = "";
+async function deactivate() {
+  await context.storage.set("draft", draft);
+}
+```
+
+A plugin that crashes or stops responding is destroyed at once, without calling
+`deactivate()`.
+
 ## Declarative views
 
 Views are plain JSON data. The host validates and renders them; plugins cannot
 inject DOM, HTML, scripts or styles. A view tree is limited to 256 nodes, depth
 12, and 256 KB.
 
-| `type`   | Fields                                                                       |
-| -------- | ---------------------------------------------------------------------------- |
-| `stack`  | `children: View[]`                                                           |
-| `row`    | `children: View[]`, `align?: "start" \| "center" \| "between"`, `gap?: "sm" \| "md"` |
-| `text`   | `text`, `tone?: "muted" \| "error" \| "heading"`                             |
-| `badge`  | `text`                                                                       |
-| `list`   | `items: { label, text }[]`                                                   |
-| `table`  | `columns: { key, label }[]`, `rows: Record<string,string>[]`, `caption?`     |
-| `code`   | `text`, `language?` (rendered as `<pre><code>`, not executed)                |
-| `diff`   | `text` (unified diff; `+`/`-`/`@@` lines are tinted)                         |
-| `image`  | `src` (must be a `data:image/…;base64,` URL), `alt?`                         |
-| `input`  | `command`, `placeholder`, `submit`, `label?`, `disabled?` (single-line form) |
+| `type`   | Fields                                                                                                       |
+| -------- | ------------------------------------------------------------------------------------------------------------ |
+| `stack`  | `children: View[]`                                                                                           |
+| `row`    | `children: View[]`, `align?: "start" \| "center" \| "between"`, `gap?: "sm" \| "md"`                         |
+| `text`   | `text`, `tone?: "muted" \| "error" \| "heading"`                                                             |
+| `badge`  | `text`                                                                                                       |
+| `list`   | `items: { label, text }[]`                                                                                   |
+| `table`  | `columns: { key, label }[]`, `rows: Record<string,string>[]`, `caption?`                                     |
+| `code`   | `text`, `language?` (rendered as `<pre><code>`, not executed)                                                |
+| `diff`   | `text` (unified diff; `+`/`-`/`@@` lines are tinted)                                                         |
+| `image`  | `src` (must be a `data:image/…;base64,` URL), `alt?`                                                         |
+| `input`  | `command`, `placeholder`, `submit`, `label?`, `disabled?` (single-line form)                                 |
 | `button` | `command`, `label`, `args?`, `disabled?`, `variant?: "inline" \| "row"`, `detail?`, `badge?: { text, tone }` |
-| `form`   | `command`, `placeholder`, `submit`, `disabled?` (multi-line text)            |
+| `form`   | `command`, `placeholder`, `submit`, `disabled?` (multi-line text)                                            |
 
 Any `command` referenced by a view must be a declared, owned command. Table cells
 must use declared column keys.
@@ -166,8 +192,10 @@ must use declared column keys.
   an allowlist enforced by the Rust host process.
 - Install is snapshot-based: Pion stores the manifest and entry source reviewed
   at install time. Editing source requires a new review. `Reload` only reloads
-  the approved snapshot.
-- Payload, message-rate, activation (8 s), heartbeat and command (30 s) limits
+  the approved snapshot. The exception is a folder linked for development (see
+  below), whose code reloads but whose permissions stay fixed.
+- Payload, message-rate, activation (8 s), heartbeat, command (30 s) and
+  shutdown (2 s, storage only) limits
   apply per plugin.
 
 This sandbox suits a controlled MVP; it is not an OS container. Distributing
@@ -185,14 +213,30 @@ untrusted third-party plugins needs an independent security review.
 The same flow works in the desktop app and the browser preview (the preview uses
 local storage and has no native file or network access).
 
+## Development mode
+
+While writing a plugin, link its folder instead of installing a snapshot:
+
+1. In **Settings → Plugins**, enter the plugin folder and choose
+   **Link for development**. ZIP files cannot be linked.
+2. Review and approve the permissions as usual.
+3. Edit `plugin.json` or the entry file. About once a second Pion re-reads the
+   folder and, if anything changed, reloads the plugin, including after a crash.
+
+A linked plugin shows a **Development** badge and its folder path. Pion refuses
+a reload that changes the plugin `id`, `permissions` or `access` and keeps the
+running version; choose **Unlink**, then link the folder again to review the new
+permissions. Unlink removes the link only, not the folder or plugin storage.
+Checks pause while the Pion window is hidden.
+
 ## Create a plugin from scratch
 
 ```bash
 node scripts/create-plugin.mjs ~/src/hello-plugin hello-plugin "Hello Plugin"
 ```
 
-Then edit `plugin.json` and `index.js`, and install the folder through
-**Settings → Plugins**. To package as a ZIP, keep `plugin.json` and the entry file
+Then link the folder for development (see above) and edit `plugin.json` and
+`index.js`; Pion reloads the plugin as you save. To package as a ZIP, keep `plugin.json` and the entry file
 at the archive root:
 
 ```bash

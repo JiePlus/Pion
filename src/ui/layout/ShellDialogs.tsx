@@ -293,9 +293,14 @@ export function ShellDialogs({
               ))}
             </ul>
             <p className="muted">
-              {t(
-                "Approval applies to this exact code snapshot. New installs and updates need a new review.",
-              )}
+              {review.dev
+                ? t(
+                    "Development link: Pion reloads this plugin whenever files in {path} change. Changing its permissions or access needs a new review.",
+                    { path: review.dev },
+                  )
+                : t(
+                    "Approval applies to this exact code snapshot. New installs and updates need a new review.",
+                  )}
             </p>
             <div className={`button-row ${utilityStyles.buttonRow}`}>
               <button disabled={busy} onClick={() => action("core.review.cancel")}>

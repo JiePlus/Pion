@@ -7,6 +7,8 @@ export async function taskFixture(page: Page) {
     ({ manifest, source }) => {
       if (!localStorage.getItem("pion.locale") && navigator.language.startsWith("en"))
         localStorage.setItem("pion.locale", "en");
+      // Most tests reload and expect the new-task page; reopening the last task is opt-in.
+      if (!localStorage.getItem("fixture.keepLastTask")) localStorage.removeItem("pion.lastTask");
       const callbacks = new Map<number, (event: unknown) => void>();
       const listeners = new Map<string, number>();
       let sequence = 0;
@@ -65,12 +67,23 @@ export async function taskFixture(page: Page) {
         installation: "ready",
         executable: "pi",
         installedVersion: "0.87.0",
-        verifiedVersion: "0.87.0",
         npmManaged: true,
         canInstall: true,
         modelReady: true,
         selectedModel: { provider: "openai", id: "gpt-test" },
         models: [model, { provider: "anthropic", id: "claude-test", name: "Claude Test" }],
+      });
+      const gitRepo = read("fixture.gitRepo", {
+        branch: "main",
+        ahead: 0,
+        unstaged: [
+          "@@ -1,3 +1,3 @@\n one\n-two\n+TWO\n three\n",
+          "@@ -20,2 +20,3 @@\n twenty\n+twenty-one\n twenty-two\n",
+        ],
+        staged: [] as string[],
+        untracked: ["notes.md"],
+        stagedNew: [] as string[],
+        turn: true,
       });
       const gitStatus = read("fixture.gitStatus", {
         repo: true,
@@ -276,18 +289,165 @@ export async function taskFixture(page: Page) {
               localStorage.setItem("fixture.appRelaunched", "yes");
               return null;
             }
+            // The fixture keeps delivering Pi events as broadcasts; the channel is unused.
+            if (command === "pi_events") return null;
             if (command !== "desktop") throw new Error("Unexpected native command");
             const request = args.request;
+            if (request.op === "pi.read") {
+              // One host call for several reads; answer each as the matching "pi" command.
+              const results: Record<string, unknown> = {};
+              for (const name of request.commands)
+                results[name] = await this.invoke("desktop", {
+                  request: { op: "pi", command: name, args: {} },
+                });
+              return results;
+            }
             if (request.op === "extension_ui.response") {
               if (localStorage.getItem("fixture.delayExtensionResponse"))
                 await new Promise((resolve) => setTimeout(resolve, 150));
               localStorage.setItem("fixture.extensionResponse", JSON.stringify(request));
               return null;
             }
+            if (request.op === "builtin.set") {
+              const states = { "git-review": true, ...read("fixture.builtins", {}) };
+              states[request.id] = request.enabled;
+              localStorage.setItem("fixture.builtins", JSON.stringify(states));
+              return states;
+            }
+            if (typeof request.op === "string" && request.op.startsWith("git.")) {
+              const calls = read("fixture.gitCalls", []);
+              localStorage.setItem("fixture.gitCalls", JSON.stringify([...calls, request]));
+              if (localStorage.getItem("fixture.gitNotRepo") && request.op !== "git.init") {
+                if (request.op === "git.summary") return { repo: false };
+                throw new Error("Workspace is not a Git repository");
+              }
+              const repo = gitRepo;
+              const hunkA1 = "@@ -1,3 +1,3 @@\n one\n-two\n+TWO\n three\n";
+              const hunkA2 = "@@ -20,2 +20,3 @@\n twenty\n+twenty-one\n twenty-two\n";
+              const fileDiff = (path: string, hunks: string[]) =>
+                hunks.length
+                  ? `diff --git a/${path} b/${path}\nindex 1111111..2222222 100644\n--- a/${path}\n+++ b/${path}\n${hunks.join("")}`
+                  : "";
+              const untracked = (path: string) =>
+                `diff --git a/${path} b/${path}\nnew file mode 100644\n--- /dev/null\n+++ b/${path}\n@@ -0,0 +1 @@\n+hello\n`;
+              const diffs = {
+                unstaged:
+                  fileDiff("src/a.ts", repo.unstaged) + repo.untracked.map(untracked).join(""),
+                staged: fileDiff("src/a.ts", repo.staged) + repo.stagedNew.map(untracked).join(""),
+                branch: fileDiff("src/a.ts", [hunkA1]),
+                turn: repo.turn ? fileDiff("src/a.ts", [hunkA2]) : "",
+              } as Record<string, string>;
+              const unstagedCount = (repo.unstaged.length ? 1 : 0) + repo.untracked.length;
+              const stagedCount = (repo.staged.length ? 1 : 0) + repo.stagedNew.length;
+              switch (request.op) {
+                case "git.init":
+                  localStorage.removeItem("fixture.gitNotRepo");
+                  localStorage.setItem("fixture.gitUnborn", "yes");
+                  return { ok: true, output: "" };
+                case "git.summary":
+                  return {
+                    repo: true,
+                    branch: repo.branch,
+                    ahead: repo.ahead,
+                    behind: 0,
+                    additions: repo.unstaged.length + repo.staged.length + repo.untracked.length,
+                    deletions:
+                      repo.unstaged.includes(hunkA1) || repo.staged.includes(hunkA1) ? 1 : 0,
+                    files: unstagedCount + stagedCount,
+                  };
+                case "git.review":
+                  return {
+                    repo: true,
+                    scope: request.scope,
+                    branch: repo.branch,
+                    detached: false,
+                    ahead: repo.ahead,
+                    behind: 0,
+                    upstream: true,
+                    remote: true,
+                    staged: stagedCount,
+                    unstaged: unstagedCount,
+                    base: request.scope === "branch" ? "origin/main" : null,
+                    turnAvailable: repo.turn,
+                    unborn: !!localStorage.getItem("fixture.gitUnborn"),
+                    diff: diffs[request.scope] ?? "",
+                    truncated: false,
+                  };
+                case "git.hunk": {
+                  const from = request.action === "unstage" ? repo.staged : repo.unstaged;
+                  const index = from.indexOf(request.hunk);
+                  if (index < 0)
+                    throw new Error("This change is out of date; refresh the review and try again");
+                  const [hunk] = from.splice(index, 1);
+                  if (request.action === "stage") repo.staged.push(hunk);
+                  if (request.action === "unstage") repo.unstaged.push(hunk);
+                  break;
+                }
+                case "git.stage":
+                  for (const path of request.paths) {
+                    if (path === "." || path === "src/a.ts") {
+                      repo.staged.push(...repo.unstaged.splice(0));
+                    }
+                    if (path === ".") repo.stagedNew.push(...repo.untracked.splice(0));
+                    else if (repo.untracked.includes(path)) {
+                      repo.untracked = repo.untracked.filter((item: string) => item !== path);
+                      repo.stagedNew.push(path);
+                    }
+                  }
+                  break;
+                case "git.unstage":
+                  repo.unstaged.push(...repo.staged.splice(0));
+                  repo.untracked.push(...repo.stagedNew.splice(0));
+                  break;
+                case "git.revert":
+                  for (const path of request.paths) {
+                    if (path === "src/a.ts") repo.unstaged = [];
+                    repo.untracked = repo.untracked.filter((item: string) => item !== path);
+                  }
+                  break;
+                case "git.commit": {
+                  if (request.includeUnstaged) {
+                    repo.staged.push(...repo.unstaged.splice(0));
+                    repo.stagedNew.push(...repo.untracked.splice(0));
+                  }
+                  repo.staged = [];
+                  repo.stagedNew = [];
+                  repo.ahead += 1;
+                  const result: Record<string, unknown> = { ok: true, hash: "f00ba47" };
+                  if (request.then !== "commit") {
+                    result.pushed = true;
+                    repo.ahead = 0;
+                  }
+                  if (request.then === "pr") result.prUrl = "https://github.com/acme/pion/pull/7";
+                  return result;
+                }
+                case "git.branches":
+                  if (localStorage.getItem("fixture.gitUnborn"))
+                    return {
+                      branches: [{ name: repo.branch, current: true, upstream: "", unborn: true }],
+                    };
+                  return {
+                    branches: [
+                      { name: repo.branch, current: true, upstream: `origin/${repo.branch}` },
+                      { name: "feature/glass", current: false, upstream: "" },
+                    ].filter((b, i, all) => all.findIndex((x) => x.name === b.name) === i),
+                  };
+                case "git.checkout":
+                  repo.branch = request.branch;
+                  break;
+                case "git.createBranch":
+                  repo.branch = request.name;
+                  break;
+                case "git.pr":
+                  return { ok: true, prUrl: "https://github.com/acme/pion/pull/7" };
+              }
+              return { ok: true, output: "" };
+            }
             switch (request.op) {
               case "boot":
                 return {
                   plugins: records,
+                  builtins: read("fixture.builtins", {}),
                   catalog,
                   settings: { executable: "pi", workspace: "/projects/Pion" },
                 };
@@ -298,11 +458,10 @@ export async function taskFixture(page: Page) {
                   throw new Error("Pi scan failed; retry or enter the path manually");
                 return {
                   candidates: read("fixture.piCandidates", [
-                    { executable: "/usr/local/bin/pi", version: "0.87.0", verified: true },
+                    { executable: "/usr/local/bin/pi", version: "0.87.0" },
                     {
                       executable: "/Users/test/.nvm/versions/node/v22.19.0/bin/pi",
                       version: "0.87.1",
-                      verified: true,
                     },
                   ]),
                 };
@@ -337,7 +496,9 @@ export async function taskFixture(page: Page) {
                 if (localStorage.getItem("fixture.updateBlocked"))
                   throw new Error("Wait for running Pi tasks to finish before updating");
                 localStorage.setItem("fixture.piUpdated", "yes");
-                Object.assign(setupStatus, { installedVersion: setupStatus.verifiedVersion });
+                Object.assign(setupStatus, {
+                  installedVersion: read("fixture.versionStatus", {}).latestVersion ?? "0.87.1",
+                });
                 localStorage.setItem("fixture.setupStatus", JSON.stringify(setupStatus));
                 return setupStatus;
               case "package.list":
@@ -657,6 +818,8 @@ export async function taskFixture(page: Page) {
               }
               case "task.prepare":
                 localStorage.setItem("fixture.prepareStarted", "yes");
+                if (!localStorage.getItem("fixture.setupStatusFinished"))
+                  localStorage.setItem("fixture.prepareBeforeSetupStatus", "yes");
                 active = "draft";
                 generation++;
                 emit("pi:status", {
@@ -675,7 +838,14 @@ export async function taskFixture(page: Page) {
                   working: false,
                 });
                 return null;
+              case "task.transcript":
+                // The host's saved copy of the last transcript Pi returned for this task.
+                return localStorage.getItem("fixture.cachedTranscript")
+                  ? { messages: JSON.parse(localStorage.getItem("fixture.cachedTranscript")!) }
+                  : null;
               case "task.open":
+                if (localStorage.getItem("fixture.openDelay"))
+                  await new Promise((resolve) => setTimeout(resolve, 800));
                 if (localStorage.getItem("fixture.failOpen"))
                   throw new Error("Cannot start Pi: test failure");
                 active = request.id;

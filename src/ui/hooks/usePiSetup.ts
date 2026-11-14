@@ -12,6 +12,37 @@ function defaultPiModel(): { provider: string; id: string } | null {
     ? { provider: value.slice(0, separator), id: value.slice(separator + 1) }
     : null;
 }
+const SETUP_CACHE = "pion.setupStatus";
+
+/** The last setup check that passed for this Pi executable, if any. */
+export function readCachedSetup(executable: string): PiSetupStatus | null {
+  try {
+    const cached = JSON.parse(localStorage.getItem(SETUP_CACHE) ?? "null") as {
+      executable?: string;
+      status?: PiSetupStatus;
+    } | null;
+    const status = cached?.status;
+    return cached?.executable === executable &&
+      status?.installation === "ready" &&
+      status.modelReady &&
+      status.selectedModel
+      ? status
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveCachedSetup(executable: string, status: PiSetupStatus) {
+  try {
+    if (status.installation === "ready" && status.modelReady && status.selectedModel)
+      localStorage.setItem(SETUP_CACHE, JSON.stringify({ executable, status }));
+    else localStorage.removeItem(SETUP_CACHE);
+  } catch {
+    // Without the cache the next start runs the full check.
+  }
+}
+
 export function usePiSetup(initialExecutable: string, setPage: Dispatch<SetStateAction<Page>>) {
   const [executable, setExecutable] = useState(initialExecutable);
   const [setupStatus, setSetupStatus] = useState<PiSetupStatus | null>(null);
@@ -33,6 +64,7 @@ export function usePiSetup(initialExecutable: string, setPage: Dispatch<SetState
         model,
       });
       setSetupStatus(result);
+      saveCachedSetup(result.executable ?? candidateExecutable, result);
       if (result.detail) setSetupError(result.detail);
       if (
         result.installation === "ready" &&
@@ -118,8 +150,43 @@ export function usePiSetup(initialExecutable: string, setPage: Dispatch<SetState
     }
   }
 
+  // Confirms a remembered setup without starting a throwaway Pi: Pi still runs and
+  // the model is still signed in. Anything else falls back to the full check.
+  async function verifyCachedSetup(cached: PiSetupStatus) {
+    try {
+      const result = await host<PiSetupStatus>({
+        op: "pi_setup.status",
+        executable,
+        model: cached.selectedModel,
+        quick: true,
+      });
+      if (
+        result.installation === "ready" &&
+        result.modelReady &&
+        result.executable === executable
+      ) {
+        const status = { ...cached, ...result, models: cached.models };
+        setSetupStatus(status);
+        saveCachedSetup(executable, status);
+        return;
+      }
+    } catch {
+      // Fall through to the full check, which reports the problem.
+    }
+    await refreshSetup(cached.selectedModel ?? null);
+  }
+
   useEffect(() => {
-    if (native) void refreshSetup();
+    if (!native) return;
+    const cached = readCachedSetup(executable);
+    if (!cached) {
+      void refreshSetup();
+      return;
+    }
+    // Start from the last good check so the workspace connects Pi right away.
+    setSetupStatus(cached);
+    setSetupModel(cached.selectedModel ?? null);
+    void verifyCachedSetup(cached);
   }, []);
 
   return {

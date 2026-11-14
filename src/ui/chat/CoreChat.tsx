@@ -1,5 +1,5 @@
 import { componentClass } from "../componentClass.ts";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { Json } from "../../core/api.ts";
 import {
   attachmentDraft,
@@ -48,9 +48,22 @@ interface ChatSnapshot {
   commands: Command[];
   queue: { steering: string[]; followUp: string[] };
 }
+/** Last state of recently shown chats, most recent last. A long transcript is
+ * megabytes, so only a few are kept; older tasks reload from Pi or the disk cache. */
 const snapshots = new Map<string, ChatSnapshot>();
-export function hasChatSnapshot(taskId: string) {
-  return snapshots.has(taskId);
+const MAX_SNAPSHOTS = 6;
+/** Tasks whose models, levels and commands Pi has already sent this run. */
+const fullyRead = new Set<string>();
+
+function remember(taskId: string, snapshot: ChatSnapshot) {
+  snapshots.delete(taskId);
+  snapshots.set(taskId, snapshot);
+  for (const oldest of snapshots.keys()) {
+    if (snapshots.size <= MAX_SNAPSHOTS) break;
+    snapshots.delete(oldest);
+    // Without its snapshot the chat must read everything from Pi again.
+    fullyRead.delete(oldest);
+  }
 }
 
 export function CoreChat({
@@ -60,6 +73,7 @@ export function CoreChat({
   onInitialSent,
   onWorkingChange,
   onExtensionTitle,
+  active = true,
   extensionStatuses,
   extensionWidgets,
   externalDraft,
@@ -74,6 +88,8 @@ export function CoreChat({
   onInitialSent: () => void;
   onWorkingChange: (working: boolean) => void;
   onExtensionTitle: (title: string) => void;
+  /** False for a resident chat kept mounted but hidden; it reports nothing upward. */
+  active?: boolean;
   extensionStatuses: Map<string, string>;
   extensionWidgets: Map<string, { lines: string[]; placement: "aboveEditor" | "belowEditor" }>;
   externalDraft: string | null;
@@ -118,9 +134,11 @@ export function CoreChat({
   const composer = useRef<HTMLTextAreaElement>(null);
   const picker = useRef<HTMLInputElement>(null);
   const sendingRef = useRef(false);
+  // Set once Pi itself has answered; a cached transcript never overwrites that.
+  const fromPi = useRef(false);
 
   useEffect(() => {
-    snapshots.set(taskId, { messages, state, models, levels, commands, queue });
+    remember(taskId, { messages, state, models, levels, commands, queue });
   }, [taskId, messages, state, models, levels, commands, queue]);
 
   useLayoutEffect(() => {
@@ -140,46 +158,41 @@ export function CoreChat({
     setAttachmentDraft(taskId, value);
   }
 
+  // One host call for everything the task view needs, rather than one per query.
   async function readPi(full: boolean) {
-    const nextState = await host<State>({ op: "pi", command: "get_state", args: {} });
+    const read = await host<{
+      get_state: State;
+      get_messages: { messages: Message[] };
+      get_models?: { models: Model[] };
+      get_thinking_levels?: { levels: string[] };
+      get_commands?: { commands: Command[] };
+    }>({
+      op: "pi.read",
+      commands: full
+        ? ["get_state", "get_messages", "get_models", "get_thinking_levels", "get_commands"]
+        : ["get_state", "get_messages"],
+    });
+    const nextState = read.get_state;
     setState(nextState);
     setWorking(!!nextState.isStreaming || !!nextState.isCompacting);
-    const history = await host<{ messages: Message[] }>({
-      op: "pi",
-      command: "get_messages",
-      args: {},
-    });
-    setMessages(history.messages);
+    setMessages(read.get_messages.messages);
+    fromPi.current = true;
     setSyncError("");
     setTools(new Map());
-    if (!full) return nextState;
-    const available = await host<{ models: Model[] }>({
-      op: "pi",
-      command: "get_models",
-      args: {},
-    });
-    setModels(available.models);
-    const thinking = await host<{ levels: string[] }>({
-      op: "pi",
-      command: "get_thinking_levels",
-      args: {},
-    });
-    setLevels(thinking.levels);
-    const availableCommands = await host<{ commands: Command[] }>({
-      op: "pi",
-      command: "get_commands",
-      args: {},
-    });
-    setCommands(availableCommands.commands);
+    if (read.get_models) setModels(read.get_models.models);
+    if (read.get_thinking_levels) setLevels(read.get_thinking_levels.levels);
+    if (read.get_commands) setCommands(read.get_commands.commands);
+    if (full) fullyRead.add(taskId);
     return nextState;
   }
 
   useEffect(() => {
-    onWorkingChange(working);
-  }, [onWorkingChange, working]);
+    if (active) onWorkingChange(working);
+  }, [active, onWorkingChange, working]);
 
   usePiEvents({
     taskId,
+    active,
     setWorking,
     setError,
     setStream,
@@ -194,18 +207,36 @@ export function CoreChat({
   });
 
   useEffect(() => {
-    if (externalDraft === null) return;
+    if (externalDraft === null || !active) return;
     saveDraft(externalDraft);
     onExternalDraftApplied();
     requestAnimationFrame(() => composer.current?.focus());
-  }, [externalDraft, onExternalDraftApplied]);
+  }, [active, externalDraft, onExternalDraftApplied]);
+
+  // A task opened for the first time this run shows its last saved transcript at once,
+  // while its Pi process starts; Pi's own answer replaces it when it arrives.
+  useEffect(() => {
+    if (fullyRead.has(taskId) || !native) return;
+    let live = true;
+    host<{ messages?: Message[] } | null>({ op: "task.transcript", id: taskId })
+      .then((saved) => {
+        if (live && !fromPi.current && Array.isArray(saved?.messages)) setMessages(saved.messages);
+      })
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, [taskId]);
 
   useEffect(() => {
     let live = true;
     async function restore() {
       if (!connected) return;
+      // The snapshot is written from the first render, so it cannot tell whether Pi
+      // has answered yet; only a completed full read can.
+      const known = fullyRead.has(taskId);
       try {
-        const nextState = await readPi(!cached);
+        const nextState = await readPi(!known);
         if (initialPrompt !== undefined && live) {
           if (attachments.length && !nextState.model?.input?.includes("image")) return;
           setWorking(true);
@@ -223,7 +254,7 @@ export function CoreChat({
       } catch (failure) {
         if (live) {
           setWorking(false);
-          if (cached) setSyncError(String(failure));
+          if (known) setSyncError(String(failure));
           else setError(String(failure));
         }
       }
@@ -335,21 +366,25 @@ export function CoreChat({
     }
   }
 
-  const toolResults = new Map<string, Tool>();
-  for (const message of messages) {
-    if (Array.isArray(message.content)) {
-      for (const block of message.content) {
-        if (block.type === "toolCall" && block.id && !working)
-          toolResults.set(block.id, { status: "interrupted" });
+  // Stable while a reply streams, so finished messages are not re-rendered per token.
+  const toolResults = useMemo(() => {
+    const results = new Map<string, Tool>();
+    for (const message of messages) {
+      if (Array.isArray(message.content)) {
+        for (const block of message.content) {
+          if (block.type === "toolCall" && block.id && !working)
+            results.set(block.id, { status: "interrupted" });
+        }
       }
+      if (message.role === "toolResult" && message.toolCallId)
+        results.set(message.toolCallId, {
+          status: message.isError ? "failed" : "completed",
+          result: message,
+        });
     }
-    if (message.role === "toolResult" && message.toolCallId)
-      toolResults.set(message.toolCallId, {
-        status: message.isError ? "failed" : "completed",
-        result: message,
-      });
-  }
-  for (const [id, tool] of tools) toolResults.set(id, tool);
+    for (const [id, tool] of tools) results.set(id, tool);
+    return results;
+  }, [messages, tools, working]);
   const activeModel = state.model ? `${state.model.provider}/${state.model.id}` : "";
   const supportsImages = !!state.model?.input?.includes("image");
   const aboveWidgets = [...extensionWidgets.entries()].filter(
@@ -391,6 +426,7 @@ export function CoreChat({
         </div>
       )}
       <ChatTranscript
+        connected={connected}
         messages={messages}
         stream={stream}
         models={models}

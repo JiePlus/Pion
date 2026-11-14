@@ -10,6 +10,8 @@ import type { Message, Tool } from "../chat/ChatMessage.tsx";
 
 interface PiEventState {
   taskId: string;
+  /** Only the visible chat follows Pi; resident hidden chats ignore its events. */
+  active: boolean;
   setWorking: Dispatch<SetStateAction<boolean>>;
   setError: Dispatch<SetStateAction<string>>;
   setStream: Dispatch<SetStateAction<Message | null>>;
@@ -31,6 +33,7 @@ interface PiEventState {
 
 export function usePiEvents({
   taskId,
+  active,
   setWorking,
   setError,
   setStream,
@@ -44,6 +47,7 @@ export function usePiEvents({
   onExtensionTitle,
 }: PiEventState) {
   useEffect(() => {
+    if (!active) return;
     const dispose = hostEvents.on("pi:event", (value) => {
       const event = value as PiEvent;
       if (event.type === "agent_start") {
@@ -133,5 +137,5 @@ export function usePiEvents({
         onExtensionTitle(String(event.title ?? ""));
     });
     return dispose;
-  }, [onExtensionTitle, taskId]);
+  }, [active, onExtensionTitle, taskId]);
 }

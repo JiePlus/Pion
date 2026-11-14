@@ -1,12 +1,15 @@
-import { invoke, isTauri } from "@tauri-apps/api/core";
+import { Channel, invoke, isTauri } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import type { Bundle, Json } from "./api.ts";
+import { createHostQueue } from "./host-queue.ts";
 import { Events } from "./registry.ts";
 
 export interface Installed {
   bundle: Bundle;
   digest: string;
   enabled: boolean;
+  /** Linked development folder; Pion reloads the plugin when its files change. */
+  dev?: string;
 }
 export interface Project {
   id: string;
@@ -27,12 +30,13 @@ export interface Boot {
   plugins: Installed[];
   catalog: Catalog;
   settings: { executable: string; workspace: string };
+  /** Built-in feature switches; missing ids are enabled. */
+  builtins?: Record<string, boolean>;
 }
 export interface PiSetupStatus {
   installation: "missing" | "broken" | "ready";
   executable?: string;
   installedVersion?: string;
-  verifiedVersion: string;
   latestVersion?: string;
   npmManaged?: boolean;
   canInstall: boolean;
@@ -44,22 +48,20 @@ export interface PiSetupStatus {
 }
 export const native = isTauri();
 export const hostEvents = new Events();
-let tail: Promise<unknown> = Promise.resolve();
 let generation = 0;
 let activeTask: string | null = null;
 
-// One host request in flight. Queue admission rechecks plugin lifetime before invoking Rust.
+const queue = createHostQueue((request) =>
+  native ? invoke("desktop", { request }) : preview(request),
+);
+
+// One request in flight per lane (Core, or one plugin). The guard rechecks plugin
+// lifetime when the request is admitted, just before Rust is invoked.
 export function host<T = Json>(
   request: Record<string, unknown>,
   guard: () => void = () => {},
 ): Promise<T> {
-  const task = () => {
-    guard();
-    return native ? invoke<T>("desktop", { request }) : (preview(request) as Promise<T>);
-  };
-  const result = tail.then(task);
-  tail = result.catch(() => {});
-  return result;
+  return queue.enqueue<T>(request, guard);
 }
 
 // Extension dialogs can block the command that caused them, so their response must bypass
@@ -72,13 +74,17 @@ export function respondExtensionUi(request: Record<string, unknown>): Promise<vo
 }
 export async function connectEvents(): Promise<() => void> {
   if (!native) return () => {};
-  const pi = await listen<{ generation: number; taskId?: string | null; event: unknown }>(
-    "pi:event",
-    (event) => {
-      if (event.payload.generation === generation && (event.payload.taskId ?? null) === activeTask)
-        hostEvents.emit("pi:event", event.payload.event);
-    },
-  );
+  type PiEventPayload = { generation: number; taskId?: string | null; event: unknown };
+  const deliver = (payload: PiEventPayload) => {
+    if (payload.generation === generation && (payload.taskId ?? null) === activeTask)
+      hostEvents.emit("pi:event", payload.event);
+  };
+  // Pi events arrive on this window's own channel; the broadcast listener below only
+  // serves a host that has no channel registered.
+  const channel = new Channel<PiEventPayload>();
+  channel.onmessage = deliver;
+  await invoke("pi_events", { channel });
+  const pi = await listen<PiEventPayload>("pi:event", (event) => deliver(event.payload));
   const status = await listen<{
     generation: number;
     taskId?: string | null;
@@ -120,6 +126,7 @@ async function preview(request: Record<string, unknown>): Promise<unknown> {
         plugins: installed,
         catalog: { projects: [], tasks: [] },
         settings: { executable: "pi", workspace: "" },
+        builtins: {},
       };
     case "review": {
       throw new Error("Local installation requires the desktop app");

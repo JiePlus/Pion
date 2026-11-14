@@ -7,8 +7,12 @@ import { native } from "../../core/host.ts";
 import type { Installed } from "../../core/host.ts";
 import { localized, t } from "../../core/i18n.ts";
 import type { Runtime } from "../../core/runtime.ts";
+import { builtinEnabled, builtinFeatures } from "../../core/builtins.ts";
+import type { BuiltinStates } from "../../core/builtins.ts";
 
 interface PluginsProps {
+  builtins: BuiltinStates;
+  onToggleBuiltin: (id: string, enabled: boolean) => void;
   installed: Installed[];
   runtime: Runtime;
   path: string;
@@ -17,7 +21,16 @@ interface PluginsProps {
   action: (id: string, args?: Json) => void;
 }
 
-export function Plugins({ installed, runtime, path, setPath, busy, action }: PluginsProps) {
+export function Plugins({
+  builtins,
+  onToggleBuiltin,
+  installed,
+  runtime,
+  path,
+  setPath,
+  busy,
+  action,
+}: PluginsProps) {
   return (
     <main className={componentClass(managementStyles, "management")}>
       <PageHero
@@ -26,13 +39,46 @@ export function Plugins({ installed, runtime, path, setPath, busy, action }: Plu
         description={t(
           "Install a local plugin, review its permissions, and make this space yours.",
         )}
-        stat={{ value: installed.length, caption: "installed", tone: "blue" }}
+        stat={{
+          value: installed.length + builtinFeatures.length,
+          caption: "installed",
+          tone: "blue",
+        }}
         actions={
           <button type="button" onClick={() => action("core.navigate", "panels")}>
             {t("Manage extension panels")}
           </button>
         }
       />
+      <Card span={12} icon="layers" title={t("Built-in")} headingId="builtin-plugins-heading">
+        {builtinFeatures.map((feature) => {
+          const enabled = builtinEnabled(builtins, feature.id);
+          return (
+            <article className={componentClass(managementStyles, "plugin-card")} key={feature.id}>
+              <div>
+                <h2>
+                  {localized(feature.name, feature.nameI18n)}{" "}
+                  <small className={componentClass(managementStyles, "builtin-badge")}>
+                    {t("Built-in")}
+                  </small>
+                </h2>
+                <p>
+                  {feature.id} · {t(enabled ? "active" : "disabled")}
+                </p>
+                <p>{localized(feature.description, feature.descriptionI18n)}</p>
+              </div>
+              <div className={componentClass(managementStyles, "card-actions")}>
+                <button
+                  disabled={busy || !native}
+                  onClick={() => onToggleBuiltin(feature.id, !enabled)}
+                >
+                  {t(enabled ? "Disable" : "Enable")}
+                </button>
+              </div>
+            </article>
+          );
+        })}
+      </Card>
       <Card span={5} icon="puzzle" eyebrow="Review & install">
         <form
           className={componentClass(managementStyles, "install-form")}
@@ -52,6 +98,18 @@ export function Plugins({ installed, runtime, path, setPath, busy, action }: Plu
           <button type="submit" disabled={busy || !path || !native}>
             {t("Review installation")}
           </button>
+          <button
+            type="button"
+            disabled={busy || !path || !native}
+            onClick={() => action("core.review", { path, dev: true })}
+          >
+            {t("Link for development")}
+          </button>
+          <p className="muted">
+            {t(
+              "A linked folder reloads whenever its files change. Changing permissions needs a new review.",
+            )}
+          </p>
         </form>
       </Card>
       <Card
@@ -71,7 +129,16 @@ export function Plugins({ installed, runtime, path, setPath, busy, action }: Plu
               <div>
                 <h2>
                   {localized(m.name, m.nameI18n)} <small>{m.version}</small>
+                  {record.dev && (
+                    <>
+                      {" "}
+                      <small className={componentClass(managementStyles, "builtin-badge")}>
+                        {t("Development")}
+                      </small>
+                    </>
+                  )}
                 </h2>
+                {record.dev && <p className="muted">{record.dev}</p>}
                 <p>
                   {m.id} ·{" "}
                   <span className={state?.state === "crashed" ? "error" : ""}>
@@ -109,7 +176,7 @@ export function Plugins({ installed, runtime, path, setPath, busy, action }: Plu
                   disabled={busy}
                   onClick={() => action("core.plugin", { id: m.id, action: "remove" })}
                 >
-                  {t("Uninstall")}
+                  {t(record.dev ? "Unlink" : "Uninstall")}
                 </button>
               </div>
             </article>

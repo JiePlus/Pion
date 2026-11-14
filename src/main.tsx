@@ -26,14 +26,19 @@ async function start() {
     // Agent Chat was bundled in 0.1/0.2. Pi's base conversation is now part of Core.
     boot.plugins = boot.plugins.filter((record) => record.bundle.manifest.id !== "agent-chat");
     const runtime = new Runtime();
-    for (const record of boot.plugins) {
-      try {
-        runtime.load(record.bundle, record.enabled);
-      } catch (error) {
-        runtime.notice("Desktop", t("Plugin rejected: {error}", { error: String(error) }));
-      }
-    }
     root.render(<Shell runtime={runtime} boot={boot} />);
+    // Plugins start after the first frame, so their sandboxes never delay the window.
+    requestAnimationFrame(() =>
+      setTimeout(() => {
+        for (const record of boot.plugins) {
+          try {
+            runtime.load(record.bundle, record.enabled);
+          } catch (error) {
+            runtime.notice("Desktop", t("Plugin rejected: {error}", { error: String(error) }));
+          }
+        }
+      }),
+    );
   } catch (error) {
     root.render(
       <main className={startupStyles.startupError}>
