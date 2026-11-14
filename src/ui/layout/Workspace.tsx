@@ -15,7 +15,7 @@ import { SlotResizer } from "./Slot/SlotResizer.tsx";
 import styles from "./Shell.module.css";
 
 /** Task chats kept mounted, the visible one included, so switching back is instant. */
-const RESIDENT_VIEWS = 3;
+const RESIDENT_VIEWS = 2;
 // Extension statuses and widgets belong to the visible task; hidden chats get none.
 const NO_STATUSES = new Map<string, string>();
 const NO_WIDGETS = new Map<string, { lines: string[]; placement: "aboveEditor" | "belowEditor" }>();

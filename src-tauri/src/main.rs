@@ -26,8 +26,26 @@ use tauri::{Emitter, Manager};
 use tauri_plugin_dialog::DialogExt;
 
 const MAX_TASK_PROCESSES: usize = 4;
-/// Projects that keep a warm spare Pi at once. Each spare costs one idle Pi process.
-const MAX_SPARES: usize = 2;
+/// Warm spare Pi processes kept at once, for the most recent project. Each costs one
+/// idle Pi process (about 120 MB).
+const MAX_SPARES: usize = 1;
+/// Pi processes Pion runs at once: tasks, the new-task draft and the spare. A spare is
+/// only started while there is room, so it never pushes memory past this.
+const MAX_PI_PROCESSES: usize = MAX_TASK_PROCESSES + 1;
+
+fn pi_processes(state: &State) -> usize {
+    state
+        .tasks
+        .values()
+        .filter(|process| process.is_alive())
+        .count()
+        + state
+            .prepared
+            .as_ref()
+            .is_some_and(|process| process.is_alive()) as usize
+        + state.spares.len()
+        + state.warming.len()
+}
 
 struct Spare {
     root: PathBuf,
@@ -114,6 +132,7 @@ fn warm_spare(app: &tauri::AppHandle, root: PathBuf, executable: String) {
                 .spares
                 .iter()
                 .any(|spare| spare.root == root && spare.executable == executable)
+                || pi_processes(&state) >= MAX_PI_PROCESSES
                 || !state.warming.insert(root.clone())
             {
                 return;
@@ -952,8 +971,9 @@ fn handle(app: &tauri::AppHandle, request: Value) -> Result<Value, String> {
                 }
             };
             state.workspace = Some(root.clone());
+            // This process doubles as the project's spare: opening an existing task
+            // binds it instead of starting another one.
             state.prepared = Some(Arc::new(process));
-            warm_spare(app, root.clone(), executable.to_string());
             let _ = app.emit("workspace:opened", workspace::describe(&root));
             let _ = app.emit("pi:status", json!({"generation":state.generation,"taskId":Value::Null,"active":true,"state":"connected", "detail":"Pi RPC connected"}));
             Ok(Value::Null)
@@ -1051,9 +1071,15 @@ fn handle(app: &tauri::AppHandle, request: Value) -> Result<Value, String> {
             let extension = state.pi_extension.clone();
             // An existing session can bind to the project's warm spare instead of
             // starting a new Pi process.
-            let spare = session_file
-                .as_ref()
-                .and_then(|_| take_spare(&mut state, &root, executable));
+            let spare = session_file.as_ref().and_then(|_| {
+                take_spare(&mut state, &root, executable).or_else(|| {
+                    // The new-task draft's process is idle and about to be dropped.
+                    (state.workspace.as_ref() == Some(&root))
+                        .then(|| state.prepared.take())
+                        .flatten()
+                        .filter(|process| process.is_alive())
+                })
+            });
             drop(state);
             let bound = spare.and_then(|spare| {
                 spare.set_task_id(Some(id.to_string()));

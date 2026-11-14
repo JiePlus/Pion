@@ -48,9 +48,23 @@ interface ChatSnapshot {
   commands: Command[];
   queue: { steering: string[]; followUp: string[] };
 }
+/** Last state of recently shown chats, most recent last. A long transcript is
+ * megabytes, so only a few are kept; older tasks reload from Pi or the disk cache. */
 const snapshots = new Map<string, ChatSnapshot>();
+const MAX_SNAPSHOTS = 6;
 /** Tasks whose models, levels and commands Pi has already sent this run. */
 const fullyRead = new Set<string>();
+
+function remember(taskId: string, snapshot: ChatSnapshot) {
+  snapshots.delete(taskId);
+  snapshots.set(taskId, snapshot);
+  for (const oldest of snapshots.keys()) {
+    if (snapshots.size <= MAX_SNAPSHOTS) break;
+    snapshots.delete(oldest);
+    // Without its snapshot the chat must read everything from Pi again.
+    fullyRead.delete(oldest);
+  }
+}
 
 export function CoreChat({
   taskId,
@@ -124,7 +138,7 @@ export function CoreChat({
   const fromPi = useRef(false);
 
   useEffect(() => {
-    snapshots.set(taskId, { messages, state, models, levels, commands, queue });
+    remember(taskId, { messages, state, models, levels, commands, queue });
   }, [taskId, messages, state, models, levels, commands, queue]);
 
   useLayoutEffect(() => {
